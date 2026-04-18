@@ -688,7 +688,77 @@
     /* ── FOOTER ─────────────────────────────────────────────────── */
     .footer {
       background: var(--slate);
-      padding: 36px 0;
+      padding: 0 0 36px;
+    }
+    .footer-partners {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 28px 0;
+      margin-bottom: 28px;
+    }
+    .footer-partners-inner {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .fp-label {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.28);
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding-right: 8px;
+      border-right: 1px solid rgba(255,255,255,0.1);
+    }
+    .fp-logos {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .fp-logo {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      opacity: 0.55;
+      transition: opacity 0.2s;
+      text-decoration: none;
+    }
+    .fp-logo:hover { opacity: 0.9; }
+    .fp-logo img {
+      height: 28px;
+      width: auto;
+      max-width: 90px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      display: block;
+    }
+    .fp-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .fp-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+    .fp-role {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .fp-divider {
+      width: 1px; height: 30px;
+      background: rgba(255,255,255,0.1);
+      flex-shrink: 0;
     }
     .footer-inner {
       display: flex; align-items: center;
@@ -798,7 +868,6 @@
     </div>
 
     <div class="nav-actions">
-      <div class="nav-status"><span class="status-dot"></span>Accepting Pilots</div>
       <a href="#contact" class="btn btn-outline">Schedule Call</a>
       <a href="#contact" class="btn btn-blue">Join Pilot</a>
     </div>
@@ -1353,6 +1422,47 @@
 <!-- ═══ FOOTER ════════════════════════════════════════════════════ -->
 <footer class="footer">
   <div class="container">
+
+    <!-- Partner / funder logos row -->
+    <div class="footer-partners">
+      <div class="footer-partners-inner">
+        <span class="fp-label">Research &amp; Funding</span>
+        <div class="fp-logos">
+
+          <a class="fp-logo" href="https://www.ljmu.ac.uk" target="_blank" rel="noopener">
+            <img src="assets/ljmu-logo.png"
+                 alt="Liverpool John Moores University"
+                 onerror="this.style.display='none'" />
+            <div class="fp-text">
+              <span class="fp-name">LJMU</span>
+              <span class="fp-role">PhD Research Institution</span>
+            </div>
+          </a>
+
+          <div class="fp-divider"></div>
+
+          <a class="fp-logo" href="https://icure.org.uk" target="_blank" rel="noopener">
+            <img src="assets/iCURE-logo.png"
+                 alt="iCURE"
+                 onerror="this.style.display='none'" />
+            <div class="fp-text">
+              <span class="fp-name">iCURE</span>
+              <span class="fp-role">Market Discovery Funding</span>
+            </div>
+          </a>
+
+          <div class="fp-divider"></div>
+
+ 
+          <a class="fp-logo" href="https://www.ukri.org" target="_blank" rel="noopener" title="UK Research and Innovation">
+            <img src="assets/ukri-logo.png" alt="UK Research and Innovation" />
+          </a>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Copyright row -->
     <div class="footer-inner">
       <div class="footer-left">
         <div>
