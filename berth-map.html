@@ -1,0 +1,1019 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Search UK rail berth codes and railway locations, then map them to geolocation coordinates." />
+  <title>Rail Insights - Berth Geolocation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --white: #ffffff;
+      --off: #f5f6f8;
+      --off-2: #eceef2;
+      --blue: #0f52ba;
+      --blue-dark: #0a3d8f;
+      --blue-pale: #eaf1fd;
+      --blue-mid: #c5d8f8;
+      --slate: #0d1b2e;
+      --slate-2: #1c2d42;
+      --text: #0d1b2e;
+      --text-2: #3b4a5c;
+      --text-3: #6b7a8e;
+      --text-4: #9aa4b0;
+      --green: #0a7c4c;
+      --amber: #b45309;
+      --amber-bg: #fffbeb;
+      --border: #dde1e8;
+      --border-2: #c8cdd7;
+      --shadow-xs: 0 1px 2px rgba(13,27,46,0.06);
+      --shadow-sm: 0 2px 8px rgba(13,27,46,0.08);
+      --shadow: 0 8px 28px rgba(13,27,46,0.1);
+      --r: 8px;
+      --r-lg: 14px;
+      --font: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      background: var(--off);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input, select { font: inherit; }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255,255,255,0.96);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(18px);
+    }
+    .nav {
+      max-width: 1440px;
+      margin: 0 auto;
+      height: 68px;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 220px;
+    }
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--blue);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+    .brand-mark svg { width: 24px; height: 24px; }
+    .brand-name {
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+    }
+    .brand-name span { color: var(--blue); }
+    .brand-sub {
+      color: var(--text-4);
+      font: 500 10px/1.2 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .nav-link {
+      height: 38px;
+      padding: 0 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      background: white;
+      color: var(--text-2);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: var(--shadow-xs);
+    }
+    .nav-link.primary {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+    }
+
+    .shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 28px 32px 42px;
+    }
+    .tool-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+    .eyebrow {
+      color: var(--blue);
+      font: 700 11px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: clamp(34px, 4.2vw, 56px);
+      line-height: 1;
+      letter-spacing: -0.03em;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+    .lead {
+      max-width: 760px;
+      color: var(--text-2);
+      font-size: 17px;
+    }
+    .dataset-status {
+      min-width: 270px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      background: white;
+      box-shadow: var(--shadow-xs);
+      padding: 16px;
+    }
+    .dataset-status strong {
+      display: block;
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .status-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--text-3);
+      font: 500 12px/1.5 var(--mono);
+    }
+
+    .search-panel {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .search-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      gap: 12px;
+      padding: 18px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .search-box {
+      position: relative;
+    }
+    .search-box svg {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      color: var(--text-4);
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      height: 48px;
+      border: 1.5px solid var(--border-2);
+      border-radius: var(--r);
+      padding: 0 46px;
+      color: var(--text);
+      outline: none;
+      font-size: 16px;
+      font-weight: 500;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(15,82,186,0.1);
+    }
+    .clear-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-4);
+      cursor: pointer;
+      display: none;
+    }
+    .clear-btn.show { display: grid; place-items: center; }
+    .clear-btn:hover { background: var(--off); color: var(--text); }
+    .mode-tabs {
+      display: inline-grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--border-2);
+      border-radius: var(--r);
+      background: var(--off);
+      padding: 3px;
+      height: 48px;
+    }
+    .mode-tab {
+      min-width: 86px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-3);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .mode-tab.active {
+      background: white;
+      color: var(--blue-dark);
+      box-shadow: var(--shadow-xs);
+    }
+    .geo-toggle {
+      height: 48px;
+      border: 1px solid var(--border-2);
+      border-radius: var(--r);
+      background: white;
+      color: var(--text-2);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .geo-toggle input { width: 16px; height: 16px; accent-color: var(--blue); }
+    .quick-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 18px;
+      flex-wrap: wrap;
+      background: #fbfcfe;
+    }
+    .quick-label {
+      color: var(--text-4);
+      font: 700 10px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-right: 3px;
+    }
+    .quick-chip {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text-2);
+      border-radius: 999px;
+      height: 30px;
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .quick-chip:hover { border-color: var(--blue-mid); color: var(--blue-dark); background: var(--blue-pale); }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 20px;
+      align-items: start;
+    }
+    .results-panel,
+    .detail-panel {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-xs);
+      overflow: hidden;
+    }
+    .panel-head {
+      min-height: 62px;
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .panel-title {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+    .panel-meta {
+      color: var(--text-3);
+      font: 600 12px/1.3 var(--mono);
+      text-align: right;
+    }
+    .results-list {
+      display: grid;
+      gap: 0;
+      max-height: 720px;
+      overflow: auto;
+    }
+    .result-card {
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      background: white;
+      padding: 16px 18px;
+      text-align: left;
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      transition: background 0.12s;
+    }
+    .result-card:hover,
+    .result-card.active { background: var(--blue-pale); }
+    .result-card:last-child { border-bottom: 0; }
+    .result-main {
+      min-width: 0;
+    }
+    .result-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+      margin-bottom: 7px;
+    }
+    .berth-code {
+      font: 700 15px/1 var(--mono);
+      color: var(--blue-dark);
+      letter-spacing: 0.02em;
+    }
+    .result-name {
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      overflow-wrap: anywhere;
+    }
+    .result-sub {
+      color: var(--text-3);
+      font-size: 13px;
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: var(--off);
+      color: var(--text-3);
+      font: 700 11px/1 var(--mono);
+    }
+    .pill.good {
+      background: #e7f7f0;
+      color: var(--green);
+    }
+    .pill.warn {
+      background: var(--amber-bg);
+      color: var(--amber);
+    }
+    .coord-stack {
+      min-width: 134px;
+      text-align: right;
+      color: var(--text-3);
+      font: 600 12px/1.5 var(--mono);
+      align-self: center;
+    }
+    .empty-state,
+    .loading-state,
+    .error-state {
+      min-height: 260px;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      text-align: center;
+      color: var(--text-3);
+    }
+    .error-state { color: #991b1b; }
+
+    .detail-body {
+      padding: 18px;
+    }
+    .detail-kicker {
+      color: var(--text-4);
+      font: 700 10px/1 var(--mono);
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .detail-name {
+      font-size: 24px;
+      line-height: 1.08;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .detail-code {
+      color: var(--text-3);
+      font: 600 13px/1.5 var(--mono);
+      margin-bottom: 18px;
+    }
+    .map-card {
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      background:
+        linear-gradient(90deg, rgba(15,82,186,0.08) 1px, transparent 1px),
+        linear-gradient(rgba(15,82,186,0.08) 1px, transparent 1px),
+        var(--off);
+      background-size: 24px 24px;
+      min-height: 210px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      margin-bottom: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+    .map-card::after {
+      content: '';
+      position: absolute;
+      inset: auto 18px 18px auto;
+      width: 64px;
+      height: 64px;
+      border: 2px solid rgba(15,82,186,0.22);
+      border-radius: 50%;
+    }
+    .map-pin {
+      width: 44px;
+      height: 44px;
+      border-radius: 50% 50% 50% 8px;
+      transform: rotate(-45deg);
+      background: var(--blue);
+      box-shadow: 0 10px 26px rgba(15,82,186,0.28);
+      display: grid;
+      place-items: center;
+    }
+    .map-pin span {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: white;
+      display: block;
+    }
+    .map-copy {
+      position: relative;
+      z-index: 1;
+      color: var(--text);
+      font: 700 16px/1.5 var(--mono);
+      overflow-wrap: anywhere;
+    }
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .field-box {
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 11px 12px;
+      background: #fbfcfe;
+      min-width: 0;
+    }
+    .field-label {
+      color: var(--text-4);
+      font: 700 10px/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .field-value {
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .action-btn {
+      min-height: 42px;
+      border: 1px solid var(--border-2);
+      border-radius: var(--r);
+      background: white;
+      color: var(--text-2);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .action-btn.primary {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+    }
+    .action-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .notice {
+      margin-top: 14px;
+      border: 1px solid #fde68a;
+      border-radius: var(--r);
+      background: var(--amber-bg);
+      color: #78350f;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 100;
+      transform: translateY(64px);
+      opacity: 0;
+      transition: all 0.22s ease;
+      background: var(--slate);
+      color: white;
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      max-width: 320px;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 1100px) {
+      .tool-head,
+      .content-grid { grid-template-columns: 1fr; }
+      .dataset-status { min-width: 0; }
+      .detail-panel { position: static; }
+    }
+    @media (max-width: 760px) {
+      .nav { padding: 0 20px; }
+      .brand { min-width: 0; }
+      .brand-sub { display: none; }
+      .nav-link:not(.primary) { display: none; }
+      .shell { padding: 22px 20px 34px; }
+      .search-row { grid-template-columns: 1fr; }
+      .mode-tabs { width: 100%; }
+      .geo-toggle { justify-content: center; }
+      .result-card { grid-template-columns: 1fr; }
+      .coord-stack { text-align: left; }
+      .field-grid,
+      .action-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <nav class="nav">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 9h16M4 14h16" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path d="M7 5v14M12 5v14M17 5v14" stroke="rgba(255,255,255,0.55)" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span>
+          <span class="brand-name">Rail <span>Insights</span></span>
+          <span class="brand-sub">Berth Geolocation</span>
+        </span>
+      </a>
+      <div class="nav-actions">
+        <a class="nav-link" href="index.html">Main site</a>
+        <a class="nav-link primary" href="index.html#contact">Request pilot access</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section class="tool-head">
+      <div>
+        <div class="eyebrow">Lookup Tool</div>
+        <h1>Berth geolocation map</h1>
+        <p class="lead">Find SMART berth mappings by berth code, TD area, STANOX, TIPLOC, CRS code, or station name.</p>
+      </div>
+      <aside class="dataset-status" aria-live="polite">
+        <strong id="loadState">Loading data</strong>
+        <div class="status-line"><span>Records</span><span id="statRows">-</span></div>
+        <div class="status-line"><span>With coordinates</span><span id="statGeo">-</span></div>
+        <div class="status-line"><span>Source</span><span>SMART + LOC + CORPUS</span></div>
+      </aside>
+    </section>
+
+    <section class="search-panel" aria-label="Berth search">
+      <div class="search-row">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+            <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input id="searchInput" class="search-input" type="search" autocomplete="off" placeholder="Search berth 5021, TD IR, Thurso, PAD, 73000..." />
+          <button id="clearBtn" class="clear-btn" type="button" aria-label="Clear search">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+              <path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="mode-tabs" role="tablist" aria-label="Search mode">
+          <button class="mode-tab active" type="button" data-mode="all">All</button>
+          <button class="mode-tab" type="button" data-mode="berth">Berth</button>
+          <button class="mode-tab" type="button" data-mode="location">Location</button>
+        </div>
+        <label class="geo-toggle">
+          <input id="geoOnly" type="checkbox" />
+          Mapped only
+        </label>
+      </div>
+      <div class="quick-row">
+        <span class="quick-label">Examples</span>
+        <button class="quick-chip" type="button" data-query="5021">5021</button>
+        <button class="quick-chip" type="button" data-query="IR 5021">IR 5021</button>
+        <button class="quick-chip" type="button" data-query="Thurso">Thurso</button>
+        <button class="quick-chip" type="button" data-query="Paddington">Paddington</button>
+        <button class="quick-chip" type="button" data-query="PAD">PAD</button>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <div class="results-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Results</div>
+            <div class="panel-meta" id="queryMeta">Enter a search term</div>
+          </div>
+          <div class="panel-meta" id="resultCount">0 shown</div>
+        </div>
+        <div id="resultsList" class="results-list">
+          <div class="loading-state">Loading berth mapping data...</div>
+        </div>
+      </div>
+
+      <aside class="detail-panel" aria-live="polite">
+        <div class="panel-head">
+          <div class="panel-title">Selected berth</div>
+          <div class="panel-meta" id="detailMeta">No selection</div>
+        </div>
+        <div id="detailBody" class="detail-body">
+          <div class="empty-state">Select a result to view geolocation and railway identifiers.</div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const DATA_URL = 'data/berths-geo.json';
+    const MAX_RESULTS = 150;
+
+    const els = {
+      loadState: document.getElementById('loadState'),
+      statRows: document.getElementById('statRows'),
+      statGeo: document.getElementById('statGeo'),
+      input: document.getElementById('searchInput'),
+      clear: document.getElementById('clearBtn'),
+      geoOnly: document.getElementById('geoOnly'),
+      modes: [...document.querySelectorAll('.mode-tab')],
+      chips: [...document.querySelectorAll('.quick-chip')],
+      results: document.getElementById('resultsList'),
+      resultCount: document.getElementById('resultCount'),
+      queryMeta: document.getElementById('queryMeta'),
+      detail: document.getElementById('detailBody'),
+      detailMeta: document.getElementById('detailMeta'),
+      toast: document.getElementById('toast'),
+    };
+
+    const state = {
+      rows: [],
+      schema: {},
+      mode: 'all',
+      selected: null,
+      filtered: [],
+    };
+
+    const fmt = new Intl.NumberFormat('en-GB');
+
+    function cell(row, key) {
+      return row[state.schema[key]];
+    }
+
+    function text(value) {
+      return String(value ?? '').trim();
+    }
+
+    function norm(value) {
+      return text(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    }
+
+    function compact(value) {
+      return text(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
+    }
+
+    function hasCoordinates(row) {
+      return cell(row, 'latitude') !== null && cell(row, 'longitude') !== null;
+    }
+
+    function rowObject(row) {
+      return Object.fromEntries(Object.keys(state.schema).map(key => [key, cell(row, key)]));
+    }
+
+    function escapeHtml(value) {
+      return text(value).replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[char]));
+    }
+
+    function scoreRow(row, rawQuery, tokens) {
+      const q = norm(rawQuery);
+      const qCompact = compact(rawQuery);
+      const berth = compact(cell(row, 'berth'));
+      const td = compact(cell(row, 'td'));
+      const berthFields = compact([cell(row, 'td'), cell(row, 'berth'), cell(row, 'stanox')].join(' '));
+      const locationFields = norm([
+        cell(row, 'locationName'),
+        cell(row, 'station'),
+        cell(row, 'tiploc'),
+        cell(row, 'crs'),
+        cell(row, 'stanox'),
+        cell(row, 'nlc'),
+      ].join(' '));
+
+      const berthMatch = berthFields.includes(qCompact) || berth.includes(qCompact) || `${td}${berth}`.includes(qCompact);
+      const locationMatch = tokens.every(token => locationFields.includes(token));
+
+      if (state.mode === 'berth' && !berthMatch) return -1;
+      if (state.mode === 'location' && !locationMatch) return -1;
+      if (state.mode === 'all' && !berthMatch && !locationMatch) return -1;
+
+      let score = 0;
+      if (berth === qCompact) score += 120;
+      if (`${td}${berth}` === qCompact) score += 115;
+      if (berth.startsWith(qCompact)) score += 70;
+      if (norm(cell(row, 'locationName')) === q) score += 90;
+      if (norm(cell(row, 'locationName')).startsWith(q)) score += 55;
+      if (compact(cell(row, 'crs')) === qCompact || compact(cell(row, 'tiploc')) === qCompact) score += 75;
+      if (hasCoordinates(row)) score += 10;
+      return score;
+    }
+
+    function runSearch() {
+      const raw = els.input.value.trim();
+      els.clear.classList.toggle('show', raw.length > 0);
+
+      if (!state.rows.length) return;
+      if (!raw) {
+        state.filtered = [];
+        state.selected = null;
+        renderResults();
+        renderDetail();
+        return;
+      }
+
+      const tokens = norm(raw).split(/\s+/).filter(Boolean);
+      const scored = [];
+      for (const row of state.rows) {
+        if (els.geoOnly.checked && !hasCoordinates(row)) continue;
+        const score = scoreRow(row, raw, tokens);
+        if (score >= 0) scored.push([score, row]);
+      }
+      scored.sort((a, b) =>
+        b[0] - a[0] ||
+        text(cell(a[1], 'locationName')).localeCompare(text(cell(b[1], 'locationName'))) ||
+        text(cell(a[1], 'berth')).localeCompare(text(cell(b[1], 'berth')))
+      );
+
+      state.filtered = scored.map(item => item[1]);
+      state.selected = state.filtered[0] || null;
+      renderResults();
+      renderDetail();
+    }
+
+    function renderResults() {
+      const raw = els.input.value.trim();
+      if (!raw) {
+        els.queryMeta.textContent = 'Enter a search term';
+        els.resultCount.textContent = '0 shown';
+        els.results.innerHTML = '<div class="empty-state">Search by berth code, TD area, STANOX, TIPLOC, CRS, or location name.</div>';
+        return;
+      }
+
+      const visible = state.filtered.slice(0, MAX_RESULTS);
+      els.queryMeta.textContent = state.mode === 'all' ? 'All fields' : state.mode[0].toUpperCase() + state.mode.slice(1);
+      els.resultCount.textContent = `${fmt.format(visible.length)} of ${fmt.format(state.filtered.length)} shown`;
+
+      if (!visible.length) {
+        els.results.innerHTML = '<div class="empty-state">No matching berth mappings found.</div>';
+        return;
+      }
+
+      els.results.innerHTML = visible.map((row, index) => {
+        const selected = row === state.selected ? ' active' : '';
+        const lat = cell(row, 'latitude');
+        const lon = cell(row, 'longitude');
+        const coord = hasCoordinates(row)
+          ? `<div>${Number(lat).toFixed(5)}</div><div>${Number(lon).toFixed(5)}</div>`
+          : '<span class="pill warn">No grid ref</span>';
+      const platform = text(cell(row, 'platform')) || 'n/a';
+      const crs = text(cell(row, 'crs'));
+        return `
+          <button class="result-card${selected}" type="button" data-index="${index}">
+            <span class="result-main">
+              <span class="result-title">
+                <span class="berth-code">${escapeHtml(cell(row, 'td'))}:${escapeHtml(cell(row, 'berth'))}</span>
+                <span class="result-name">${escapeHtml(cell(row, 'locationName'))}</span>
+                ${hasCoordinates(row) ? '<span class="pill good">Mapped</span>' : '<span class="pill warn">Unmapped</span>'}
+              </span>
+              <span class="result-sub">
+                <span>SMART berth</span>
+                <span>STANOX ${escapeHtml(cell(row, 'stanox'))}</span>
+                <span>TIPLOC ${escapeHtml(cell(row, 'tiploc') || 'n/a')}</span>
+                ${crs ? `<span>CRS ${escapeHtml(crs)}</span>` : ''}
+                <span>Platform ${escapeHtml(platform)}</span>
+              </span>
+            </span>
+            <span class="coord-stack">${coord}</span>
+          </button>
+        `;
+      }).join('');
+
+      [...els.results.querySelectorAll('.result-card')].forEach(button => {
+        button.addEventListener('click', () => {
+          state.selected = visible[Number(button.dataset.index)];
+          renderResults();
+          renderDetail();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const row = state.selected;
+      if (!row) {
+        els.detailMeta.textContent = 'No selection';
+        els.detail.innerHTML = '<div class="empty-state">Select a result to view geolocation and railway identifiers.</div>';
+        return;
+      }
+
+      const item = rowObject(row);
+      const hasGeo = item.latitude !== null && item.longitude !== null;
+      const lat = hasGeo ? Number(item.latitude).toFixed(6) : '';
+      const lon = hasGeo ? Number(item.longitude).toFixed(6) : '';
+      const mapUrl = hasGeo ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}` : '';
+
+      els.detailMeta.textContent = `${item.td}:${item.berth}`;
+      els.detail.innerHTML = `
+        <div class="detail-kicker">SMART berth</div>
+        <div class="detail-name">${escapeHtml(item.locationName)}</div>
+        <div class="detail-code">TD ${escapeHtml(item.td)} / Berth ${escapeHtml(item.berth)} / STANOX ${escapeHtml(item.stanox)}</div>
+
+        <div class="map-card">
+          <div class="map-pin" aria-hidden="true"><span></span></div>
+          <div class="map-copy">${hasGeo ? `${lat}, ${lon}` : 'No coordinate available'}</div>
+        </div>
+
+        <div class="field-grid">
+          ${field('TIPLOC', item.tiploc)}
+          ${field('CRS', item.crs || 'n/a')}
+          ${field('Platform', item.platform || 'n/a')}
+          ${field('Event', item.event || 'n/a')}
+          ${field('Route', item.route || 'n/a')}
+          ${field('Offset', item.offsetMetres ? `${item.offsetMetres} m` : 'n/a')}
+          ${field('Grid ref', item.easting && item.northing ? `${item.easting}, ${item.northing}` : 'n/a')}
+          ${field('Source date', item.sourceDate || 'n/a')}
+        </div>
+
+        <div class="action-row">
+          <button class="action-btn" id="copyCoords" type="button" ${hasGeo ? '' : 'disabled'}>Copy coordinates</button>
+          <a class="action-btn primary" ${hasGeo ? `href="${mapUrl}" target="_blank" rel="noopener"` : 'aria-disabled="true"'}>Open map</a>
+        </div>
+
+        ${hasGeo ? '' : '<div class="notice">This berth matched railway identifiers, but the joined location row does not include usable coordinates.</div>'}
+      `;
+
+      const copyButton = document.getElementById('copyCoords');
+      if (copyButton && hasGeo) {
+        copyButton.addEventListener('click', () => copyText(`${lat}, ${lon}`, 'Coordinates copied'));
+      }
+    }
+
+    function field(label, value) {
+      return `
+        <div class="field-box">
+          <div class="field-label">${escapeHtml(label)}</div>
+          <div class="field-value">${escapeHtml(value)}</div>
+        </div>
+      `;
+    }
+
+    async function copyText(value, message) {
+      try {
+        await navigator.clipboard.writeText(value);
+        notify(message);
+      } catch {
+        notify(value);
+      }
+    }
+
+    function notify(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add('show');
+      clearTimeout(notify.timer);
+      notify.timer = setTimeout(() => els.toast.classList.remove('show'), 2600);
+    }
+
+    function debounce(fn, wait = 80) {
+      let timer;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), wait);
+      };
+    }
+
+    async function loadData() {
+      try {
+        const response = await fetch(DATA_URL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        state.schema = Object.fromEntries(payload.schema.map((name, index) => [name, index]));
+        state.rows = payload.records;
+        els.loadState.textContent = 'Data ready';
+        els.statRows.textContent = fmt.format(payload.summary.derivedRows);
+        els.statGeo.textContent = fmt.format(payload.summary.rowsWithCoordinates);
+        renderResults();
+      } catch (error) {
+        els.loadState.textContent = 'Data unavailable';
+        els.results.innerHTML = `<div class="error-state">Unable to load ${DATA_URL}. Serve this page over HTTP so the browser can fetch the local dataset.</div>`;
+        console.error(error);
+      }
+    }
+
+    const debouncedSearch = debounce(runSearch);
+    els.input.addEventListener('input', debouncedSearch);
+    els.geoOnly.addEventListener('change', runSearch);
+    els.clear.addEventListener('click', () => {
+      els.input.value = '';
+      els.input.focus();
+      runSearch();
+    });
+    els.modes.forEach(button => {
+      button.addEventListener('click', () => {
+        state.mode = button.dataset.mode;
+        els.modes.forEach(item => item.classList.toggle('active', item === button));
+        runSearch();
+      });
+    });
+    els.chips.forEach(button => {
+      button.addEventListener('click', () => {
+        els.input.value = button.dataset.query;
+        els.input.focus();
+        runSearch();
+      });
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
