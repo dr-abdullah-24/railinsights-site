@@ -449,51 +449,33 @@
     .map-card {
       border: 1px solid var(--border);
       border-radius: var(--r);
-      background:
-        linear-gradient(90deg, rgba(15,82,186,0.08) 1px, transparent 1px),
-        linear-gradient(rgba(15,82,186,0.08) 1px, transparent 1px),
-        var(--off);
-      background-size: 24px 24px;
-      min-height: 210px;
-      padding: 18px;
-      display: grid;
-      align-content: space-between;
+      background: var(--off);
+      height: 260px;
       margin-bottom: 16px;
       overflow: hidden;
       position: relative;
     }
-    .map-card::after {
-      content: '';
-      position: absolute;
-      inset: auto 18px 18px auto;
-      width: 64px;
-      height: 64px;
-      border: 2px solid rgba(15,82,186,0.22);
-      border-radius: 50%;
-    }
-    .map-pin {
-      width: 44px;
-      height: 44px;
-      border-radius: 50% 50% 50% 8px;
-      transform: rotate(-45deg);
-      background: var(--blue);
-      box-shadow: 0 10px 26px rgba(15,82,186,0.28);
-      display: grid;
-      place-items: center;
-    }
-    .map-pin span {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: white;
+    .map-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
       display: block;
     }
+    .map-fallback {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 14px;
+      font-weight: 700;
+    }
     .map-copy {
-      position: relative;
-      z-index: 1;
       color: var(--text);
       font: 700 16px/1.5 var(--mono);
       overflow-wrap: anywhere;
+      margin: -4px 0 16px;
     }
     .field-grid {
       display: grid;
@@ -899,9 +881,14 @@
 
       const item = rowObject(row);
       const hasGeo = item.latitude !== null && item.longitude !== null;
-      const lat = hasGeo ? Number(item.latitude).toFixed(6) : '';
-      const lon = hasGeo ? Number(item.longitude).toFixed(6) : '';
+      const latNum = hasGeo ? Number(item.latitude) : null;
+      const lonNum = hasGeo ? Number(item.longitude) : null;
+      const lat = hasGeo ? latNum.toFixed(6) : '';
+      const lon = hasGeo ? lonNum.toFixed(6) : '';
       const mapUrl = hasGeo ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}` : '';
+      const mapEmbedUrl = hasGeo
+        ? `https://www.openstreetmap.org/export/embed.html?bbox=${(lonNum - 0.018).toFixed(6)}%2C${(latNum - 0.010).toFixed(6)}%2C${(lonNum + 0.018).toFixed(6)}%2C${(latNum + 0.010).toFixed(6)}&layer=mapnik&marker=${lat}%2C${lon}`
+        : '';
 
       els.detailMeta.textContent = `${item.td}:${item.berth}`;
       els.detail.innerHTML = `
@@ -910,9 +897,11 @@
         <div class="detail-code">TD ${escapeHtml(item.td)} / Berth ${escapeHtml(item.berth)} / STANOX ${escapeHtml(item.stanox)}</div>
 
         <div class="map-card">
-          <div class="map-pin" aria-hidden="true"><span></span></div>
-          <div class="map-copy">${hasGeo ? `${lat}, ${lon}` : 'No coordinate available'}</div>
+          ${hasGeo
+            ? `<iframe class="map-frame" title="Map for ${escapeHtml(item.locationName)}" src="${mapEmbedUrl}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`
+            : '<div class="map-fallback">No coordinate available for this berth.</div>'}
         </div>
+        <div class="map-copy">${hasGeo ? `${lat}, ${lon}` : 'No coordinate available'}</div>
 
         <div class="field-grid">
           ${field('TIPLOC', item.tiploc)}
