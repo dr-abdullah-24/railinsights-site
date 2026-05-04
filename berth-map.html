@@ -3,8 +3,50 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="Search UK rail berth codes and railway locations, then map them to geolocation coordinates." />
-  <title>Rail Insights - Berth Geolocation</title>
+
+  <!-- ── Primary SEO ─────────────────────────────────────────── -->
+  <title>Berth Geolocation Map | Rail Insights</title>
+  <meta name="description" content="Search and map UK rail berth codes, STANOX, TIPLOC, CRS codes, and TD areas to precise geolocation coordinates. A free tool by Rail Insights." />
+  <meta name="keywords" content="UK rail berth codes, berth geolocation, STANOX lookup, TIPLOC map, CRS code, TD area, rail berth map, freight rail, Rail Insights" />
+  <meta name="author" content="Rail Insights" />
+  <link rel="canonical" href="https://railinsights.co.uk/berth-map.html" />
+
+  <!-- ── Favicons ──────────────────────────────────────────────── -->
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="icon" href="assets/favicon-16.png" type="image/png" sizes="16x16" />
+  <link rel="apple-touch-icon" href="assets/favicon-180.png" />
+  <meta name="theme-color" content="#0f52ba" />
+
+  <!-- ── Open Graph ─────────────────────────────────────────────── -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://railinsights.co.uk/berth-map.html" />
+  <meta property="og:title" content="Berth Geolocation Map | Rail Insights" />
+  <meta property="og:description" content="Search UK rail berth codes, STANOX, TIPLOC, and CRS codes with precise geolocation mapping. Free tool by Rail Insights." />
+  <meta property="og:image" content="https://railinsights.co.uk/assets/favicon-512.png" />
+  <meta property="og:site_name" content="Rail Insights" />
+  <meta property="og:locale" content="en_GB" />
+
+  <!-- ── Twitter / X card ─────────────────────────────────────── -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Berth Geolocation Map | Rail Insights" />
+  <meta name="twitter:description" content="Search and map UK rail berth codes, STANOX, TIPLOC and CRS codes to geolocation. Free tool by Rail Insights." />
+  <meta name="twitter:image" content="https://railinsights.co.uk/assets/favicon-512.png" />
+
+  <!-- ── Structured data ──────────────────────────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Rail Insights Berth Geolocation Map",
+    "url": "https://railinsights.co.uk/berth-map.html",
+    "description": "Search and map UK rail berth codes, STANOX, TIPLOC, CRS codes, and TD areas to precise geolocation coordinates.",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Web",
+    "isPartOf": { "@type": "WebSite", "name": "Rail Insights", "url": "https://railinsights.co.uk" }
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -74,15 +116,13 @@
       min-width: 220px;
     }
     .brand-mark {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      background: var(--blue);
-      display: grid;
-      place-items: center;
+      height: 40px;
+      width: auto;
       flex: 0 0 auto;
+      display: flex;
+      align-items: center;
     }
-    .brand-mark svg { width: 24px; height: 24px; }
+    .brand-mark img { height: 48px; width: auto; object-fit: contain; display: block; }
     .brand-name {
       font-weight: 800;
       font-size: 17px;
@@ -590,10 +630,7 @@
     <nav class="nav">
       <a class="brand" href="index.html">
         <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M4 9h16M4 14h16" stroke="white" stroke-width="2" stroke-linecap="round"/>
-            <path d="M7 5v14M12 5v14M17 5v14" stroke="rgba(255,255,255,0.55)" stroke-width="1.7" stroke-linecap="round"/>
-          </svg>
+          <img src="assets/Project_logo_header.png" alt="Rail Insights logo" />
         </span>
         <span>
           <span class="brand-name">Rail <span>Insights</span></span>
@@ -601,7 +638,6 @@
         </span>
       </a>
       <div class="nav-actions">
-        <a class="nav-link" href="index.html">Main site</a>
         <a class="nav-link primary" href="index.html#contact">Request pilot access</a>
       </div>
     </nav>
