@@ -3,8 +3,58 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="AI-powered decision intelligence for freight rail capacity planning, operations, and real-time monitoring. railinsights.co.uk" />
-  <title>Rail Insights — Freight Rail Intelligence Platform</title>
+
+  <!-- ── Primary SEO ─────────────────────────────────────────── -->
+  <title>Rail Insights | AI-Powered Freight Rail Intelligence Platform</title>
+  <meta name="description" content="Rail Insights delivers AI-powered decision intelligence for UK freight rail: capacity planning, real-time berth monitoring, delay propagation analysis, and operational optimisation. Join the pilot at railinsights.co.uk." />
+  <meta name="keywords" content="freight rail, rail capacity planning, AI rail intelligence, UK freight rail, berth monitoring, train delay analysis, rail optimisation, modal shift, freight operations, railinsights" />
+  <meta name="author" content="Rail Insights" />
+  <link rel="canonical" href="https://railinsights.co.uk/" />
+
+  <!-- ── Favicons ──────────────────────────────────────────────── -->
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="icon" href="assets/favicon-16.png" type="image/png" sizes="16x16" />
+  <link rel="apple-touch-icon" href="assets/favicon-180.png" />
+  <meta name="theme-color" content="#0f52ba" />
+
+  <!-- ── Open Graph (LinkedIn, Facebook, WhatsApp) ─────────────── -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://railinsights.co.uk/" />
+  <meta property="og:title" content="Rail Insights | AI-Powered Freight Rail Intelligence Platform" />
+  <meta property="og:description" content="AI decision intelligence for UK freight rail: capacity planning, real-time berth maps, delay propagation tracing, and operational optimisation." />
+  <meta property="og:image" content="https://railinsights.co.uk/assets/favicon-512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:site_name" content="Rail Insights" />
+  <meta property="og:locale" content="en_GB" />
+
+  <!-- ── Twitter / X card ─────────────────────────────────────── -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Rail Insights | AI-Powered Freight Rail Intelligence" />
+  <meta name="twitter:description" content="AI-powered capacity planning, berth-level maps, and delay analysis for UK freight rail." />
+  <meta name="twitter:image" content="https://railinsights.co.uk/assets/favicon-512.png" />
+
+  <!-- ── Structured data (Google rich results) ────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Rail Insights",
+    "url": "https://railinsights.co.uk",
+    "description": "AI-powered decision intelligence platform for UK freight rail capacity planning, real-time berth monitoring, and operational optimisation.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP", "availability": "https://schema.org/InStock" },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Rail Insights",
+      "url": "https://railinsights.co.uk",
+      "logo": "https://railinsights.co.uk/assets/favicon-512.png"
+    }
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -78,7 +128,7 @@
 
     /* Logo */
     .logo-wrap { display: flex; align-items: center; gap: 12px; }
-    .logo-svg { width: 36px; height: 36px; flex-shrink: 0; }
+    .logo-svg { height: 48px; width: auto; flex-shrink: 0; object-fit: contain; }
     .logo-name {
       font-family: var(--font);
       font-weight: 700;
@@ -839,20 +889,7 @@
 <header class="header" id="header">
   <nav class="nav">
     <div class="logo-wrap">
-      <!-- Logo SVG — track/signal mark -->
-      <svg class="logo-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="36" height="36" rx="8" fill="#0f52ba"/>
-        <!-- Horizontal rail lines -->
-        <rect x="6" y="15" width="24" height="2.2" rx="1.1" fill="white"/>
-        <rect x="6" y="19" width="24" height="2.2" rx="1.1" fill="rgba(255,255,255,0.45)"/>
-        <!-- Sleepers -->
-        <rect x="8"  y="12" width="2.2" height="12" rx="1" fill="rgba(255,255,255,0.6)"/>
-        <rect x="13" y="12" width="2.2" height="12" rx="1" fill="rgba(255,255,255,0.6)"/>
-        <rect x="18" y="12" width="2.2" height="12" rx="1" fill="rgba(255,255,255,0.6)"/>
-        <rect x="23" y="12" width="2.2" height="12" rx="1" fill="rgba(255,255,255,0.6)"/>
-        <!-- Signal dot -->
-        <circle cx="29" cy="9" r="3.5" fill="#4ade80"/>
-      </svg>
+      <img class="logo-svg" src="assets/Project_logo_header.png" alt="Rail Insights logo" />
       <div>
         <div class="logo-name">Rail <strong>Insights</strong></div>
         <div class="logo-domain">railinsights.co.uk</div>
@@ -1443,7 +1480,7 @@
           <div class="fp-divider"></div>
 
           <a class="fp-logo" href="https://icure.org.uk" target="_blank" rel="noopener">
-            <img src="assets/icure-logo.png"
+            <img src="assets/icure-logo-white.png"
                  alt="iCURE"
                  onerror="this.style.display='none'" />
             <div class="fp-text">
@@ -1456,7 +1493,7 @@
 
  
           <a class="fp-logo" href="https://www.ukri.org" target="_blank" rel="noopener" title="UK Research and Innovation">
-            <img src="assets/ukri-logo.png" alt="UK Research and Innovation" />
+            <img src="assets/ukri-logo-white.png" alt="UK Research and Innovation" />
           </a>
 
         </div>
