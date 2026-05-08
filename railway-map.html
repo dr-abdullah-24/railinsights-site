@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UK Railway Map: Tracks, Stations and Platforms | Rail Insights</title>
+  <meta name="description" content="Interactive UK railway map showing all rail tracks, stations and platforms from live OpenStreetMap data. Search any station and explore the full British rail network." />
+  <link rel="canonical" href="https://railinsights.co.uk/railway-map.html" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/favicon-180.png" />
+  <meta name="theme-color" content="#0f52ba" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+
+  <style>
+    :root {
+      --white:      #ffffff;
+      --off:        #f5f6f8;
+      --blue:       #0f52ba;
+      --blue-dark:  #0a3d8f;
+      --blue-pale:  #eaf1fd;
+      --blue-mid:   #c5d8f8;
+      --slate:      #0d1b2e;
+      --slate-2:    #1c2d42;
+      --text:       #0d1b2e;
+      --text-2:     #3b4a5c;
+      --text-3:     #6b7a8e;
+      --text-4:     #9aa4b0;
+      --green:      #0a7c4c;
+      --green-bg:   #e7f7f0;
+      --amber:      #b45309;
+      --amber-bg:   #fffbeb;
+      --border:     #dde1e8;
+      --shadow-xs:  0 1px 2px rgba(13,27,46,0.06);
+      --shadow-sm:  0 2px 8px rgba(13,27,46,0.08);
+      --shadow:     0 6px 20px rgba(13,27,46,0.1);
+      --r:          8px;
+      --font:       'Outfit', -apple-system, sans-serif;
+      --mono:       'IBM Plex Mono', ui-monospace, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: var(--font);
+      background: var(--off);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ───────────────────────────────────────────────── */
+    .app-header {
+      position: relative;
+      z-index: 500;
+      background: rgba(255,255,255,0.97);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(18px);
+      flex-shrink: 0;
+    }
+    .nav {
+      max-width: 100%;
+      height: 62px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .brand img { height: 44px; width: auto; object-fit: contain; display: block; }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-name { font-weight: 800; font-size: 16px; letter-spacing: -0.02em; color: var(--text); }
+    .brand-name span { color: var(--blue); }
+    .brand-sub { font: 500 9.5px/1.2 var(--mono); color: var(--text-4); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 1px; }
+
+    /* search in header */
+    .header-search {
+      flex: 1;
+      max-width: 420px;
+      position: relative;
+    }
+    .header-search input {
+      width: 100%;
+      height: 38px;
+      padding: 0 14px 0 38px;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      background: var(--off);
+      font: 14px var(--font);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .header-search input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(15,82,186,0.12); background: white; }
+    .header-search input::placeholder { color: var(--text-4); }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text-3); pointer-events: none;
+    }
+    .search-results {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+      background: white; border: 1px solid var(--border); border-radius: var(--r);
+      box-shadow: var(--shadow); z-index: 9999; max-height: 260px; overflow-y: auto;
+      display: none;
+    }
+    .search-results.open { display: block; }
+    .search-item {
+      padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid var(--off); font-size: 14px;
+      transition: background 0.15s;
+    }
+    .search-item:last-child { border-bottom: none; }
+    .search-item:hover { background: var(--blue-pale); }
+    .search-item-icon { color: var(--blue); flex-shrink: 0; }
+    .search-item-name { font-weight: 600; }
+    .search-item-type { font-size: 11px; color: var(--text-4); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
+    .search-empty { padding: 14px; text-align: center; color: var(--text-4); font-size: 13px; }
+
+    .nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .nav-btn {
+      height: 36px; padding: 0 14px; border-radius: var(--r);
+      font: 600 13px var(--font); cursor: pointer; border: 1px solid var(--border);
+      background: white; color: var(--text-2); display: flex; align-items: center; gap: 6px;
+      text-decoration: none; transition: all 0.15s; box-shadow: var(--shadow-xs);
+    }
+    .nav-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-pale); }
+    .nav-btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+    .nav-btn.primary:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
+
+    /* ── MAP SHELL ─────────────────────────────────────────────── */
+    .map-shell {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── SIDE PANEL ────────────────────────────────────────────── */
+    .side-panel {
+      width: 260px;
+      flex-shrink: 0;
+      background: white;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 200;
+    }
+
+    .panel-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--off-2, #eceef2);
+    }
+    .panel-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 10px;
+      font-family: var(--mono);
+    }
+
+    /* Layer toggles */
+    .layer-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid var(--off); cursor: pointer;
+    }
+    .layer-item:last-child { border-bottom: none; }
+    .layer-left { display: flex; align-items: center; gap: 10px; }
+    .layer-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .layer-name { font-size: 13px; font-weight: 500; color: var(--text); }
+    .layer-note { font-size: 11px; color: var(--text-4); font-family: var(--mono); }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 34px; height: 20px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0; border-radius: 20px;
+      background: var(--border); transition: background 0.2s; cursor: pointer;
+    }
+    .toggle-track::after {
+      content: ''; position: absolute; width: 14px; height: 14px;
+      border-radius: 50%; background: white; top: 3px; left: 3px;
+      transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle input:checked + .toggle-track { background: var(--blue); }
+    .toggle input:checked + .toggle-track::after { transform: translateX(14px); }
+
+    /* Stats */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card {
+      background: var(--off); border-radius: var(--r); padding: 10px 12px;
+    }
+    .stat-val { font-size: 20px; font-weight: 800; color: var(--blue); line-height: 1; }
+    .stat-lbl { font-size: 11px; color: var(--text-3); margin-top: 3px; font-weight: 500; }
+
+    /* Legend */
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--text-2); }
+    .legend-line { width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+    .legend-box { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+    .legend-circle { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Zoom hint */
+    .zoom-hint {
+      margin: 12px 16px; padding: 10px 12px;
+      background: var(--amber-bg); border-radius: var(--r);
+      border-left: 3px solid #f59e0b;
+      font-size: 12px; color: var(--amber); line-height: 1.4;
+      display: none;
+    }
+    .zoom-hint.visible { display: block; }
+
+    /* Info box */
+    .info-box {
+      flex: 1; overflow-y: auto; padding: 0;
+    }
+    .info-empty {
+      padding: 20px 16px; text-align: center;
+      color: var(--text-4); font-size: 13px; line-height: 1.6;
+    }
+    .info-empty svg { opacity: 0.3; margin-bottom: 8px; }
+    .station-card {
+      padding: 16px;
+      border-bottom: 1px solid var(--off);
+    }
+    .station-card-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .station-card-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--blue-pale); color: var(--blue);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      padding: 2px 7px; border-radius: 20px; text-transform: uppercase;
+      font-family: var(--mono); margin-bottom: 10px;
+    }
+    .station-card-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-size: 12px; color: var(--text-3); margin-bottom: 4px;
+    }
+    .station-card-row span:last-child { color: var(--text-2); font-weight: 500; text-align: right; max-width: 60%; }
+
+    /* ── MAP ───────────────────────────────────────────────────── */
+    #map {
+      flex: 1;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Leaflet overrides */
+    .leaflet-control-zoom { border: 1px solid var(--border) !important; box-shadow: var(--shadow-sm) !important; }
+    .leaflet-control-zoom a { font-family: var(--font) !important; color: var(--text) !important; }
+    .leaflet-control-attribution { font-size: 10px !important; opacity: 0.7; }
+
+    /* Custom station marker */
+    .station-marker {
+      background: var(--blue);
+      border: 2px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(15,82,186,0.4);
+      transition: transform 0.15s;
+    }
+    .station-marker.halt {
+      background: var(--text-3);
+    }
+    .station-marker:hover { transform: scale(1.3); }
+
+    /* Popup */
+    .leaflet-popup-content-wrapper {
+      border-radius: var(--r) !important;
+      box-shadow: var(--shadow) !important;
+      border: 1px solid var(--border);
+      padding: 0 !important;
+    }
+    .leaflet-popup-content { margin: 0 !important; min-width: 220px; }
+    .leaflet-popup-tip-container { margin-top: -1px; }
+    .popup-inner { padding: 14px 16px; }
+    .popup-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .popup-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+      text-transform: uppercase; font-family: var(--mono); margin-bottom: 10px;
+    }
+    .popup-badge.station { background: var(--blue-pale); color: var(--blue); }
+    .popup-badge.halt { background: var(--off); color: var(--text-3); }
+    .popup-badge.platform { background: var(--green-bg); color: var(--green); }
+    .popup-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-3); margin-bottom: 3px; }
+    .popup-row strong { color: var(--text-2); font-weight: 500; }
+    .popup-divider { border: none; border-top: 1px solid var(--off); margin: 10px 0; }
+    .popup-coords { font-family: var(--mono); font-size: 10px; color: var(--text-4); }
+
+    /* Loading overlay */
+    .loading-bar {
+      position: absolute; top: 0; left: 0; right: 0; height: 3px; z-index: 9999;
+      background: linear-gradient(90deg, var(--blue), #7eb8ff, var(--blue));
+      background-size: 200% 100%;
+      animation: loadbar 1.2s linear infinite;
+      display: none;
+    }
+    .loading-bar.active { display: block; }
+    @keyframes loadbar { 0%{background-position:0%} 100%{background-position:200%} }
+
+    /* Error toast */
+    .toast {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #dc2626; color: white; padding: 10px 18px; border-radius: var(--r);
+      font-size: 13px; font-weight: 600; z-index: 9999; box-shadow: var(--shadow);
+      display: none; white-space: nowrap;
+    }
+    .toast.visible { display: block; }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .side-panel { display: none; }
+      .header-search { max-width: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <img src="assets/Project_logo_header.png" alt="Rail Insights" />
+      <div class="brand-text">
+        <span class="brand-name">Rail <span>Insights</span></span>
+        <span class="brand-sub">UK Railway Map</span>
+      </div>
+    </a>
+
+    <div class="header-search">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input type="text" id="stationSearch" placeholder="Search stations, e.g. Manchester Piccadilly…" autocomplete="off" spellcheck="false" />
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <div class="nav-actions">
+      <a class="nav-btn" href="berth-map.html">Berth Map</a>
+      <a class="nav-btn" href="live-trains.html">Live Trains</a>
+      <a class="nav-btn primary" href="index.html#contact">Join Pilot</a>
+    </div>
+  </nav>
+</header>
+
+<div class="map-shell">
+  <div class="loading-bar" id="loadingBar"></div>
+  <div class="toast" id="toast"></div>
+
+  <!-- Side panel -->
+  <aside class="side-panel">
+
+    <!-- Layers -->
+    <div class="panel-section">
+      <div class="panel-label">Map Layers</div>
+
+      <div class="layer-item" onclick="toggleLayer('railway')">
+        <div class="layer-left">
+          <div class="layer-dot" style="background:#e06c1f"></div>
+          <div>
+            <div class="layer-name">Railway Tracks</div>
+            <div class="layer-note">All UK rail lines</div>
+          </div>
+        </div>
+        <label class="toggle" onclick="event.stopPropagation()">
+          <input type="checkbox" id="toggle-railway" checked onchange="toggleLayer('railway')">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="layer-item" onclick="toggleLayer('stations')">
+        <div class="layer-left">
+          <div class="layer-dot" style="background:var(--blue)"></div>
+          <div>
+            <div class="layer-name">Stations</div>
+            <div class="layer-note">Zoom in to load</div>
+          </div>
+        </div>
+        <label class="toggle" onclick="event.stopPropagation()">
+          <input type="checkbox" id="toggle-stations" checked onchange="toggleLayer('stations')">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="layer-item" onclick="toggleLayer('platforms')">
+        <div class="layer-left">
+          <div class="layer-dot" style="background:var(--green)"></div>
+          <div>
+            <div class="layer-name">Platforms</div>
+            <div class="layer-note">Zoom ≥ 15 to load</div>
+          </div>
+        </div>
+        <label class="toggle" onclick="event.stopPropagation()">
+          <input type="checkbox" id="toggle-platforms" checked onchange="toggleLayer('platforms')">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="panel-section">
+      <div class="panel-label">Loaded in View</div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-val" id="statStations">—</div>
+          <div class="stat-lbl">Stations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="statPlatforms">—</div>
+          <div class="stat-lbl">Platforms</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zoom hint -->
+    <div class="zoom-hint" id="zoomHint">
+      Zoom in further to load stations and platforms from OpenStreetMap.
+    </div>
+
+    <!-- Legend -->
+    <div class="panel-section">
+      <div class="panel-label">Legend</div>
+      <div class="legend-item">
+        <div class="legend-line" style="background:#e06c1f"></div>
+        Railway track
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background:#888; height:2px"></div>
+        Light rail / metro
+      </div>
+      <div class="legend-item">
+        <div class="legend-circle" style="background:var(--blue); border:2px solid white; box-shadow:0 1px 4px rgba(15,82,186,0.3)"></div>
+        Station
+      </div>
+      <div class="legend-item">
+        <div class="legend-circle" style="background:var(--text-3); border:2px solid white;"></div>
+        Halt / minor stop
+      </div>
+      <div class="legend-item">
+        <div class="legend-box" style="background:rgba(10,124,76,0.25); border:1.5px solid var(--green)"></div>
+        Platform
+      </div>
+    </div>
+
+    <!-- Selected feature info -->
+    <div class="info-box" id="infoBox">
+      <div class="info-empty">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="10" width="24" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M10 10V8a6 6 0 0112 0v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="16" cy="18" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <p>Click a station or<br>platform to see details</p>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- Leaflet map -->
+  <div id="map"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ── MAP INIT ────────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [54.0, -2.0],
+  zoom: 6,
+  minZoom: 5,
+  maxZoom: 19,
+  zoomControl: true
+});
+
+map.zoomControl.setPosition('bottomright');
+
+// UK bounds (soft)
+const UK_BOUNDS = L.latLngBounds([49.5, -8.5], [61.0, 2.5]);
+map.setMaxBounds(UK_BOUNDS.pad(0.2));
+
+// ── BASE TILES ──────────────────────────────────────────────────
+const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19
+}).addTo(map);
+
+// ── RAILWAY OVERLAY (OpenRailwayMap) ────────────────────────────
+const railwayLayer = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a>',
+  maxZoom: 19,
+  subdomains: ['a', 'b', 'c'],
+  opacity: 0.85
+}).addTo(map);
+
+// ── DATA LAYERS ─────────────────────────────────────────────────
+const stationsLayer = L.layerGroup().addTo(map);
+const platformsLayer = L.layerGroup().addTo(map);
+
+// ── STATE ───────────────────────────────────────────────────────
+let layerVisible = { railway: true, stations: true, platforms: true };
+let fetchTimer = null;
+let lastFetchZoom = 0;
+let lastFetchBounds = null;
+let stationCache = {};   // osm_id → marker
+let platformCache = {};  // osm_id → polygon
+let searchIndex = [];    // [{name, lat, lng, type}]
+
+// ── HELPERS ─────────────────────────────────────────────────────
+const loadingBar = document.getElementById('loadingBar');
+const toast = document.getElementById('toast');
+const statStations = document.getElementById('statStations');
+const statPlatforms = document.getElementById('statPlatforms');
+const zoomHint = document.getElementById('zoomHint');
+
+function setLoading(on) { loadingBar.classList.toggle('active', on); }
+
+function showToast(msg, duration = 4000) {
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), duration);
+}
+
+function updateStats() {
+  const sCount = Object.keys(stationCache).length;
+  const pCount = Object.keys(platformCache).length;
+  statStations.textContent = sCount > 0 ? sCount : '—';
+  statPlatforms.textContent = pCount > 0 ? pCount : '—';
+}
+
+// ── LAYER TOGGLES ────────────────────────────────────────────────
+function toggleLayer(name) {
+  const cb = document.getElementById('toggle-' + name);
+  layerVisible[name] = cb.checked;
+
+  if (name === 'railway') {
+    if (layerVisible.railway) map.addLayer(railwayLayer);
+    else map.removeLayer(railwayLayer);
+  }
+  if (name === 'stations') {
+    if (layerVisible.stations) map.addLayer(stationsLayer);
+    else map.removeLayer(stationsLayer);
+  }
+  if (name === 'platforms') {
+    if (layerVisible.platforms) map.addLayer(platformsLayer);
+    else map.removeLayer(platformsLayer);
+  }
+}
+
+// ── STATION POPUP HTML ───────────────────────────────────────────
+function stationPopupHTML(props, latlng) {
+  const type = props.railway || 'station';
+  const name = props.name || 'Unnamed station';
+  const network = props.network || props.operator || '';
+  const lines = props['railway:ref'] || props.ref || '';
+  const crs = props['ref:crs'] || props['naptan:AtcoCode'] || '';
+  const electrified = props.electrified ? capitalise(props.electrified) : '';
+  const usage = props.usage || '';
+
+  return `
+    <div class="popup-inner">
+      <div class="popup-name">${escHtml(name)}</div>
+      <span class="popup-badge ${type === 'halt' ? 'halt' : 'station'}">${type === 'halt' ? '🚏 Halt' : '🚉 Station'}</span>
+      ${network ? `<div class="popup-row"><span>Network</span><strong>${escHtml(network)}</strong></div>` : ''}
+      ${lines ? `<div class="popup-row"><span>Ref</span><strong>${escHtml(lines)}</strong></div>` : ''}
+      ${crs ? `<div class="popup-row"><span>CRS</span><strong>${escHtml(crs)}</strong></div>` : ''}
+      ${electrified ? `<div class="popup-row"><span>Electrified</span><strong>${escHtml(electrified)}</strong></div>` : ''}
+      ${usage ? `<div class="popup-row"><span>Usage</span><strong>${escHtml(capitalise(usage))}</strong></div>` : ''}
+      <hr class="popup-divider"/>
+      <div class="popup-coords">${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}</div>
+    </div>`;
+}
+
+// ── PLATFORM POPUP HTML ──────────────────────────────────────────
+function platformPopupHTML(props, latlng) {
+  const name = props.name || 'Platform';
+  const ref = props.ref || '';
+  const surface = props.surface || '';
+  const shelter = props.shelter || '';
+  const covered = props.covered || '';
+  return `
+    <div class="popup-inner">
+      <div class="popup-name">${escHtml(name)}${ref ? ' — Platform ' + escHtml(ref) : ''}</div>
+      <span class="popup-badge platform">🛤 Platform</span>
+      ${surface ? `<div class="popup-row"><span>Surface</span><strong>${escHtml(capitalise(surface))}</strong></div>` : ''}
+      ${shelter ? `<div class="popup-row"><span>Shelter</span><strong>${escHtml(capitalise(shelter))}</strong></div>` : ''}
+      ${covered ? `<div class="popup-row"><span>Covered</span><strong>${escHtml(capitalise(covered))}</strong></div>` : ''}
+      <hr class="popup-divider"/>
+      <div class="popup-coords">${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}</div>
+    </div>`;
+}
+
+// ── SIDE PANEL INFO ──────────────────────────────────────────────
+function showStationInfo(props) {
+  const name = props.name || 'Unnamed station';
+  const type = props.railway || 'station';
+  const network = props.network || props.operator || '—';
+  const crs = props['ref:crs'] || props['naptan:AtcoCode'] || '—';
+  const electrified = props.electrified ? capitalise(props.electrified) : '—';
+  const usage = props.usage ? capitalise(props.usage) : '—';
+
+  document.getElementById('infoBox').innerHTML = `
+    <div class="station-card">
+      <div class="station-card-name">${escHtml(name)}</div>
+      <span class="station-card-badge">${type === 'halt' ? '🚏 Halt' : '🚉 Station'}</span>
+      <div class="station-card-row"><span>Network</span><span>${escHtml(network)}</span></div>
+      <div class="station-card-row"><span>CRS code</span><span>${escHtml(crs)}</span></div>
+      <div class="station-card-row"><span>Electrified</span><span>${escHtml(electrified)}</span></div>
+      <div class="station-card-row"><span>Usage</span><span>${escHtml(usage)}</span></div>
+    </div>`;
+}
+
+// ── OVERPASS FETCH (with fallback endpoints) ─────────────────────
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+];
+
+async function overpassFetch(query) {
+  let lastErr;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'data=' + encodeURIComponent(query)
+      });
+      if (!resp.ok) { lastErr = new Error('HTTP ' + resp.status); continue; }
+      return await resp.json();
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('All Overpass endpoints failed');
+}
+
+// ── FETCH STATIONS ───────────────────────────────────────────────
+async function fetchStations(bounds) {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const bbox = `${sw.lat.toFixed(6)},${sw.lng.toFixed(6)},${ne.lat.toFixed(6)},${ne.lng.toFixed(6)}`;
+  const query = `[out:json][timeout:25][maxsize:8388608];
+(
+  node["railway"="station"](${bbox});
+  node["railway"="halt"](${bbox});
+);
+out body 500;`;
+
+  const data = await overpassFetch(query);
+
+  // Clear markers outside current bounds, keep ones inside
+  const newCache = {};
+  stationsLayer.clearLayers();
+
+  data.elements.forEach(el => {
+    const id = el.id;
+    const latlng = L.latLng(el.lat, el.lon);
+    const props = el.tags || {};
+    const isHalt = props.railway === 'halt';
+    const name = props.name || '';
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="station-marker${isHalt ? ' halt' : ''}"></div>`,
+      iconSize: isHalt ? [8, 8] : [12, 12],
+      iconAnchor: isHalt ? [4, 4] : [6, 6]
+    });
+
+    const marker = L.marker(latlng, { icon })
+      .bindPopup(stationPopupHTML(props, latlng), { maxWidth: 280 })
+      .on('click', () => showStationInfo(props));
+
+    stationsLayer.addLayer(marker);
+    newCache[id] = marker;
+
+    // Build search index entry
+    if (name && !searchIndex.find(s => s.id === id)) {
+      searchIndex.push({ id, name, lat: el.lat, lng: el.lon, type: isHalt ? 'halt' : 'station' });
+    }
+  });
+
+  stationCache = newCache;
+}
+
+// ── FETCH PLATFORMS ──────────────────────────────────────────────
+async function fetchPlatforms(bounds) {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const bbox = `${sw.lat.toFixed(6)},${sw.lng.toFixed(6)},${ne.lat.toFixed(6)},${ne.lng.toFixed(6)}`;
+  const query = `[out:json][timeout:30];
+(
+  way["railway"="platform"](${bbox});
+  way["public_transport"="platform"]["railway"](${bbox});
+);
+out geom;`;
+
+  const data = await overpassFetch(query);
+
+  platformsLayer.clearLayers();
+  const newCache = {};
+
+  data.elements.forEach(el => {
+    if (!el.geometry || el.geometry.length < 2) return;
+    const coords = el.geometry.map(g => [g.lat, g.lon]);
+    const props = el.tags || {};
+    const centroid = coords.reduce((acc, c) => [acc[0]+c[0], acc[1]+c[1]], [0,0]);
+    const centre = L.latLng(centroid[0]/coords.length, centroid[1]/coords.length);
+
+    const poly = L.polygon(coords, {
+      color: '#0a7c4c',
+      fillColor: '#0a7c4c',
+      fillOpacity: 0.2,
+      weight: 1.8,
+      opacity: 0.8
+    })
+    .bindPopup(platformPopupHTML(props, centre), { maxWidth: 260 });
+
+    platformsLayer.addLayer(poly);
+    newCache[el.id] = poly;
+  });
+
+  platformCache = newCache;
+}
+
+// ── MAIN FETCH ORCHESTRATOR ──────────────────────────────────────
+const MIN_ZOOM_STATIONS  = 10;
+const MIN_ZOOM_PLATFORMS = 15;
+
+async function fetchVisible() {
+  const zoom = map.getZoom();
+  const bounds = map.getBounds();
+
+  // Show zoom hint if too far out
+  const needsZoom = zoom < MIN_ZOOM_STATIONS;
+  zoomHint.classList.toggle('visible', needsZoom);
+
+  if (zoom < MIN_ZOOM_STATIONS) {
+    stationsLayer.clearLayers();
+    platformsLayer.clearLayers();
+    stationCache = {};
+    platformCache = {};
+    updateStats();
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const promises = [];
+    if (layerVisible.stations) promises.push(fetchStations(bounds));
+    if (layerVisible.platforms && zoom >= MIN_ZOOM_PLATFORMS) {
+      promises.push(fetchPlatforms(bounds));
+    } else {
+      platformsLayer.clearLayers();
+      platformCache = {};
+    }
+    await Promise.all(promises);
+  } catch (err) {
+    console.error(err);
+    showToast('Could not load map data — please try again shortly.');
+  } finally {
+    setLoading(false);
+    updateStats();
+  }
+}
+
+// ── DEBOUNCED MAP EVENTS ─────────────────────────────────────────
+function scheduleFetch() {
+  clearTimeout(fetchTimer);
+  fetchTimer = setTimeout(fetchVisible, 700);
+}
+
+map.on('moveend', scheduleFetch);
+map.on('zoomend', scheduleFetch);
+
+// Initial fetch
+setTimeout(fetchVisible, 600);
+
+// ── SEARCH ───────────────────────────────────────────────────────
+const searchInput  = document.getElementById('stationSearch');
+const searchResults = document.getElementById('searchResults');
+
+// Search against loaded index, fallback to Nominatim
+async function doSearch(query) {
+  if (!query || query.length < 2) { searchResults.classList.remove('open'); return; }
+
+  const q = query.toLowerCase();
+
+  // Local index first
+  const local = searchIndex
+    .filter(s => s.name.toLowerCase().includes(q))
+    .slice(0, 8);
+
+  if (local.length > 0) {
+    renderSearchResults(local);
+    return;
+  }
+
+  // Fallback: Nominatim for UK railway stations
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `q=${encodeURIComponent(query + ' railway station UK')}&countrycodes=gb&format=json&limit=8&addressdetails=0`;
+    const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    const items = await resp.json();
+    const results = items
+      .filter(i => i.type === 'station' || i.class === 'railway' || i.display_name.toLowerCase().includes('station'))
+      .map(i => ({
+        id: i.osm_id,
+        name: i.display_name.split(',')[0],
+        lat: parseFloat(i.lat),
+        lng: parseFloat(i.lon),
+        type: 'station'
+      }));
+    renderSearchResults(results);
+  } catch {
+    renderSearchResults([]);
+  }
+}
+
+function renderSearchResults(results) {
+  if (results.length === 0) {
+    searchResults.innerHTML = '<div class="search-empty">No stations found</div>';
+  } else {
+    searchResults.innerHTML = results.map(r => `
+      <div class="search-item" data-lat="${r.lat}" data-lng="${r.lng}">
+        <svg class="search-item-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="6" fill="#0f52ba" opacity="0.15"/>
+          <circle cx="7" cy="7" r="3" fill="#0f52ba"/>
+        </svg>
+        <div>
+          <div class="search-item-name">${escHtml(r.name)}</div>
+          <div class="search-item-type">${r.type}</div>
+        </div>
+      </div>`).join('');
+  }
+  searchResults.classList.add('open');
+
+  searchResults.querySelectorAll('.search-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const lat = parseFloat(el.dataset.lat);
+      const lng = parseFloat(el.dataset.lng);
+      map.setView([lat, lng], 15, { animate: true });
+      searchResults.classList.remove('open');
+      searchInput.value = el.querySelector('.search-item-name').textContent;
+    });
+  });
+}
+
+let searchTimer;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => doSearch(searchInput.value.trim()), 350);
+});
+
+searchInput.addEventListener('blur', () => {
+  setTimeout(() => searchResults.classList.remove('open'), 200);
+});
+
+// ── UTILS ────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function capitalise(str) {
+  return str ? str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g,' ') : str;
+}
+</script>
+</body>
+</html>
