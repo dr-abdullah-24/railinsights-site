@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Live Train Map | Rail Insights</title>
+  <meta name="description" content="Real-time UK live train positions from Train Describer (TD) data. All active headcodes on an interactive map with clustering, train-type filters, and headcode search." />
+  <meta name="keywords" content="live UK train map, TD data, headcode tracker, real-time train positions, Rail Insights, UK rail live" />
+  <meta name="author" content="Rail Insights" />
+  <link rel="canonical" href="https://railinsights.co.uk/live-trains.html" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/favicon-180.png" />
+  <meta name="theme-color" content="#0f52ba" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+
+  <style>
+    :root {
+      --white:      #ffffff;
+      --off:        #f5f6f8;
+      --off-2:      #eceef2;
+      --blue:       #0f52ba;
+      --blue-dark:  #0a3d8f;
+      --blue-pale:  #eaf1fd;
+      --blue-mid:   #c5d8f8;
+      --slate:      #0d1b2e;
+      --slate-2:    #1c2d42;
+      --text:       #0d1b2e;
+      --text-2:     #3b4a5c;
+      --text-3:     #6b7a8e;
+      --text-4:     #9aa4b0;
+      --green:      #0a7c4c;
+      --green-bg:   #e7f7f0;
+      --amber:      #b45309;
+      --amber-bg:   #fffbeb;
+      --red:        #dc2626;
+      --border:     #dde1e8;
+      --shadow-xs:  0 1px 2px rgba(13,27,46,0.06);
+      --shadow-sm:  0 2px 8px rgba(13,27,46,0.08);
+      --shadow:     0 6px 20px rgba(13,27,46,0.10);
+      --r:          8px;
+      --font:       'Outfit', -apple-system, sans-serif;
+      --mono:       'IBM Plex Mono', ui-monospace, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: var(--font); background: var(--off); color: var(--text); -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; }
+
+    /* ── HEADER ─────────────────────────────────────────────────── */
+    .app-header {
+      position: relative; z-index: 500;
+      background: rgba(255,255,255,0.97);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(18px);
+      flex-shrink: 0;
+    }
+    .nav {
+      height: 62px; padding: 0 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; flex-shrink: 0; }
+    .brand img { height: 44px; width: auto; object-fit: contain; display: block; }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-name { font-weight: 800; font-size: 16px; letter-spacing: -0.02em; color: var(--text); }
+    .brand-name span { color: var(--blue); }
+    .brand-sub { font: 500 9.5px/1.2 var(--mono); color: var(--text-4); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 1px; }
+
+    /* live indicator in header */
+    .live-badge {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--off); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px 5px 10px;
+      font: 600 12px var(--font); color: var(--text-2);
+      flex-shrink: 0;
+    }
+    .live-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #6b7280; flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .live-dot.connected    { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.2); animation: pulse-green 2s infinite; }
+    .live-dot.reconnecting { background: #d97706; box-shadow: 0 0 0 3px rgba(217,119,6,0.2);  animation: pulse-amber 1s infinite; }
+    .live-dot.disconnected { background: #dc2626; }
+    @keyframes pulse-green { 0%,100%{box-shadow:0 0 0 3px rgba(22,163,74,0.2)} 50%{box-shadow:0 0 0 5px rgba(22,163,74,0.08)} }
+    @keyframes pulse-amber { 0%,100%{box-shadow:0 0 0 3px rgba(217,119,6,0.2)}  50%{box-shadow:0 0 0 5px rgba(217,119,6,0.08)}  }
+    .live-count { font-family: var(--mono); }
+
+    .nav-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .nav-btn {
+      height: 34px; padding: 0 13px; border-radius: var(--r);
+      font: 600 12px var(--font); cursor: pointer; border: 1px solid var(--border);
+      background: white; color: var(--text-2); display: flex; align-items: center; gap: 5px;
+      text-decoration: none; transition: all 0.15s; box-shadow: var(--shadow-xs);
+    }
+    .nav-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-pale); }
+    .nav-btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+    .nav-btn.primary:hover { background: var(--blue-dark); }
+
+    /* ── APP SHELL ───────────────────────────────────────────────── */
+    .app-shell { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+    /* ── SIDE PANEL ──────────────────────────────────────────────── */
+    .side-panel {
+      width: 272px; flex-shrink: 0;
+      background: white; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden; z-index: 200;
+    }
+    .panel-scroll { flex: 1; overflow-y: auto; }
+    .panel-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--off-2);
+    }
+    .panel-label {
+      font: 700 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-3); margin-bottom: 10px;
+    }
+
+    /* ── SEARCH ──────────────────────────────────────────────────── */
+    .search-wrap { position: relative; }
+    .search-icon {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--text-3); pointer-events: none;
+    }
+    .search-input {
+      width: 100%; height: 36px; padding: 0 32px 0 34px;
+      border: 1px solid var(--border); border-radius: var(--r);
+      background: var(--off); font: 13px var(--mono); color: var(--text);
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(15,82,186,0.12); background: white; }
+    .search-input::placeholder { text-transform: none; letter-spacing: 0; color: var(--text-4); font-family: var(--font); }
+    .search-clear {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: var(--text-3);
+      padding: 2px; line-height: 1; border-radius: 50%;
+      display: none; transition: color 0.15s;
+    }
+    .search-clear.show { display: block; }
+    .search-clear:hover { color: var(--red); }
+    .search-hits {
+      margin-top: 7px; font: 11px var(--font); color: var(--text-4);
+      min-height: 14px;
+    }
+
+    /* ── FILTER TOGGLES ─────────────────────────────────────────── */
+    .filter-all-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .filter-all-btn {
+      font: 600 11px var(--font); color: var(--blue); background: none; border: none;
+      cursor: pointer; padding: 0; letter-spacing: 0.02em;
+    }
+    .filter-all-btn:hover { text-decoration: underline; }
+
+    .filter-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--off);
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .filter-item:last-child { border-bottom: none; }
+    .filter-item.off { opacity: 0.45; }
+    .filter-left { display: flex; align-items: center; gap: 9px; }
+    .filter-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .filter-label { font: 500 12px var(--font); color: var(--text); }
+    .filter-right { display: flex; align-items: center; gap: 8px; }
+    .filter-count {
+      font: 600 10px var(--mono); color: var(--text-3);
+      background: var(--off-2); padding: 1px 6px; border-radius: 10px;
+      min-width: 22px; text-align: center;
+    }
+    .filter-toggle { position: relative; width: 30px; height: 17px; flex-shrink: 0; }
+    .filter-toggle input { opacity: 0; width: 0; height: 0; }
+    .filter-track {
+      position: absolute; inset: 0; border-radius: 17px;
+      background: var(--border); transition: background 0.2s; cursor: pointer;
+    }
+    .filter-track::after {
+      content: ''; position: absolute;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: white; top: 2.5px; left: 2.5px;
+      transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    .filter-toggle input:checked + .filter-track::after { transform: translateX(13px); }
+
+    /* ── STATS ───────────────────────────────────────────────────── */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card { background: var(--off); border-radius: var(--r); padding: 10px 12px; }
+    .stat-val { font: 800 22px/1 var(--font); color: var(--blue); }
+    .stat-lbl { font: 500 10px var(--font); color: var(--text-3); margin-top: 3px; letter-spacing: 0.02em; }
+    .stat-updated { margin-top: 8px; font: 400 11px var(--mono); color: var(--text-4); }
+
+    /* ── CONNECTION SECTION ──────────────────────────────────────── */
+    .conn-status-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+    }
+    .conn-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #6b7280; flex-shrink: 0; transition: background 0.3s;
+    }
+    .conn-dot.connected    { background: #16a34a; animation: pulse-green 2s infinite; }
+    .conn-dot.reconnecting { background: #d97706; animation: pulse-amber 1s infinite; }
+    .conn-dot.disconnected { background: var(--red); }
+    .conn-text { font: 600 12px var(--font); color: var(--text-2); flex: 1; }
+
+    /* ── DETAIL PANEL (selected train) ─────────────────────────── */
+    .detail-section { padding: 14px 16px; }
+    .detail-empty { font: 13px var(--font); color: var(--text-4); text-align: center; padding: 10px 0; }
+    .detail-hc {
+      font: 800 28px/1 var(--mono); letter-spacing: 0.06em; margin-bottom: 4px;
+    }
+    .detail-type-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font: 700 10px var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 20px; margin-bottom: 12px;
+    }
+    .detail-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font: 12px var(--font); color: var(--text-3); padding: 4px 0;
+      border-bottom: 1px solid var(--off);
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row span:last-child { font-weight: 600; color: var(--text-2); font-family: var(--mono); font-size: 11px; text-align: right; }
+    .detail-locate-btn {
+      margin-top: 10px; width: 100%; height: 32px;
+      border-radius: var(--r); font: 600 12px var(--font);
+      cursor: pointer; border: 1px solid var(--border);
+      background: white; color: var(--text-2);
+      transition: all 0.15s;
+    }
+    .detail-locate-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-pale); }
+
+    /* ── MAP ────────────────────────────────────────────────────── */
+    #map { flex: 1; height: 100%; z-index: 1; }
+
+    /* Leaflet overrides */
+    .leaflet-control-zoom { border: 1px solid var(--border) !important; box-shadow: var(--shadow-sm) !important; }
+    .leaflet-control-zoom a { font-family: var(--font) !important; color: var(--text) !important; }
+    .leaflet-control-attribution { font-size: 10px !important; opacity: 0.7; }
+    .leaflet-popup-content-wrapper {
+      border-radius: var(--r) !important; box-shadow: var(--shadow) !important;
+      border: 1px solid var(--border); padding: 0 !important;
+    }
+    .leaflet-popup-content { margin: 0 !important; min-width: 200px; }
+
+    /* ── TRAIN PILL MARKERS ─────────────────────────────────────── */
+    .train-pill {
+      display: inline-block;
+      font: 700 10px/1.4 var(--mono);
+      padding: 2px 6px; border-radius: 4px;
+      white-space: nowrap; cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.30);
+      border: 1.5px solid rgba(255,255,255,0.35);
+      letter-spacing: 0.05em;
+      transition: transform 0.1s, box-shadow 0.1s;
+      user-select: none;
+    }
+    .train-pill:hover {
+      transform: scale(1.25) translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+      z-index: 9999 !important;
+    }
+
+    /* ── CLUSTER ICONS ──────────────────────────────────────────── */
+    .train-cluster {
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font: 700 12px var(--font); color: white;
+      box-shadow: 0 2px 8px rgba(15,82,186,0.45);
+      border: 2.5px solid white;
+      background: var(--blue);
+    }
+    .train-cluster.sm  { width: 32px; height: 32px; font-size: 11px; }
+    .train-cluster.md  { width: 40px; height: 40px; font-size: 13px; }
+    .train-cluster.lg  { width: 50px; height: 50px; font-size: 15px; }
+    .train-cluster.xl  { width: 60px; height: 60px; font-size: 17px; box-shadow: 0 3px 12px rgba(15,82,186,0.5); }
+
+    /* ── POPUP ──────────────────────────────────────────────────── */
+    .popup-inner { padding: 13px 15px; }
+    .popup-hc { font: 800 20px/1 var(--mono); letter-spacing: 0.06em; margin-bottom: 3px; }
+    .popup-type-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      font: 700 9px var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 20px; margin-bottom: 10px;
+    }
+    .popup-row { display: flex; justify-content: space-between; font: 12px var(--font); color: var(--text-3); margin-bottom: 4px; }
+    .popup-row strong { color: var(--text-2); font-weight: 600; font-family: var(--mono); font-size: 11px; }
+    .popup-divider { border: none; border-top: 1px solid var(--off); margin: 8px 0; }
+    .popup-coords { font: 10px var(--mono); color: var(--text-4); }
+    .popup-age { font: 10px var(--mono); color: var(--text-4); }
+
+    /* ── TOAST ───────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--slate); color: white; padding: 9px 18px;
+      border-radius: var(--r); font: 600 13px var(--font);
+      z-index: 9999; box-shadow: var(--shadow); display: none; white-space: nowrap;
+    }
+    .toast.show { display: block; }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────────── */
+    @media (max-width: 680px) {
+      .side-panel { display: none; }
+      .live-badge .live-count { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <img src="assets/Project_logo_header.png" alt="Rail Insights" />
+      <div class="brand-text">
+        <span class="brand-name">Rail <span>Insights</span></span>
+        <span class="brand-sub">Live Train Map</span>
+      </div>
+    </a>
+
+    <div class="live-badge">
+      <div class="live-dot disconnected" id="headerDot"></div>
+      <span id="headerStatus">Not connected</span>
+      &nbsp;·&nbsp;
+      <span class="live-count" id="headerCount">0 trains</span>
+    </div>
+
+    <div class="nav-actions">
+      <a class="nav-btn" href="railway-map.html">Railway Map</a>
+      <a class="nav-btn" href="berth-map.html">Berth Map</a>
+      <a class="nav-btn primary" href="index.html#contact">Join Pilot</a>
+    </div>
+  </nav>
+</header>
+
+<div class="app-shell">
+
+  <!-- ── SIDE PANEL ────────────────────────────────────────────── -->
+  <aside class="side-panel">
+    <div class="panel-scroll">
+
+      <!-- Connection status (read-only) -->
+      <div class="panel-section">
+        <div class="conn-status-row">
+          <div class="conn-dot disconnected" id="connDot"></div>
+          <div class="conn-text" id="connText">Connecting…</div>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="panel-section">
+        <div class="panel-label">Search headcode</div>
+        <div class="search-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <input class="search-input" id="searchInput" type="text" placeholder="e.g. 1A23 or 6E…" maxlength="6" autocomplete="off" spellcheck="false" />
+          <button class="search-clear" id="searchClear" title="Clear">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="search-hits" id="searchHits"></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="panel-section">
+        <div class="filter-all-row">
+          <div class="panel-label" style="margin-bottom:0">Train Types</div>
+          <div style="display:flex;gap:8px">
+            <button class="filter-all-btn" onclick="setAllFilters(true)">All on</button>
+            <button class="filter-all-btn" onclick="setAllFilters(false)">All off</button>
+          </div>
+        </div>
+        <div id="filterList"></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="panel-section">
+        <div class="panel-label">Statistics</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-val" id="statVisible">0</div>
+            <div class="stat-lbl">Visible</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="statTotal">0</div>
+            <div class="stat-lbl">Tracked</div>
+          </div>
+        </div>
+        <div class="stat-updated" id="statUpdated">Waiting for data…</div>
+      </div>
+
+      <!-- Selected train detail -->
+      <div class="detail-section" id="detailSection">
+        <div class="panel-label">Selected train</div>
+        <div class="detail-empty" id="detailEmpty">Click a marker on the map</div>
+        <div id="detailBody" style="display:none"></div>
+      </div>
+
+    </div><!-- /panel-scroll -->
+  </aside>
+
+  <!-- ── MAP ───────────────────────────────────────────────────── -->
+  <div id="map"></div>
+
+</div><!-- /app-shell -->
+
+<div class="toast" id="toast"></div>
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+<script src="data/berth-locations.js"></script>
+<script>
+'use strict';
+
+// ── Train type config ────────────────────────────────────────────────────────
+const TYPES = {
+  express:   { label: 'Express Passenger',   color: '#0f52ba', bg: '#eaf1fd', chars: '1'    },
+  passenger: { label: 'Stopping Passenger',  color: '#0891b2', bg: '#ecfeff', chars: '2'    },
+  ecs:       { label: 'Empty Coaching Stock', color: '#7c3aed', bg: '#f5f3ff', chars: '5'   },
+  loco:      { label: 'Light Loco',           color: '#d97706', bg: '#fffbeb', chars: '6'   },
+  freight:   { label: 'Freight',              color: '#059669', bg: '#f0fdf4', chars: '4789' },
+  parcels:   { label: 'Parcels',              color: '#db2777', bg: '#fdf2f8', chars: '3'   },
+  special:   { label: 'Special / Other',      color: '#6b7280', bg: '#f9fafb', chars: '0'   },
+};
+const TYPE_KEYS = Object.keys(TYPES);
+
+function getType(hc) {
+  if (!hc) return 'special';
+  const c = hc[0];
+  if (c === '1') return 'express';
+  if (c === '2') return 'passenger';
+  if (c === '3') return 'parcels';
+  if ('4789'.includes(c)) return 'freight';
+  if (c === '5') return 'ecs';
+  if (c === '6') return 'loco';
+  return 'special';
+}
+
+// ── Build berth lookup ───────────────────────────────────────────────────────
+const berthLookup = new Map(); // "TD:berth" → { lat, lon, name }
+if (window.BERTH_DATA) {
+  for (const loc of BERTH_DATA.locations) {
+    for (const b of (loc.b || [])) {
+      const key = `${loc.td}:${b}`;
+      if (!berthLookup.has(key)) berthLookup.set(key, { lat: loc.lat, lon: loc.lon, name: loc.n });
+    }
+  }
+}
+
+// ── Leaflet map ──────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [53.2, -1.5], zoom: 7, zoomControl: true });
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19
+}).addTo(map);
+
+// Cluster group
+const clusterGroup = L.markerClusterGroup({
+  maxClusterRadius: 45,
+  disableClusteringAtZoom: 13,
+  spiderfyOnMaxZoom: true,
+  showCoverageOnHover: false,
+  animate: true,
+  iconCreateFunction(cluster) {
+    const n = cluster.getChildCount();
+    let cls, sz;
+    if      (n <  10) { cls = 'sm'; sz = 32; }
+    else if (n <  50) { cls = 'md'; sz = 40; }
+    else if (n < 200) { cls = 'lg'; sz = 50; }
+    else              { cls = 'xl'; sz = 60; }
+    return L.divIcon({
+      html: `<div class="train-cluster ${cls}">${n > 999 ? '999+' : n}</div>`,
+      className: '',
+      iconSize:   [sz, sz],
+      iconAnchor: [sz / 2, sz / 2],
+    });
+  }
+});
+map.addLayer(clusterGroup);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let trainData    = {};           // headcode → server train info
+const trainMk    = new Map();    // headcode → L.Marker
+const inCluster  = new Set();    // headcodes currently rendered in clusterGroup
+const activeFilters = new Set(TYPE_KEYS);
+let searchQuery  = '';
+let selectedHc   = null;
+let ws           = null;
+let reconnTimer  = null;
+let reconnDelay  = 2000;
+let lastUpdate   = null;
+
+// ── Marker factory ───────────────────────────────────────────────────────────
+function makeIcon(hc, type) {
+  const cfg = TYPES[type] || TYPES.special;
+  return L.divIcon({
+    html: `<div class="train-pill" style="background:${cfg.color};color:#fff">${hc}</div>`,
+    className: '',
+    iconSize:   null,
+    iconAnchor: [20, 9],
+  });
+}
+
+function buildPopup(hc, t) {
+  const cfg  = TYPES[t.type] || TYPES.special;
+  const time = t.ts ? new Date(t.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+  const ago  = t.ts ? Math.round((Date.now() - t.ts) / 1000) : null;
+  const agoStr = ago !== null ? (ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`) : '—';
+  return `
+    <div class="popup-inner">
+      <div class="popup-hc" style="color:${cfg.color}">${hc}</div>
+      <div class="popup-type-tag" style="background:${cfg.bg};color:${cfg.color}">${cfg.label}</div>
+      <div class="popup-row"><span>Location</span><strong>${esc(t.name || 'Unknown')}</strong></div>
+      <div class="popup-row"><span>TD Area</span><strong>${esc(t.td || '—')}</strong></div>
+      <div class="popup-row"><span>Berth</span><strong>${esc(t.berth || '—')}</strong></div>
+      <hr class="popup-divider">
+      <div class="popup-age">Last seen ${time} (${agoStr})</div>
+      <div class="popup-coords">${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}</div>
+    </div>`;
+}
+
+// ── Visibility logic ─────────────────────────────────────────────────────────
+function shouldShow(hc, t) {
+  if (!activeFilters.has(t.type)) return false;
+  if (searchQuery && !hc.startsWith(searchQuery)) return false;
+  return true;
+}
+
+function setMarkerVisibility(hc, show) {
+  const mk = trainMk.get(hc);
+  if (!mk) return;
+  const vis = inCluster.has(hc);
+  if (show && !vis) { clusterGroup.addLayer(mk); inCluster.add(hc); }
+  else if (!show && vis) { clusterGroup.removeLayer(mk); inCluster.delete(hc); }
+}
+
+// ── State update from WebSocket ──────────────────────────────────────────────
+function applyState(newTrains) {
+  // Remove headcodes that disappeared
+  for (const hc of trainMk.keys()) {
+    if (!newTrains[hc]) {
+      const mk = trainMk.get(hc);
+      if (inCluster.has(hc)) { clusterGroup.removeLayer(mk); inCluster.delete(hc); }
+      trainMk.delete(hc);
+    }
+  }
+
+  // Add / update
+  for (const [hc, t] of Object.entries(newTrains)) {
+    if (!t.lat || !t.lon) continue;
+
+    if (trainMk.has(hc)) {
+      const mk = trainMk.get(hc);
+      mk.setLatLng([t.lat, t.lon]);
+      mk.setPopupContent(buildPopup(hc, t));
+      setMarkerVisibility(hc, shouldShow(hc, t));
+    } else {
+      const mk = L.marker([t.lat, t.lon], {
+        icon: makeIcon(hc, t.type),
+        zIndexOffset: zOrder(t.type),
+      }).bindPopup('', { maxWidth: 260 });
+
+      mk.on('popupopen', () => {
+        mk.setPopupContent(buildPopup(hc, t));
+        selectTrain(hc, t);
+      });
+
+      trainMk.set(hc, mk);
+      if (shouldShow(hc, t)) { clusterGroup.addLayer(mk); inCluster.add(hc); }
+    }
+  }
+
+  trainData = newTrains;
+  lastUpdate = new Date();
+  refreshUI();
+}
+
+// ── Apply filters / search (no full rebuild needed) ──────────────────────────
+function applyFilters() {
+  for (const [hc, t] of Object.entries(trainData)) {
+    setMarkerVisibility(hc, shouldShow(hc, t));
+  }
+  refreshUI();
+}
+
+// ── UI updates ───────────────────────────────────────────────────────────────
+function zOrder(type) {
+  return { express: 800, ecs: 600, loco: 400, passenger: 200, parcels: 100, freight: 0, special: 0 }[type] ?? 0;
+}
+
+function refreshUI() {
+  const total   = Object.keys(trainData).length;
+  const visible = inCluster.size;
+
+  document.getElementById('statTotal').textContent   = total;
+  document.getElementById('statVisible').textContent = visible;
+  document.getElementById('headerCount').textContent = `${total} train${total !== 1 ? 's' : ''}`;
+
+  if (lastUpdate) {
+    document.getElementById('statUpdated').textContent =
+      'Updated ' + lastUpdate.toLocaleTimeString('en-GB');
+  }
+
+  // Update filter counts
+  const counts = {};
+  for (const t of Object.values(trainData)) counts[t.type] = (counts[t.type] || 0) + 1;
+  for (const k of TYPE_KEYS) {
+    const el = document.getElementById(`fc-${k}`);
+    if (el) el.textContent = counts[k] || 0;
+  }
+
+  // Search hits
+  const hitsEl = document.getElementById('searchHits');
+  if (searchQuery) {
+    const n = Object.keys(trainData).filter(hc => hc.startsWith(searchQuery)).length;
+    hitsEl.textContent = n ? `${n} match${n !== 1 ? 'es' : ''} in tracked data` : 'No matches';
+  } else {
+    hitsEl.textContent = '';
+  }
+}
+
+function selectTrain(hc, t) {
+  selectedHc = hc;
+  const cfg = TYPES[t.type] || TYPES.special;
+  const time = t.ts ? new Date(t.ts).toLocaleTimeString('en-GB') : '—';
+
+  document.getElementById('detailEmpty').style.display = 'none';
+  const body = document.getElementById('detailBody');
+  body.style.display = 'block';
+  body.innerHTML = `
+    <div class="detail-hc" style="color:${cfg.color}">${hc}</div>
+    <div class="detail-type-badge" style="background:${cfg.bg};color:${cfg.color}">${cfg.label}</div>
+    <div class="detail-row"><span>Location</span><span>${esc(t.name || 'Unknown')}</span></div>
+    <div class="detail-row"><span>TD Area</span><span>${esc(t.td || '—')}</span></div>
+    <div class="detail-row"><span>Berth</span><span>${esc(t.berth || '—')}</span></div>
+    <div class="detail-row"><span>Last seen</span><span>${time}</span></div>
+    <div class="detail-row"><span>Coordinates</span><span>${t.lat.toFixed(4)}, ${t.lon.toFixed(4)}</span></div>
+    <button class="detail-locate-btn" onclick="flyTo('${hc}')">
+      &#8982; Centre map on this train
+    </button>
+  `;
+}
+
+function flyTo(hc) {
+  const mk = trainMk.get(hc);
+  if (!mk) return;
+  map.flyTo(mk.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.8 });
+  mk.openPopup();
+}
+
+// ── Connection management ────────────────────────────────────────────────────
+function setConnState(state, text) {
+  ['connDot', 'headerDot'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'conn-dot ' + state;
+    if (id === 'headerDot') el.className = 'live-dot ' + state;
+  });
+  document.getElementById('connText').textContent = text;
+  document.getElementById('headerStatus').textContent = text;
+}
+
+const WS_URL = (() => {
+  const h = location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1' || h === '') return 'ws://localhost:3000';
+  return 'wss://YOUR-APP.railway.app'; // replace after Railway deployment
+})();
+
+function connect() {
+  setConnState('reconnecting', 'Connecting…');
+
+  try { ws = new WebSocket(WS_URL); }
+  catch (e) { onFail(); return; }
+
+  let confirmed = false; // only go "Live" after first real data packet
+
+  ws.onopen = () => {
+    // TCP connected but don't trust it yet — wait for actual train data
+    setConnState('reconnecting', 'Waiting for data…');
+  };
+
+  ws.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'state') {
+        if (!confirmed) {
+          confirmed = true;
+          reconnDelay = 2000;
+          setConnState('connected', 'Live');
+        }
+        applyState(msg.trains || {});
+      }
+    } catch {}
+  };
+
+  ws.onclose = onFail;
+  ws.onerror = () => { try { ws.close(); } catch {} };
+}
+
+function onFail() {
+  setConnState('disconnected', 'Disconnected');
+  reconnTimer = setTimeout(connect, reconnDelay);
+  reconnDelay = Math.min(reconnDelay * 1.5, 30000);
+}
+
+// ── Filter UI ────────────────────────────────────────────────────────────────
+function buildFilterUI() {
+  const list = document.getElementById('filterList');
+  list.innerHTML = TYPE_KEYS.map(k => {
+    const cfg = TYPES[k];
+    return `
+      <div class="filter-item" id="fi-${k}" onclick="toggleFilter('${k}')">
+        <div class="filter-left">
+          <div class="filter-swatch" style="background:${cfg.color}"></div>
+          <div class="filter-label">${cfg.label}</div>
+        </div>
+        <div class="filter-right">
+          <span class="filter-count" id="fc-${k}">0</span>
+          <label class="filter-toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" id="ft-${k}" checked onchange="toggleFilter('${k}')">
+            <span class="filter-track" style="--on-color:${cfg.color}"></span>
+          </label>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Colour the toggle-on state per type
+  document.querySelectorAll('.filter-track').forEach((el, i) => {
+    const cfg = TYPES[TYPE_KEYS[i]];
+    el.style.setProperty('--on-color', cfg.color);
+  });
+  // Make checked toggles use type colour
+  const style = document.createElement('style');
+  TYPE_KEYS.forEach(k => {
+    const cfg = TYPES[k];
+    style.textContent += `#ft-${k}:checked + .filter-track { background: ${cfg.color}; }\n`;
+  });
+  document.head.appendChild(style);
+}
+
+function toggleFilter(k) {
+  const cb = document.getElementById(`ft-${k}`);
+  const checked = cb.checked;
+  const item = document.getElementById(`fi-${k}`);
+  item.classList.toggle('off', !checked);
+  if (checked) activeFilters.add(k); else activeFilters.delete(k);
+  applyFilters();
+}
+
+function setAllFilters(on) {
+  for (const k of TYPE_KEYS) {
+    const cb = document.getElementById(`ft-${k}`);
+    cb.checked = on;
+    document.getElementById(`fi-${k}`).classList.toggle('off', !on);
+    if (on) activeFilters.add(k); else activeFilters.delete(k);
+  }
+  applyFilters();
+}
+
+// ── Search ───────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value.trim().toUpperCase();
+  searchClear.classList.toggle('show', searchQuery.length > 0);
+  applyFilters();
+});
+
+searchClear.addEventListener('click', () => {
+  searchInput.value = '';
+  searchQuery = '';
+  searchClear.classList.remove('show');
+  applyFilters();
+  searchInput.focus();
+});
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, ms = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+buildFilterUI();
+// Auto-connect on load
+connect();
+</script>
+</body>
+</html>
