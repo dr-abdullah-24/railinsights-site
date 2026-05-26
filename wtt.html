@@ -622,6 +622,15 @@ function splitLine(line) {
 
 // ── Shared service finaliser ─────────────────────────────────────
 function finalise(s) {
+  // Remove duplicate stops introduced by the same service appearing in multiple WTT books
+  const seen = new Set();
+  s.stops = s.stops.filter(st => {
+    const key = `${st.location}|${st.arr}|${st.dep}|${st.pass_time}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   s.stops.sort((a,b) => {
     let ta=t2m(stopTime(a)), tb=t2m(stopTime(b));
     if (ta==null&&tb==null) return 0;
