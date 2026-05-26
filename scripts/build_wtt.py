@@ -11,8 +11,10 @@ import json
 import sys
 from pathlib import Path
 
-SRC = Path('data/wtt_stops.csv')
-OUT = Path('data/wtt_data.json')
+# Use the full multi-book WTT if available, fall back to the local copy
+_FULL = Path(r'C:\Users\LOQ\Downloads\01. May 2026 timetable - separate PDFs\wtt_stops.csv')
+SRC   = _FULL if _FULL.exists() else Path('data/wtt_stops.csv')
+OUT   = Path('data/wtt_data.json')
 
 def main():
     if not SRC.exists():
@@ -59,8 +61,12 @@ def main():
                     'do': row.get('dates_of_operation', '').strip(),
                     'rd': row.get('running_days', '').strip(),
                     'sc': row.get('service_code', '').strip(),
+                    'bk': set(),
                     's':  [],
                 }
+            book = row.get('wtt_book', '').strip()
+            if book:
+                services[uid]['bk'].add(book)
 
             # Stop tuple: [loc_idx, platform, arr, dep, pass_time]
             # Omit trailing empty strings to save space
@@ -77,6 +83,10 @@ def main():
             services[uid]['s'].append(stop)
 
     print(f'\nParsed {len(services):,} services, {len(locs_list):,} locations.')
+
+    # Convert book sets to sorted lists for JSON serialisation
+    for svc in services.values():
+        svc['bk'] = sorted(svc['bk'])
 
     data = {'locs': locs_list, 'svcs': list(services.values())}
 

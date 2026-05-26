@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>WTT June–December 2026 · Rail Insights</title>
-  <meta name="description" content="Network Rail Working Timetable CB01 June–December 2026. All movements including freight, ECS and depot workings. For rail industry professionals." />
+  <meta name="description" content="Network Rail Working Timetable June–December 2026 — all 249 books. All movements including freight, ECS and depot workings. For rail industry professionals." />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="icon" href="favicon.ico" sizes="any" />
   <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
@@ -287,14 +287,14 @@
   <!-- TOOL HEAD -->
   <section class="tool-head">
     <div>
-      <div class="eyebrow">Network Rail · CB01 · Industry Document</div>
+      <div class="eyebrow">Network Rail · Working Timetable · Industry Document</div>
       <h1>Working Timetable</h1>
       <p class="lead">WTT June–December 2026. All scheduled movements including express passenger, empty coaching stock, freight, test trains and depot workings.</p>
     </div>
     <aside class="validity-card" aria-live="polite">
       <div class="vc-label">Timetable Validity</div>
       <div class="vc-range">18 May 2026 – 13 Dec 2026</div>
-      <div class="vc-until">Book: CB01 &nbsp;·&nbsp; Jun–Dec 2026</div>
+      <div class="vc-until" id="vcBooks">All Books · Jun–Dec 2026</div>
       <hr class="vc-divider" />
       <div class="stat-row">
         <div class="stat-item"><span class="stat-n" id="statSvc">—</span><span class="stat-l">Services</span></div>
@@ -360,6 +360,10 @@
         <select class="f-select" id="fToc" style="min-width:155px;"><option value="">All operators</option></select>
       </div>
       <div class="fg-inline">
+        <span class="fg-title">Book / Route</span>
+        <select class="f-select" id="fBook" style="min-width:220px;"><option value="">All books</option></select>
+      </div>
+      <div class="fg-inline">
         <span class="fg-title">Sort</span>
         <button class="sort-btn on" data-sort="time">Depart</button>
         <button class="sort-btn" data-sort="duration">Duration</button>
@@ -380,7 +384,7 @@
       <div>
         <div class="loading-spin"></div>
         <div class="loading-txt">Loading WTT data…</div>
-        <div class="loading-sub">Parsing CB01 Working Timetable · Jun–Dec 2026</div>
+        <div class="loading-sub">Loading Working Timetable · Jun–Dec 2026</div>
       </div>
     </div>
   </div>
@@ -405,6 +409,131 @@ const TOC_NAMES = {
   TL:'Thameslink', HX:'Heathrow Express', GA:'Greater Anglia',
   GC:'Grand Central', HT:'Hull Trains', SW:'South Western Railway',
   AW:'Transport for Wales',
+};
+
+const BOOK_REGIONS = [
+  {p:'CB',l:'CB — WCML South (Euston–Rugby)'},
+  {p:'CC',l:'CC — West Midlands & Wales'},
+  {p:'CE',l:'CE — WCML North & Liverpool'},
+  {p:'CF',l:'CF — North Wales & Merseyrail'},
+  {p:'CG',l:'CG — Chiltern'},
+  {p:'CJ',l:'CJ — Midland Main Line'},
+  {p:'CL',l:'CL — Manchester & North West'},
+  {p:'CM',l:'CM — Manchester Piccadilly Area'},
+  {p:'CY',l:'CY — Freight: WCML Corridor'},
+  {p:'CZ',l:'CZ — Freight: WCML North & Liverpool'},
+  {p:'EL',l:'EL — Elizabeth Line'},
+  {p:'GA',l:'GA — ScotRail: Glasgow'},
+  {p:'GC',l:'GC — ScotRail: Edinburgh & North'},
+  {p:'GF',l:'GF — Freight: Scotland'},
+  {p:'LA',l:'LA — Greater Anglia'},
+  {p:'LB',l:'LB — Anglia North'},
+  {p:'LC',l:'LC — London: c2c & Overground'},
+  {p:'LD',l:'LD — Freight: Anglia'},
+  {p:'PA',l:'PA — GWR: London'},
+  {p:'PB',l:'PB — GWR: West & Wales'},
+  {p:'PC',l:'PC — GWR: South West'},
+  {p:'PD',l:'PD — TfW: Cardiff Valleys'},
+  {p:'PF',l:'PF — Freight: Western'},
+  {p:'WA',l:'WA — Southeastern: Ashford'},
+  {p:'WB',l:'WB — Southeastern: Chatham'},
+  {p:'WC',l:'WC — Southeastern: Charing Cross'},
+  {p:'WE',l:'WE — Southern: Brighton'},
+  {p:'WF',l:'WF — Southern: Victoria'},
+  {p:'WG',l:'WG — South Western Railway'},
+  {p:'WH',l:'WH — SWR: Waterloo'},
+  {p:'WK',l:'WK — Freight: South'},
+  {p:'YA',l:'YA — East Coast Main Line'},
+  {p:'YD',l:'YD — North East England'},
+  {p:'YE',l:'YE — Yorkshire'},
+  {p:'YG',l:'YG — Yorkshire: Leeds'},
+  {p:'YH',l:'YH — Freight: ECML & Yorkshire'},
+];
+
+const BOOK_META = {
+  CB01:'Euston – Watford Jn (Main)',CB02:'Watford Jn – Rugby',CB03:'Rugby – Basford Hall Jn',
+  CB04:'Derby & Stone – Congleton',CB05:'Euston – Watford Jn (DC)',CB06:'Watford Jn – St Albans Abbey',CB07:'Bletchley – Bedford',
+  CC01:'Chesterfield – Birmingham',CC02:'Lichfield – Redditch',CC03:'Rugby – Stafford',
+  CC04:'Stechford – Bushbury Jn',CC05:'Wolverhampton – Wrexham & Nantwich',CC06:'Shrewsbury – Aberystwyth & Pwllheli',
+  CE01:'Madeley – Balshaw Lane',CE02:'Balshaw Lane – Gretna Jn',CE03:'Weaver Jn – Liverpool Lime Street',
+  CE04:'Manchester Oxford Road – Hunts Cross',CE05:'Carnforth – Carlisle via Barrow',CE06:'Skipton – Carnforth & Carlisle',
+  CF01:'Crewe – Wrexham & Holyhead',CF02:'Llandudno – Blaenau Ffestiniog',CF04:'Wrexham – Bidston',
+  CF05:'West Kirby/Chester – Liverpool',CF06:'Helsby – Ellesmere Port',CF07:'Liverpool – Southport/Kirkby/Ormskirk',
+  CG01:'Marylebone – Aylesbury & Banbury',CG02:'Heyford – Birmingham',CG03:'Stratford-upon-Avon – Tyseley',
+  CG04:'Birmingham – Hartlebury',CG05:'Stourbridge Jn – Town',
+  CJ01:'St Pancras – Bedford',CJ02A:'Bedford – Syston South Jn',CJ02B:'Syston South Jn – Nottingham & Derby',
+  CJ03:'Newark – Mansfield & Chesterfield',CJ04:'Birmingham – Peterborough',
+  CL01:'Manchester Victoria – Bolton/Wigan/Southport',CL02:'Ordsall Lane – Liverpool Lime Street',
+  CL03:'Manchester Victoria – Rochdale & Stalybridge',CL04:'Stockport – Guide Bridge',
+  CL06:'Preston/Bolton – Burnley/Colne/Ormskirk',CL07:'Preston – Blackpool',
+  CM01:'Kidsgrove/Crewe – Manchester Airport',CM02:'Manchester Airport – Piccadilly',
+  CM03:'Sheffield/Marple – Manchester Piccadilly',CM04:'Hadfield & Glossop – Hyde Jn',
+  CY01:'Carlton Road Jn – Sharnbrook Jn',CY02:'Sharnbrook Jn – Sileby Jn',CY03:'Syston – Chesterfield via Derby',
+  CY04:'Trent – Chesterfield via Toton',CY05:'Wigston – Coventry & Water Orton',CY06:'Ketton – Syston Jns',
+  CY07:'Knighton Jn – Burton Leicester Jn',CY08:'Trent – Bottesford & Newark',CY09A:'Derby – Water Orton',
+  CY09B:'Water Orton – Barnt Green',CY10:'North Stafford Jn – Congleton',CY11:'Heyford – Landor Street Jn',
+  CY12:'Neasden – Claydon & Aynho Jn',CY13:'Rugby – Stafford via Wolverhampton',CY14:'Crewe & Wrexham – Wolverhampton',
+  CY15:'Galton Jn – Hartlebury',CY16:'Camden Road Jn – Tring',CY17:'Tring – Rugby',
+  CY18:'Rugby – Basford Hall Jn',CY19:'Bletchley – Bedford',
+  CZ01:'Madeley – Acton Grange Jn',CZ02:'Acton Grange Jn – Balshaw Lane',CZ03:'Balshaw Lane – Gretna Jn',
+  CZ04:'Hellifield – Carlisle',CZ05:'Crewe – Trafford Park',CZ06A:'Dore West Jn – Briggs Sdgs',
+  CZ06B:'Briggs Sdgs – Ardwick Jn',CZ07:'Stockport – Mickle Trafford',CZ08:'Manchester Victoria – Huyton',
+  CZ09:'Weaver Jn – Edge Hill & Seaforth',CZ10:'Manchester Victoria – Diggle Jn',CZ11:'Crewe – Holyhead & Branches',
+  CZ12:'Chester & Hooton – Acton Grange Jn',CZ13:'Heysham Harbour – Morecambe',CZ14:'Carnforth – Carlisle via Barrow',
+  EL01:'Elizabeth Line: Reading – Shenfield',EL02:'Elizabeth Line: Whitechapel – Stepney Green',
+  GA01:'Gretna Jn – Mossend & Uddingston',GA02:'Uddingston – Glasgow Central (High)',GA03:'Carlisle – Kilmarnock',
+  GA04:'Kilmarnock – Glasgow Central',GA05:'Glasgow Central – Paisley/Ardrossan/Ayr',GA06:'Ayr – Stranraer',
+  GA07:'Paisley – Wemyss Bay & Gourock',GA08:'Glasgow Central – Cathcart/Neilston',GA09:'Rutherglen – Helensburgh',
+  GA10:'Helensburgh Upper – Oban/Fort William/Mallaig',GA11:'Mossend – Coatbridge & Garnqueen',GA12:'Glasgow Queen Street – Maryhill',
+  GC01:'Berwick – Edinburgh & Benhar Jn',GC02A:'Edinburgh – Falkirk',GC02B:'Falkirk – Glasgow Queen Street',
+  GC03:'Larbert – Dundee & Inverness',GC04:'Edinburgh – Dundee',GC05:'Dundee – Inverness',GC06:'Inverness – Kyle/Thurso/Wick',
+  GF01:'Carlisle – Mossend & Coatbridge',GF02:'Carlisle – Falkland & Kilmarnock',GF03:'Mossend – Falkland',
+  GF04:'Berwick – Millerhill & Greenhill',GF05:'Haymarket – Tay Bridge & Branches',GF06:'Mossend – Grangemouth & Aberdeen',
+  GF07:'Mossend – Fort William',GF08:'Stanley Jn – Georgemas Jn',
+  LA01:'Liverpool Street – Southminster & Southend',LA02:'Shenfield – Norwich & Branches',
+  LA03:'Norwich – Lowestoft & Felixstowe',LA04:'Romford & Upminster Branch',LA05:'Marks Tey & Sudbury Branch',
+  LB01A:'Liverpool Street – Chingford/Hertford East',LB01B:'Roydon – Stansted Airport',
+  LB02:'Royston – Cambridge',LB03:'Cambridge – Kings Lynn & Peterborough',
+  LC01:'Fenchurch Street – Southend & Shoeburyness',LC02:'Barking – Richmond',LC03:'East London Line',
+  LD01:'Tottenham South Jn – Ely',LD02:'Stowmarket & Ely – Peterborough & Lowestoft',LD03:'Tottenham South Jn – Thames Haven',
+  LD04:'Forest Gate Jn – Parkeston',LD05:'Manningtree – Felixstowe & Stowmarket',LD06:'Kew East Jn – Woodgrange Park',LD07:'Barking – Shoeburyness via Upminster',
+  PA01:'Paddington – Heathrow Airport',PA02:'Heathrow Jn – Reading',PA03:'Reading – Lavington',PA04:'Reading – Swindon',
+  PA05:'Slough & Windsor',PA06:'Maidenhead & Marlow',PA07:'Twyford & Henley',
+  PB01:'Challow – Standish Jn',PB02:'Barnt Green – Bristol Parkway',PB03:'Hullavington – Maesteg & Swansea',
+  PB04:'Swansea – West Wales',PB05:'Oxford – Worcester Shrub Hill',PB06:'Hartlebury – Hereford',
+  PB07:'Sutton Bridge Jn – Newport',PB08:'Ebbw Vale Parkway – Ebbw Jn',PB09:'Craven Arms – Llanelli',
+  PC01:'Bristol Parkway – Taunton',PC02:'Lavington – Yeovil Pen Mill',PC03:'Castle Cary – Exmouth',
+  PC04:'Exeter – Paignton & Plymouth',PC05:'Plymouth – Penzance & Branches',PC06:'Liskeard & Looe',PC07:'Penzance & St Ives',
+  PD01A:'Treherbert – Cardiff Central',PD01B:'Cardiff Central – Bridgend',
+  PF01:'Old Oak Common – Reading',PF02:'Paddington – Greenford Loop',PF03:'Maidenhead – Challow',PF04:'Reading – Westbury',
+  PF05:'Didcot – Calvert & Heyford',PF06:'Didcot – Standish Jn & Westbury',PF07:'Chippenham – Taunton via Westbury',
+  PF08:'Barnt Green – Kemble & Severn Tunnel',PF09:'Swindon – Avonmouth',PF10:'Bristol Parkway – Bathampton Jn',
+  PF11:'Awre – Bridgend',PF12:'Sutton Bridge Jn – Newport',PF13:'Machen Quarry – Newport',PF14:'Cardiff Valleys Down',
+  PF15:'Cardiff Central – Court Sart Jn',PF16:'Port Talbot – Robeston Sdgs',PF17:'Filton Jn – Tavistock Jn',PF18:'Exeter – Truro via Plymouth',
+  WA01:'Orpington & Redhill – Ashford',WA01A:'Otford – Sevenoaks',WA02:'Ashford – Margate',WA03:'Swanley – Ashford',
+  WA04:'Swanley – Margate',WA05:'Tonbridge – Hastings',WA06:'Sittingbourne – Sheerness',WA07:'St Pancras – Eurotunnel',
+  WB01:'Victoria – Fawkham Jn & Orpington',WB02:'Clapham Jn – Kensal Green',
+  WC01:'Charing Cross – Orpington',WC02:'London Bridge – Dartford',WC03:'Dartford – Paddock Wood & Gillingham',
+  WE01:'East Croydon – Tonbridge/Brighton',WE02:'Three Bridges – Havant',WE03:'Brighton – Ashford International',
+  WF01A:'Victoria – East Croydon',WF01B:'East Croydon – Stoats Nest Jn',WF02:'London Bridge – Sutton & Horsham',WF03:'Balham – Uckfield & East Grinstead',
+  WG01:'Woking – Bournemouth & Weymouth',WG02:'Surbiton – Alton',WG03:'Guildford – Portsmouth Harbour',
+  WG04:'Basingstoke & Salisbury – Exeter',WG05:'Warminster – Portsmouth',WG06:'Castle Cary – Weymouth',WG07:'Reading – Basingstoke',
+  WH01:'Waterloo – Chessington/Dorking/Guildford',WH02:'Waterloo – Feltham',WH02A:'East Putney – Wimbledon (LUL)',WH03:'Feltham – Windsor/Reading',
+  WK01:'Wembley – Herne Hill',WK02:'Herne Hill – Channel Tunnel',WK03:'Hither Green – Medway Towns',WK04:'Latchmere Jn – Tonbridge',
+  WK05:'Longhedge Jn – Farnborough',WK06:'Farnborough – Laverstock',WK07:'Redbridge – Dorchester',WK08:'Chichester – Warminster',
+  YA01:'Kings Cross – Hertford & Welwyn',YA02:'Welwyn – Grantham',YA03:'Grantham – Northallerton',
+  YA04:'Northallerton – Berwick',YA05:'Newark & Lincoln – Skegness',
+  YD01:'Bishop Auckland – Saltburn',YD02:'Middlesbrough – Whitby',YD03:'Carlisle – Bowesfield Jn',
+  YE01:'Chesterfield – Doncaster',YE02:'Doncaster – Leeds',YE03:'Wincobank Jn – Wakefield & Milford Jn',
+  YE04:'Leeds – Castleford',YE05:'Wakefield – Goole',YE06:'Doncaster – Cleethorpes',YE07:'Sheffield – Lincoln & Wrawby Jn',
+  YG01:'Leeds & Wakefield – Guide Bridge',YG02:'Leeds – Rochdale',YG03:'Bradley Jn – Dryclough Jn',
+  YG04:'Leeds – Hull/York/Scarborough',YG05:'Leeds – York via Harrogate/Bradford',YG06:'Hull – Scarborough',
+  YH01:'Kings Cross – Tallington',YH02:'Tallington – Colton Jn',YH03:'Colton Jn – Berwick',YH04:'South Humberside – Doncaster',
+  YH05:'Micklefield – Hull',YH06:'Northallerton – Newcastle via Coast',YH07:'King Edward Bridge – Carlisle',
+  YH08:'Benton North Jn – Blyth & Lynemouth',YH09:'Chesterfield – Doncaster via Masborough',YH10:'Hebden Bridge – Colton Jn',
+  YH11:'Doncaster – Whitehall Jn',YH12:'Leeds – Petteril Bridge Jn',YH13:'Shaftholme Jn – Selby',
+  YH14:'West Burton PS – Kirk Sandall Jn',YH15:'Thoresby Colliery – Shireoaks',YH16:'Chesterfield – Masborough Jn',
+  YH17:'Thornaby East Jn – Redcar & Boulby',YH18:'Bessacarr Jn – Werrington Jn',
 };
 
 const RD = {
@@ -524,14 +653,18 @@ function buildServices(rows) {
         destination:r.destination||'', destination_time:r.destination_time||'',
         timing_load:r.timing_load||'', dates:r.dates_of_operation||'',
         running_days:r.running_days||'', service_code:r.service_code||'',
+        books:[], _bkSet:new Set(),
         stops:[],
       });
     }
-    map.get(uid).stops.push({
+    const svc = map.get(uid);
+    svc.stops.push({
       location:r.location||'', platform:r.platform||'',
       arr:r.arr||'', dep:r.dep||'', pass_time:r.pass_time||'',
     });
+    if (r.wtt_book) svc._bkSet.add(r.wtt_book);
   }
+  for (const svc of map.values()) { svc.books=[...svc._bkSet].sort(); delete svc._bkSet; }
   return [...map.values()].map(finalise);
 }
 
@@ -548,6 +681,7 @@ function buildServicesFromJSON(data) {
       destination_time: sv.dt||'',
       timing_load: sv.tl||'', dates: sv.do||'',
       running_days: sv.rd||'', service_code: sv.sc||'',
+      books: sv.bk||[],
       stops: (sv.s||[]).map(st => ({
         location: typeof st[0]==='number' ? locs[st[0]]||'' : st[0]||'',
         platform: st[1]||'', arr: st[2]||'', dep: st[3]||'', pass_time: st[4]||'',
@@ -562,15 +696,16 @@ const APP = {
   all:[], filtered:[],
   visible:50, expanded:new Set(),
   types:new Set(['EXP','PAX','ECS','FRT','NPX','LL']),
-  days:new Set(), sort:'time',
+  days:new Set(), sort:'time', book:'',
 };
 
 // ── Filter ──────────────────────────────────────────────────────
 function applyFilter() {
-  const fOri = (document.getElementById('fOri').value||'').toLowerCase().trim();
-  const fDst = (document.getElementById('fDst').value||'').toLowerCase().trim();
-  const fSta = (document.getElementById('fSta').value||'').toLowerCase().trim();
-  const fToc = (document.getElementById('fToc').value||'').toLowerCase().trim();
+  const fOri  = (document.getElementById('fOri').value||'').toLowerCase().trim();
+  const fDst  = (document.getElementById('fDst').value||'').toLowerCase().trim();
+  const fSta  = (document.getElementById('fSta').value||'').toLowerCase().trim();
+  const fToc  = (document.getElementById('fToc').value||'').toLowerCase().trim();
+  APP.book    = (document.getElementById('fBook').value||'').trim();
 
   APP.filtered = APP.all.filter(s => {
     if (!APP.types.has(s.type)) return false;
@@ -579,6 +714,7 @@ function applyFilter() {
     if (fDst && !s.destination.toLowerCase().includes(fDst)) return false;
     if (fSta && !s.stops.some(st=>st.location.toLowerCase().includes(fSta))) return false;
     if (fToc && s.operator.toLowerCase()!==fToc && !s.tocName.toLowerCase().includes(fToc)) return false;
+    if (APP.book && !s.books.includes(APP.book)) return false;
     return true;
   });
 
@@ -683,6 +819,7 @@ function buildDetail(s) {
     ${s.timing_load?`<span><strong>Timing load</strong> ${esc(s.timing_load)}</span>`:''}
     <span><strong>Running days</strong> ${esc(s.running_days)} · ${esc(dates)}</span>
     ${s.durStr?`<span><strong>Total journey</strong> ${esc(s.durStr)}</span>`:''}
+    ${s.books&&s.books.length?`<span><strong>WTT book(s)</strong> ${s.books.map(b=>`${esc(b)}${BOOK_META[b]?' — '+esc(BOOK_META[b]):''}`).join(', ')}</span>`:''}
   </div>`;
 
   const hdr=`<div class="stops-hdr"><div></div><div>Location</div><div style="text-align:center">Platform</div><div style="text-align:right">Arrival</div><div style="text-align:right">Departure</div><div style="text-align:right">Pass</div><div style="text-align:right">+min</div></div>`;
@@ -756,9 +893,17 @@ function populateUI(allLocs) {
     : APP.all.flatMap(s=>s.stops.map(st=>st.location)).filter(Boolean);
   const locsSet = new Set(locsArr);
 
+  // Collect all book codes present in the data
+  const allBooks = new Set(APP.all.flatMap(s=>s.books));
+
   document.getElementById('statSvc').textContent=APP.all.length.toLocaleString();
   document.getElementById('statLocs').textContent=locsSet.size.toLocaleString();
   document.getElementById('statOps').textContent=ops.size;
+
+  // Update validity card books line
+  const bookCount = allBooks.size;
+  document.getElementById('vcBooks').textContent =
+    (bookCount>1 ? `${bookCount} Books` : bookCount===1 ? [...allBooks][0] : 'All Books') + ' · Jun–Dec 2026';
 
   const tocSel=document.getElementById('fToc');
   while(tocSel.options.length>1) tocSel.remove(1);
@@ -766,6 +911,23 @@ function populateUI(allLocs) {
     const o=document.createElement('option');
     o.value=op; o.textContent=`${op} — ${TOC_NAMES[op]||op}`;
     tocSel.appendChild(o);
+  });
+
+  // Build book select with optgroups
+  const bookSel=document.getElementById('fBook');
+  while(bookSel.options.length>1) bookSel.remove(1);
+  BOOK_REGIONS.forEach(({p,l})=>{
+    const booksInGroup=[...allBooks].filter(b=>b.startsWith(p)).sort();
+    if (!booksInGroup.length) return;
+    const grp=document.createElement('optgroup');
+    grp.label=l;
+    booksInGroup.forEach(bk=>{
+      const o=document.createElement('option');
+      o.value=bk;
+      o.textContent=`${bk} — ${BOOK_META[bk]||bk}`;
+      grp.appendChild(o);
+    });
+    bookSel.appendChild(grp);
   });
 
   function fillDL(id,items) {
@@ -889,6 +1051,7 @@ document.getElementById('searchBtn').addEventListener('click',()=>{applyFilter()
   document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter'){applyFilter();render();}});
 });
 document.getElementById('fToc').addEventListener('change',()=>{applyFilter();render();});
+document.getElementById('fBook').addEventListener('change',()=>{applyFilter();render();});
 
 document.querySelectorAll('.type-chip').forEach(b=>{
   b.addEventListener('click',()=>{
@@ -921,7 +1084,9 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
   document.getElementById('fDst').value='';
   document.getElementById('fSta').value='';
   document.getElementById('fToc').value='';
+  document.getElementById('fBook').value='';
   APP.types=new Set(['EXP','PAX','ECS','FRT','NPX','LL']);
+  APP.book='';
   APP.days.clear();
   document.querySelectorAll('.type-chip').forEach(b=>b.classList.add('on'));
   document.querySelectorAll('.day-chip').forEach(b=>b.classList.remove('on'));
