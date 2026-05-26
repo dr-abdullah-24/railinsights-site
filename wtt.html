@@ -955,8 +955,8 @@ function populateUI(allLocs) {
       const o=document.createElement('option'); o.value=v; dl.appendChild(o);
     });
   }
-  fillDL('dl-orig',APP.all.map(s=>s.origin));
-  fillDL('dl-dest',APP.all.map(s=>s.destination));
+  fillDL('dl-orig',[...locsSet]);
+  fillDL('dl-dest',[...locsSet]);
   fillDL('dl-locs',[...locsSet]);
 
   applyFilter();
