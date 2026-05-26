@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WTT June–December 2026 · Rail Insights</title>
+  <meta name="description" content="Network Rail Working Timetable CB01 June–December 2026. All movements including freight, ECS and depot workings. For rail industry professionals." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/favicon-180.png" />
+  <meta name="theme-color" content="#0f52ba" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --white: #ffffff;
+      --off: #f5f6f8;
+      --off-2: #eceef2;
+      --blue: #0f52ba;
+      --blue-dark: #0a3d8f;
+      --blue-pale: #eaf1fd;
+      --blue-mid: #c5d8f8;
+      --slate: #0d1b2e;
+      --slate-2: #1c2d42;
+      --text: #0d1b2e;
+      --text-2: #3b4a5c;
+      --text-3: #6b7a8e;
+      --text-4: #9aa4b0;
+      --green: #0a7c4c;
+      --amber: #b45309;
+      --amber-bg: #fffbeb;
+      --border: #dde1e8;
+      --border-2: #c8cdd7;
+      --shadow-xs: 0 1px 2px rgba(13,27,46,0.06);
+      --shadow-sm: 0 2px 8px rgba(13,27,46,0.08);
+      --shadow: 0 8px 28px rgba(13,27,46,0.1);
+      --r: 8px;
+      --r-lg: 14px;
+      --font: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { min-height: 100vh; background: var(--off); color: var(--text); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    button, input, select { font: inherit; }
+
+    /* ── NAV ───────────────────────────────────────────────────── */
+    .app-header { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.96); border-bottom: 1px solid var(--border); backdrop-filter: blur(18px); }
+    .nav { max-width: 1440px; margin: 0 auto; height: 68px; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+    .brand-mark { height: 40px; width: auto; flex: 0 0 auto; display: flex; align-items: center; }
+    .brand-mark img { height: 48px; width: auto; object-fit: contain; display: block; }
+    .brand-name { font-weight: 800; font-size: 17px; letter-spacing: -0.02em; }
+    .brand-name span { color: var(--blue); }
+    .brand-sub { color: var(--text-4); font: 500 10px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+    .nav-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .nav-link { height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--r); background: white; color: var(--text-2); display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-xs); cursor: pointer; }
+    .nav-link.primary { background: var(--blue); border-color: var(--blue); color: white; }
+
+    /* ── SHELL & TOOL HEAD ─────────────────────────────────────── */
+    .shell { max-width: 1440px; margin: 0 auto; padding: 28px 32px 48px; }
+    .tool-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 24px; align-items: end; margin-bottom: 22px; }
+    .eyebrow { color: var(--blue); font: 700 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-size: clamp(30px,4vw,52px); line-height: 1; letter-spacing: -0.03em; font-weight: 800; margin-bottom: 14px; }
+    .lead { max-width: 680px; color: var(--text-2); font-size: 16px; line-height: 1.65; }
+
+    .validity-card { min-width: 260px; border: 1px solid var(--border); border-radius: var(--r-lg); background: white; box-shadow: var(--shadow-xs); padding: 16px 18px; }
+    .vc-label { font: 700 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-4); margin-bottom: 6px; }
+    .vc-range { font: 700 14px/1.5 var(--mono); color: var(--blue); }
+    .vc-until { font: 500 11px/1 var(--mono); color: var(--text-3); margin-top: 3px; }
+    .vc-divider { border: 0; border-top: 1px solid var(--border); margin: 10px 0; }
+    .stat-row { display: flex; gap: 0; }
+    .stat-item { flex: 1; }
+    .stat-item + .stat-item { border-left: 1px solid var(--border); padding-left: 14px; margin-left: 14px; }
+    .stat-n { font: 700 16px/1 var(--mono); color: var(--text); display: block; }
+    .stat-l { font: 500 10px/1 var(--mono); color: var(--text-4); letter-spacing: 0.06em; text-transform: uppercase; display: block; margin-top: 3px; }
+
+    /* ── NOTICE ────────────────────────────────────────────────── */
+    .wtt-notice { border: 1px solid #fde68a; border-radius: var(--r); background: var(--amber-bg); padding: 11px 15px; margin-bottom: 18px; display: flex; gap: 10px; align-items: flex-start; font: 500 12px/1.6 var(--mono); color: #78350f; }
+    .wtt-notice strong { color: #92400e; }
+    .notice-tag { flex-shrink: 0; font: 700 9px/1 var(--mono); color: var(--amber); border: 1px solid #fcd34d; border-radius: 3px; padding: 2px 5px; letter-spacing: 0.06em; margin-top: 2px; }
+
+    /* ── FILTER PANEL ──────────────────────────────────────────── */
+    .filter-panel { background: white; border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; }
+    .filter-row-1 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); align-items: flex-end; }
+    .f-group { display: flex; flex-direction: column; gap: 5px; }
+    .f-label { font: 700 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); }
+    .f-input { height: 44px; border: 1.5px solid var(--border-2); border-radius: var(--r); padding: 0 13px; color: var(--text); font: 500 13px/1 var(--mono); outline: none; transition: border-color 0.15s, box-shadow 0.15s; width: 100%; background: white; }
+    .f-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(15,82,186,0.08); }
+    .f-input::placeholder { color: var(--text-4); }
+    .f-select { height: 44px; border: 1.5px solid var(--border-2); border-radius: var(--r); padding: 0 10px; color: var(--text-2); font: 500 12px/1 var(--mono); outline: none; cursor: pointer; background: white; transition: border-color 0.15s; }
+    .f-select:focus { border-color: var(--blue); }
+    .search-btn { height: 44px; padding: 0 20px; background: var(--blue); border: none; border-radius: var(--r); color: white; font: 700 13px/1 var(--font); cursor: pointer; white-space: nowrap; transition: background 0.14s; display: flex; align-items: center; gap: 8px; align-self: flex-end; }
+    .search-btn:hover { background: var(--blue-dark); }
+
+    .filter-row-2 { display: flex; gap: 20px; padding: 12px 16px; flex-wrap: wrap; align-items: center; background: #fbfcfe; }
+    .fg-inline { display: flex; gap: 5px; align-items: center; }
+    .fg-title { font: 700 9px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-4); margin-right: 3px; white-space: nowrap; }
+
+    .type-chip { height: 26px; padding: 0 9px; border: 1px solid var(--border); border-radius: 999px; background: white; color: var(--text-3); font: 700 10px/1 var(--mono); cursor: pointer; letter-spacing: 0.04em; transition: all 0.12s; }
+    .type-chip:hover { border-color: var(--border-2); color: var(--text-2); }
+    .type-chip.on { border-color: currentColor; background: var(--off); }
+    .type-chip[data-t="EXP"].on { color: var(--blue); background: var(--blue-pale); border-color: var(--blue-mid); }
+    .type-chip[data-t="PAX"].on { color: #0891b2; background: #ecfeff; border-color: #a5f3fc; }
+    .type-chip[data-t="ECS"].on { color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe; }
+    .type-chip[data-t="FRT"].on { color: #c2410c; background: #fff7ed; border-color: #fed7aa; }
+    .type-chip[data-t="NPX"].on { color: #059669; background: #ecfdf5; border-color: #a7f3d0; }
+    .type-chip[data-t="LL"].on  { color: var(--text-2); background: var(--off-2); border-color: var(--border-2); }
+
+    .day-chip { width: 26px; height: 26px; border: 1px solid var(--border); border-radius: var(--r); background: white; color: var(--text-3); font: 700 10px/1 var(--mono); cursor: pointer; transition: all 0.12s; display: grid; place-items: center; }
+    .day-chip:hover { border-color: var(--border-2); color: var(--text-2); }
+    .day-chip.on { background: var(--blue); border-color: var(--blue); color: white; }
+
+    .sort-btn { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: white; color: var(--text-3); font: 700 10px/1 var(--mono); cursor: pointer; letter-spacing: 0.04em; text-transform: uppercase; transition: all 0.12s; }
+    .sort-btn:hover { border-color: var(--border-2); color: var(--text-2); }
+    .sort-btn.on { background: var(--blue); border-color: var(--blue); color: white; }
+
+    .f-reset { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: white; color: var(--text-3); font: 600 10px/1 var(--mono); cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.12s; }
+    .f-reset:hover { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+
+    /* ── RESULTS BAR ───────────────────────────────────────────── */
+    .results-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 0 4px; }
+    .rb-count { font: 600 12px/1 var(--mono); color: var(--text-3); }
+    .rb-count strong { color: var(--text); font-weight: 700; }
+
+    /* ── SERVICE CARDS ─────────────────────────────────────────── */
+    .services-list { display: flex; flex-direction: column; gap: 5px; }
+
+    .svc-card { background: white; border: 1px solid var(--border); border-radius: var(--r-lg); border-left-width: 3px; overflow: hidden; box-shadow: var(--shadow-xs); transition: box-shadow 0.15s, border-color 0.15s; cursor: pointer; }
+    .svc-card:hover { box-shadow: var(--shadow-sm); border-color: var(--border-2); }
+    .svc-card.open { box-shadow: var(--shadow-sm); border-color: var(--border-2); }
+
+    .svc-card[data-type="EXP"] { border-left-color: var(--blue); }
+    .svc-card[data-type="PAX"] { border-left-color: #0891b2; }
+    .svc-card[data-type="ECS"] { border-left-color: #7c3aed; }
+    .svc-card[data-type="FRT"] { border-left-color: #c2410c; }
+    .svc-card[data-type="NPX"] { border-left-color: #059669; }
+    .svc-card[data-type="LL"]  { border-left-color: var(--text-4); }
+    .svc-card[data-type="SPL"] { border-left-color: #be185d; }
+
+    .svc-summary { display: grid; grid-template-columns: 148px 1fr 148px; gap: 0; padding: 13px 15px; align-items: center; }
+
+    .svc-id { border-right: 1px solid var(--border); padding-right: 14px; }
+    .svc-hc { font: 700 22px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; margin-bottom: 4px; }
+    .svc-uid { font: 500 10px/1 var(--mono); color: var(--text-4); letter-spacing: 0.04em; }
+    .svc-badges { display: flex; gap: 4px; margin-top: 7px; flex-wrap: wrap; }
+
+    .bdg { display: inline-flex; align-items: center; height: 17px; padding: 0 5px; border-radius: 3px; font: 700 8px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+    .b-exp { background: var(--blue-pale); color: var(--blue); }
+    .b-pax { background: #ecfeff; color: #0891b2; }
+    .b-ecs { background: #f5f3ff; color: #7c3aed; }
+    .b-frt { background: #fff7ed; color: #c2410c; }
+    .b-npx { background: #ecfdf5; color: #059669; }
+    .b-ll  { background: var(--off-2); color: var(--text-3); }
+    .b-spl { background: #fdf2f8; color: #be185d; }
+    .b-toc { background: var(--off-2); color: var(--text-2); }
+    .b-ld  { background: var(--off-2); color: var(--text-3); }
+
+    .svc-journey { padding: 0 14px; }
+    .svc-route { display: flex; align-items: baseline; gap: 7px; margin-bottom: 7px; flex-wrap: wrap; }
+    .svc-sta { font: 700 13px/1.3 var(--font); color: var(--text); letter-spacing: -0.01em; }
+    .svc-arr { color: var(--text-4); font-size: 12px; }
+
+    /* Journey strip */
+    .jstrip { display: flex; align-items: center; }
+    .jtime-block { display: flex; flex-direction: column; flex-shrink: 0; }
+    .jtime-block.right { align-items: flex-end; }
+    .jtime { font: 700 16px/1 var(--mono); white-space: nowrap; }
+    .jtime.dep { color: var(--amber); }
+    .jtime.arr { color: var(--green); }
+    .jtrack { flex: 1; position: relative; height: 32px; margin: 0 10px; }
+    .jline { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: linear-gradient(to right, var(--blue), var(--green)); transform: translateY(-50%); opacity: 0.35; }
+    .jline-used { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: linear-gradient(to right, var(--blue), var(--green)); transform: translateY(-50%); }
+    .jdot { position: absolute; top: 50%; transform: translate(-50%,-50%); border-radius: 50%; border: 2px solid white; }
+    .jdot.jc { width: 8px; height: 8px; background: var(--text-3); }
+    .jdot.jp { width: 6px; height: 6px; background: transparent; border-color: var(--border-2); }
+    .jdot.jo { width: 10px; height: 10px; background: var(--blue); border-color: white; }
+    .jdot.jd { width: 10px; height: 10px; background: var(--green); border-color: white; }
+    .jlabel { position: absolute; top: calc(50% + 9px); transform: translateX(-50%); font: 600 7.5px/1 var(--mono); color: var(--text-4); white-space: nowrap; pointer-events: none; }
+
+    .svc-meta { border-left: 1px solid var(--border); padding-left: 14px; display: flex; flex-direction: column; gap: 7px; align-items: flex-end; }
+    .svc-dur { font: 700 14px/1 var(--mono); color: var(--text); }
+    .svc-days { display: flex; gap: 2px; }
+    .dpip { width: 18px; height: 18px; border-radius: 3px; font: 700 8px/18px var(--mono); text-align: center; text-transform: uppercase; }
+    .dpip.on { background: var(--blue); color: white; }
+    .dpip.off { background: var(--off-2); color: var(--text-4); }
+    .svc-dates { font: 500 9.5px/1 var(--mono); color: var(--text-3); }
+    .expand-toggle { font: 700 9px/1 var(--mono); color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+    .tarrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .svc-card.open .tarrow { transform: rotate(180deg); }
+
+    /* ── EXPANDED DETAIL ───────────────────────────────────────── */
+    .svc-detail { display: none; border-top: 1px solid var(--border); }
+    .svc-detail.show { display: block; }
+
+    .d-meta { display: flex; gap: 16px; padding: 10px 15px; background: #fbfcfe; border-bottom: 1px solid var(--border); font: 500 11px/1.5 var(--mono); color: var(--text-3); flex-wrap: wrap; }
+    .d-meta strong { color: var(--text-2); font-weight: 700; }
+
+    .stops-hdr { display: grid; grid-template-columns: 22px 1fr 76px 76px 76px 76px 52px; gap: 4px; padding: 6px 15px; border-bottom: 1px solid var(--border); font: 700 8px/1 var(--mono); color: var(--text-4); letter-spacing: 0.1em; text-transform: uppercase; }
+    .stop-row { display: grid; grid-template-columns: 22px 1fr 76px 76px 76px 76px 52px; gap: 4px; padding: 7px 15px; border-bottom: 1px solid rgba(13,27,46,0.04); align-items: center; transition: background 0.1s; }
+    .stop-row:last-child { border-bottom: 0; }
+    .stop-row:hover { background: var(--off); }
+
+    .stop-ico { display: flex; justify-content: center; }
+    .sc { width: 9px; height: 9px; border-radius: 50%; border: 2px solid white; }
+    .sc-call { background: var(--text-3); }
+    .sc-pass { background: transparent; border-color: var(--border-2); }
+    .sc-orig { background: var(--blue); border-color: white; }
+    .sc-dest { background: var(--green); border-color: white; }
+
+    .stop-name { font: 600 12px/1.3 var(--font); color: var(--text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .stop-name.is-pass { color: var(--text-3); font-weight: 400; font-style: italic; }
+    .stop-plat { font: 500 11px/1 var(--mono); color: var(--text-3); text-align: center; }
+    .stop-plat span { font-weight: 700; color: var(--text-2); }
+    .stop-arr { font: 600 12px/1 var(--mono); color: var(--green); text-align: right; }
+    .stop-dep { font: 600 12px/1 var(--mono); color: var(--amber); text-align: right; }
+    .stop-pass { font: 500 11px/1 var(--mono); color: var(--text-3); text-align: right; font-style: italic; }
+    .stop-int { font: 500 10px/1 var(--mono); color: var(--text-4); text-align: right; }
+    .stop-dash { color: var(--text-4); text-align: right; font: 500 11px/1 var(--mono); }
+
+    /* ── FILE DROP ─────────────────────────────────────────────── */
+    .file-drop { min-height: 260px; display: grid; place-items: center; text-align: center; background: white; border: 2px dashed var(--border-2); border-radius: var(--r-lg); box-shadow: var(--shadow-xs); padding: 40px 32px; transition: border-color 0.15s, background 0.15s; }
+    .file-drop.drag-over { border-color: var(--blue); background: var(--blue-pale); }
+    .file-drop-icon { width: 52px; height: 52px; background: var(--blue-pale); border-radius: 50%; display: grid; place-items: center; margin: 0 auto 18px; }
+    .file-drop-icon svg { color: var(--blue); }
+    .file-drop h3 { font: 700 17px/1 var(--font); color: var(--text); margin-bottom: 10px; }
+    .file-drop p { font: 500 13px/1.7 var(--font); color: var(--text-2); max-width: 420px; margin: 0 auto 20px; }
+    .file-drop code { font: 600 12px/1 var(--mono); background: var(--off-2); padding: 2px 6px; border-radius: 4px; color: var(--text); }
+    .file-pick-btn { height: 44px; padding: 0 24px; background: var(--blue); border: none; border-radius: var(--r); color: white; font: 700 14px/1 var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: background 0.14s; }
+    .file-pick-btn:hover { background: var(--blue-dark); }
+    .file-pick-btn svg { flex-shrink: 0; }
+    #fileInput { display: none; }
+    .parse-progress { font: 500 12px/1 var(--mono); color: var(--text-3); margin-top: 14px; min-height: 16px; }
+
+    /* ── STATES ────────────────────────────────────────────────── */
+    .loading-state { min-height: 280px; display: grid; place-items: center; text-align: center; background: white; border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-xs); }
+    .loading-spin { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-txt { font: 700 14px/1 var(--font); color: var(--text-2); }
+    .loading-sub { font: 500 12px/1 var(--mono); color: var(--text-3); margin-top: 6px; }
+    .empty-state { min-height: 220px; display: grid; place-items: center; text-align: center; padding: 32px; background: white; border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-xs); }
+    .empty-state h3 { font: 700 16px/1 var(--font); color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font: 500 13px/1.6 var(--font); color: var(--text-2); max-width: 420px; }
+    .empty-state code { font: 600 12px/1 var(--mono); background: var(--off-2); padding: 1px 5px; border-radius: 4px; color: var(--text); }
+    .error-state { border: 1px solid #fca5a5; border-radius: var(--r-lg); background: #fef2f2; padding: 18px 20px; color: #991b1b; }
+    .error-state h3 { font: 700 14px/1 var(--font); margin-bottom: 8px; }
+    .error-state p { font: 500 12px/1.6 var(--mono); }
+    .error-state code { font: 600 11px/1 var(--mono); background: #fee2e2; padding: 1px 5px; border-radius: 3px; }
+
+    .load-more-wrap { display: flex; justify-content: center; padding: 20px 0 0; }
+    .load-more-btn { height: 40px; padding: 0 24px; border: 1px solid var(--border-2); border-radius: var(--r); background: white; color: var(--text-2); font: 700 13px/1 var(--font); cursor: pointer; box-shadow: var(--shadow-xs); transition: all 0.15s; }
+    .load-more-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* ── RESPONSIVE ────────────────────────────────────────────── */
+    @media (max-width: 1100px) { .tool-head { grid-template-columns: 1fr; } .validity-card { min-width: 0; } }
+    @media (max-width: 860px) { .filter-row-1 { grid-template-columns: 1fr 1fr; } .search-btn { grid-column: span 2; justify-content: center; } .svc-summary { grid-template-columns: 130px 1fr; } .svc-meta { display: none; } }
+    @media (max-width: 600px) { .nav { padding: 0 20px; } .brand-sub { display: none; } .nav-link:not(.primary) { display: none; } .shell { padding: 20px 20px 36px; } .filter-row-1 { grid-template-columns: 1fr; } .svc-summary { grid-template-columns: 1fr; gap: 10px; } .svc-id { border-right: 0; padding-right: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; } .stops-hdr, .stop-row { grid-template-columns: 18px 1fr 60px 60px 60px; } .stop-int { display: none; } }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="app-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true">
+        <img src="assets/Project_logo_header.png" alt="Rail Insights logo" />
+      </span>
+      <span>
+        <span class="brand-name">Rail <span>Insights</span></span>
+        <span class="brand-sub">Working Timetable</span>
+      </span>
+    </a>
+    <div class="nav-actions">
+      <a class="nav-link" href="berth-map.html">Berth Map</a>
+      <a class="nav-link" href="live-trains.html">Live Trains</a>
+      <a class="nav-link primary" href="index.html#contact">Request pilot access</a>
+    </div>
+  </nav>
+</header>
+
+<main class="shell">
+
+  <!-- TOOL HEAD -->
+  <section class="tool-head">
+    <div>
+      <div class="eyebrow">Network Rail · CB01 · Industry Document</div>
+      <h1>Working Timetable</h1>
+      <p class="lead">WTT June–December 2026. All scheduled movements including express passenger, empty coaching stock, freight, test trains and depot workings.</p>
+    </div>
+    <aside class="validity-card" aria-live="polite">
+      <div class="vc-label">Timetable Validity</div>
+      <div class="vc-range">18 May 2026 – 13 Dec 2026</div>
+      <div class="vc-until">Book: CB01 &nbsp;·&nbsp; Jun–Dec 2026</div>
+      <hr class="vc-divider" />
+      <div class="stat-row">
+        <div class="stat-item"><span class="stat-n" id="statSvc">—</span><span class="stat-l">Services</span></div>
+        <div class="stat-item"><span class="stat-n" id="statLocs">—</span><span class="stat-l">Locations</span></div>
+        <div class="stat-item"><span class="stat-n" id="statOps">—</span><span class="stat-l">Operators</span></div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- NOTICE -->
+  <div class="wtt-notice" role="note">
+    <span class="notice-tag">WTT</span>
+    <span>
+      This is the Network Rail Working Timetable — not the public passenger timetable. Contains all movements including freight, empty stock and engineering workings. Valid <strong>18 May – 13 December 2026</strong>. Contact <strong>NRT-WTT@networkrail.co.uk</strong> with queries.
+    </span>
+  </div>
+
+  <!-- FILTER PANEL -->
+  <div class="filter-panel">
+    <div class="filter-row-1">
+      <div class="f-group">
+        <label class="f-label" for="fOri">Origin station</label>
+        <input id="fOri" class="f-input" type="text" placeholder="e.g. LONDON EUSTON" autocomplete="off" list="dl-orig" />
+        <datalist id="dl-orig"></datalist>
+      </div>
+      <div class="f-group">
+        <label class="f-label" for="fDst">Destination</label>
+        <input id="fDst" class="f-input" type="text" placeholder="e.g. GLASGOW CENTRAL" autocomplete="off" list="dl-dest" />
+        <datalist id="dl-dest"></datalist>
+      </div>
+      <div class="f-group">
+        <label class="f-label" for="fSta">Calling / passing at</label>
+        <input id="fSta" class="f-input" type="text" placeholder="Any intermediate location" autocomplete="off" list="dl-locs" />
+        <datalist id="dl-locs"></datalist>
+      </div>
+      <button class="search-btn" id="searchBtn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        Search
+      </button>
+    </div>
+    <div class="filter-row-2">
+      <div class="fg-inline">
+        <span class="fg-title">Type</span>
+        <button class="type-chip on" data-t="EXP" title="Express / Special Passenger (1xxx, 9xxx)">EXP</button>
+        <button class="type-chip on" data-t="PAX" title="Ordinary Passenger (2xxx)">PAX</button>
+        <button class="type-chip on" data-t="ECS" title="Empty Coaching Stock (5xxx)">ECS</button>
+        <button class="type-chip on" data-t="FRT" title="Freight (4/6/7xxx)">FRT</button>
+        <button class="type-chip on" data-t="NPX" title="Non-Passenger / Infrastructure (3xxx)">NPX</button>
+        <button class="type-chip on" data-t="LL"  title="Light Locomotive (8xxx)">LL</button>
+      </div>
+      <div class="fg-inline">
+        <span class="fg-title">Day</span>
+        <button class="day-chip" data-d="0" title="Mondays">M</button>
+        <button class="day-chip" data-d="1" title="Tuesdays">T</button>
+        <button class="day-chip" data-d="2" title="Wednesdays">W</button>
+        <button class="day-chip" data-d="3" title="Thursdays">T</button>
+        <button class="day-chip" data-d="4" title="Fridays">F</button>
+        <button class="day-chip" data-d="5" title="Saturdays">S</button>
+        <button class="day-chip" data-d="6" title="Sundays">S</button>
+      </div>
+      <div class="fg-inline">
+        <span class="fg-title">Operator</span>
+        <select class="f-select" id="fToc" style="min-width:155px;"><option value="">All operators</option></select>
+      </div>
+      <div class="fg-inline">
+        <span class="fg-title">Sort</span>
+        <button class="sort-btn on" data-sort="time">Depart</button>
+        <button class="sort-btn" data-sort="duration">Duration</button>
+        <button class="sort-btn" data-sort="headcode">Headcode</button>
+      </div>
+      <button class="f-reset" id="resetBtn" type="button">Clear all</button>
+    </div>
+  </div>
+
+  <!-- RESULTS BAR -->
+  <div class="results-bar">
+    <div class="rb-count" id="rbCount">Loading timetable…</div>
+  </div>
+
+  <!-- SERVICE LIST -->
+  <div id="svcList" class="services-list">
+    <div class="loading-state">
+      <div>
+        <div class="loading-spin"></div>
+        <div class="loading-txt">Loading WTT data…</div>
+        <div class="loading-sub">Parsing CB01 Working Timetable · Jun–Dec 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="load-more-wrap" id="lmWrap" style="display:none;">
+    <button class="load-more-btn" id="lmBtn" type="button">Load more services</button>
+  </div>
+
+</main>
+
+<script>
+/* ================================================================
+   WTT TIMETABLE VIEWER
+   ================================================================ */
+
+// ── Lookups ─────────────────────────────────────────────────────
+const TOC_NAMES = {
+  VT:'Avanti West Coast', LM:'West Midlands Trains', LO:'London Overground',
+  ZZ:'Network Rail', CS:'Caledonian Sleeper', LF:'Lumo', SN:'Southern',
+  XC:'CrossCountry', EM:'East Midlands Railway', GW:'GWR', NT:'Northern',
+  TP:'TransPennine Express', SR:'ScotRail', CC:'c2c', SE:'Southeastern',
+  TL:'Thameslink', HX:'Heathrow Express', GA:'Greater Anglia',
+  GC:'Grand Central', HT:'Hull Trains', SW:'South Western Railway',
+  AW:'Transport for Wales',
+};
+
+const RD = {
+  MO:[1,0,0,0,0,0,0], TuO:[0,1,0,0,0,0,0], WO:[0,0,1,0,0,0,0],
+  ThO:[0,0,0,1,0,0,0], FO:[0,0,0,0,1,0,0], SO:[0,0,0,0,0,1,0],
+  SuO:[0,0,0,0,0,0,1], MX:[0,1,1,1,1,1,0], SX:[1,1,1,1,1,0,0],
+  MSX:[0,1,1,1,1,0,0], FSX:[1,1,1,1,0,0,0], WSX:[1,1,0,1,1,0,0],
+  EWD:[1,1,1,1,1,0,0], ThSX:[1,1,1,0,1,0,0], Daily:[1,1,1,1,1,1,1],
+};
+const DAY_L = ['M','T','W','T','F','S','S'];
+
+function svcType(hc) {
+  const p = (hc||'')[0];
+  if (p==='1'||p==='9') return 'EXP';
+  if (p==='2') return 'PAX';
+  if (p==='3') return 'NPX';
+  if (p==='4') return 'FRT';
+  if (p==='5') return 'ECS';
+  if (p==='6'||p==='7') return 'FRT';
+  if (p==='8') return 'LL';
+  return 'EXP';
+}
+
+function typeInfo(t) {
+  return ({
+    EXP:{l:'Express', c:'b-exp'}, PAX:{l:'Passenger', c:'b-pax'},
+    ECS:{l:'ECS', c:'b-ecs'}, FRT:{l:'Freight', c:'b-frt'},
+    NPX:{l:'Non-Pax', c:'b-npx'}, LL:{l:'Light Loco', c:'b-ll'},
+    SPL:{l:'Special', c:'b-spl'},
+  })[t] || {l:t, c:'b-toc'};
+}
+
+function t2m(t) {
+  if (!t||!t.includes(':')) return null;
+  const [h,m] = t.trim().split(':').map(Number);
+  return isNaN(h)||isNaN(m) ? null : h*60+m;
+}
+
+function diffM(s, e) {
+  if (s==null||e==null) return null;
+  return e>=s ? e-s : e+1440-s;
+}
+
+function fmtDur(m) {
+  if (m==null||m<0) return '';
+  const h=Math.floor(m/60), mm=m%60;
+  return h===0 ? `${mm}m` : `${h}h ${mm.toString().padStart(2,'0')}m`;
+}
+
+function stopTime(s) { return s.dep||s.arr||s.pass_time; }
+
+function esc(s) {
+  return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+}
+
+// ── CSV Parser ──────────────────────────────────────────────────
+function parseCSV(raw) {
+  // Strip BOM and normalise line endings
+  const text = raw.replace(/^﻿/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const lines = text.split('\n');
+  if (lines.length < 2) return [];
+  const hdrs = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+  const rows = [];
+  for (let i=1; i<lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const vals = splitLine(line);
+    if (vals.length < hdrs.length) continue;
+    const obj = {};
+    hdrs.forEach((h,j) => { obj[h] = (vals[j]||'').trim(); });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function splitLine(line) {
+  const r=[]; let cur='', inQ=false;
+  for (const c of line) {
+    if (c==='"') inQ=!inQ;
+    else if (c===','&&!inQ) { r.push(cur); cur=''; }
+    else cur+=c;
+  }
+  r.push(cur);
+  return r;
+}
+
+// ── Shared service finaliser ─────────────────────────────────────
+function finalise(s) {
+  s.stops.sort((a,b) => {
+    let ta=t2m(stopTime(a)), tb=t2m(stopTime(b));
+    if (ta==null&&tb==null) return 0;
+    if (ta==null) return 1; if (tb==null) return -1;
+    if (tb-ta>720) tb-=1440;
+    if (ta-tb>720) ta-=1440;
+    return ta-tb;
+  });
+  s.type = svcType(s.headcode);
+  s.tocName = TOC_NAMES[s.operator]||s.operator;
+  s.days = RD[s.running_days]||[0,0,0,0,0,0,0];
+  const om=t2m(s.origin_time), dm=t2m(s.destination_time);
+  s.durMins = diffM(om,dm);
+  s.durStr = fmtDur(s.durMins);
+  s.isCircular = s.origin===s.destination;
+  return s;
+}
+
+// ── Build from raw CSV rows ──────────────────────────────────────
+function buildServices(rows) {
+  const map = new Map();
+  for (const r of rows) {
+    const uid = r.uid; if (!uid) continue;
+    if (!map.has(uid)) {
+      map.set(uid, {
+        headcode:r.headcode||'', uid,
+        operator:r.operator||'', toc:r.toc||'',
+        origin:r.origin||'', origin_time:r.origin_time||'',
+        destination:r.destination||'', destination_time:r.destination_time||'',
+        timing_load:r.timing_load||'', dates:r.dates_of_operation||'',
+        running_days:r.running_days||'', service_code:r.service_code||'',
+        stops:[],
+      });
+    }
+    map.get(uid).stops.push({
+      location:r.location||'', platform:r.platform||'',
+      arr:r.arr||'', dep:r.dep||'', pass_time:r.pass_time||'',
+    });
+  }
+  return [...map.values()].map(finalise);
+}
+
+// ── Build from pre-processed JSON (wtt_data.json) ────────────────
+function buildServicesFromJSON(data) {
+  const locs = data.locs || [];
+  return (data.svcs || []).map(sv => {
+    const s = {
+      headcode: sv.h||'', uid: sv.u||'',
+      operator: sv.op||'', toc: sv.to||sv.op||'',
+      origin: typeof sv.or==='number' ? locs[sv.or]||'' : sv.or||'',
+      origin_time: sv.ot||'',
+      destination: typeof sv.ds==='number' ? locs[sv.ds]||'' : sv.ds||'',
+      destination_time: sv.dt||'',
+      timing_load: sv.tl||'', dates: sv.do||'',
+      running_days: sv.rd||'', service_code: sv.sc||'',
+      stops: (sv.s||[]).map(st => ({
+        location: typeof st[0]==='number' ? locs[st[0]]||'' : st[0]||'',
+        platform: st[1]||'', arr: st[2]||'', dep: st[3]||'', pass_time: st[4]||'',
+      })),
+    };
+    return finalise(s);
+  });
+}
+
+// ── App State ───────────────────────────────────────────────────
+const APP = {
+  all:[], filtered:[],
+  visible:50, expanded:new Set(),
+  types:new Set(['EXP','PAX','ECS','FRT','NPX','LL']),
+  days:new Set(), sort:'time',
+};
+
+// ── Filter ──────────────────────────────────────────────────────
+function applyFilter() {
+  const fOri = (document.getElementById('fOri').value||'').toLowerCase().trim();
+  const fDst = (document.getElementById('fDst').value||'').toLowerCase().trim();
+  const fSta = (document.getElementById('fSta').value||'').toLowerCase().trim();
+  const fToc = (document.getElementById('fToc').value||'').toLowerCase().trim();
+
+  APP.filtered = APP.all.filter(s => {
+    if (!APP.types.has(s.type)) return false;
+    if (APP.days.size>0 && ![...APP.days].some(d=>s.days[d]===1)) return false;
+    if (fOri && !s.origin.toLowerCase().includes(fOri)) return false;
+    if (fDst && !s.destination.toLowerCase().includes(fDst)) return false;
+    if (fSta && !s.stops.some(st=>st.location.toLowerCase().includes(fSta))) return false;
+    if (fToc && s.operator.toLowerCase()!==fToc && !s.tocName.toLowerCase().includes(fToc)) return false;
+    return true;
+  });
+
+  if (APP.sort==='time') {
+    APP.filtered.sort((a,b)=>(t2m(a.origin_time)??9999)-(t2m(b.origin_time)??9999)||a.headcode.localeCompare(b.headcode));
+  } else if (APP.sort==='duration') {
+    APP.filtered.sort((a,b)=>(a.durMins??9999)-(b.durMins??9999));
+  } else {
+    APP.filtered.sort((a,b)=>a.headcode.localeCompare(b.headcode));
+  }
+  APP.visible = 50;
+}
+
+// ── Journey Strip ────────────────────────────────────────────────
+function buildStrip(s) {
+  const om=t2m(s.origin_time), dm=t2m(s.destination_time);
+  const total=diffM(om,dm);
+  if (!total||total<=0) return '<div class="jtrack"><div class="jline"></div></div>';
+
+  const stops=s.stops;
+  // Pick up to 3 interior labels, evenly spaced
+  const labelIdx = new Set();
+  if (stops.length>2) {
+    const step = Math.max(1,Math.floor(stops.length/4));
+    for (let i=step; i<stops.length-1; i+=step) labelIdx.add(i);
+  }
+
+  let dots='';
+  for (let i=0; i<stops.length; i++) {
+    const st=stops[i];
+    const mt=t2m(stopTime(st)); if (mt==null) continue;
+    const el=diffM(om,mt); if (el==null) continue;
+    const pct=Math.min(100,Math.max(0,(el/total)*100));
+    const isO=i===0, isD=i===stops.length-1;
+    const isPass=!!(st.pass_time&&!st.arr&&!st.dep);
+    const cls=isO?'jdot jo':isD?'jdot jd':isPass?'jdot jp':'jdot jc';
+    dots+=`<div class="${cls}" style="left:${pct.toFixed(2)}%"></div>`;
+    if (labelIdx.has(i)) {
+      const nm=st.location.replace(/ JN$| JCN$| JUNCTION$/,'');
+      const short=nm.length>12?nm.slice(0,11)+'…':nm;
+      dots+=`<div class="jlabel" style="left:${pct.toFixed(2)}%">${esc(short)}</div>`;
+    }
+  }
+  return `<div class="jtrack"><div class="jline-used"></div>${dots}</div>`;
+}
+
+// ── Render Card ──────────────────────────────────────────────────
+function renderCard(s) {
+  const ti = typeInfo(s.type);
+  const pips = s.days.map((on,i)=>`<span class="dpip ${on?'on':'off'}">${DAY_L[i]}</span>`).join('');
+  const dates = s.dates.replace(/(\d{2})\/(\d{2})\/(\d{4})/g,(_,d,m,y)=>`${d}/${m}/${y.slice(2)}`);
+  const strip = buildStrip(s);
+  const isExp = APP.expanded.has(s.uid);
+  const arrMark = s.isCircular ? '↺' : '→';
+
+  const summary = `
+    <div class="svc-summary">
+      <div class="svc-id">
+        <div class="svc-hc">${esc(s.headcode)}</div>
+        <div class="svc-uid">${esc(s.uid)}</div>
+        <div class="svc-badges">
+          <span class="bdg ${ti.c}">${esc(ti.l)}</span>
+          <span class="bdg b-toc">${esc(s.tocName||s.operator)}</span>
+          ${s.timing_load?`<span class="bdg b-ld">${esc(s.timing_load)}</span>`:''}
+        </div>
+      </div>
+      <div class="svc-journey">
+        <div class="svc-route">
+          <span class="svc-sta">${esc(s.origin)}</span>
+          <span class="svc-arr">${arrMark}</span>
+          <span class="svc-sta">${esc(s.destination)}</span>
+        </div>
+        <div class="jstrip">
+          <div class="jtime-block"><span class="jtime dep">${esc(s.origin_time||'—')}</span></div>
+          ${strip}
+          <div class="jtime-block right"><span class="jtime arr">${esc(s.destination_time||'—')}</span></div>
+        </div>
+      </div>
+      <div class="svc-meta">
+        <div class="svc-dur">${esc(s.durStr||'—')}</div>
+        <div class="svc-days">${pips}</div>
+        <div class="svc-dates">${esc(dates.length>22?dates.slice(0,22):dates)}</div>
+        <div class="expand-toggle">Detail <span class="tarrow">▾</span></div>
+      </div>
+    </div>`;
+
+  return `<div class="svc-card${isExp?' open':''}" data-type="${esc(s.type)}" data-uid="${esc(s.uid)}">
+    ${summary}
+    <div class="svc-detail${isExp?' show':''}">
+      ${buildDetail(s)}
+    </div>
+  </div>`;
+}
+
+function buildDetail(s) {
+  const dates = s.dates.replace(/(\d{2})\/(\d{2})\/(\d{4})/g,(_,d,m,y)=>`${d}/${m}/${y.slice(2)}`);
+  const meta = `<div class="d-meta">
+    <span><strong>Headcode</strong> ${esc(s.headcode)}</span>
+    <span><strong>UID</strong> ${esc(s.uid)}</span>
+    <span><strong>Service code</strong> ${esc(s.service_code)}</span>
+    <span><strong>Operator</strong> ${esc(s.tocName||s.operator)}</span>
+    ${s.timing_load?`<span><strong>Timing load</strong> ${esc(s.timing_load)}</span>`:''}
+    <span><strong>Running days</strong> ${esc(s.running_days)} · ${esc(dates)}</span>
+    ${s.durStr?`<span><strong>Total journey</strong> ${esc(s.durStr)}</span>`:''}
+  </div>`;
+
+  const hdr=`<div class="stops-hdr"><div></div><div>Location</div><div style="text-align:center">Platform</div><div style="text-align:right">Arrival</div><div style="text-align:right">Departure</div><div style="text-align:right">Pass</div><div style="text-align:right">+min</div></div>`;
+
+  let prevM=null;
+  const rows=s.stops.map((st,i)=>{
+    const isO=i===0&&st.location===s.origin;
+    const isD=i===s.stops.length-1&&st.location===s.destination;
+    const isPass=!!(st.pass_time&&!st.arr&&!st.dep);
+    const icoC=isO?'sc sc-orig':isD?'sc sc-dest':isPass?'sc sc-pass':'sc sc-call';
+    const curM=t2m(st.dep||st.arr||st.pass_time);
+    let intv='';
+    if (prevM!=null&&curM!=null){const d=diffM(prevM,curM); if(d!=null&&d>0) intv=`+${d}`;}
+    if (curM!=null) prevM=curM;
+    return `<div class="stop-row">
+      <div class="stop-ico"><div class="${icoC}"></div></div>
+      <div class="stop-name${isPass?' is-pass':''}">${esc(st.location)}</div>
+      <div class="stop-plat">${st.platform?`<span>Plat ${esc(st.platform)}</span>`:'—'}</div>
+      <div class="${st.arr?'stop-arr':'stop-dash'}">${st.arr?esc(st.arr):'—'}</div>
+      <div class="${st.dep?'stop-dep':'stop-dash'}">${st.dep?esc(st.dep):'—'}</div>
+      <div class="${st.pass_time?'stop-pass':'stop-dash'}">${st.pass_time?esc(st.pass_time):'—'}</div>
+      <div class="stop-int">${intv}</div>
+    </div>`;
+  }).join('');
+
+  return meta+hdr+`<div>${rows}</div>`;
+}
+
+// ── Render List ──────────────────────────────────────────────────
+function render() {
+  const el=document.getElementById('svcList');
+  const slice=APP.filtered.slice(0,APP.visible);
+
+  if (!slice.length) {
+    el.innerHTML=`<div class="empty-state"><h3>No services found</h3><p>Adjust filters or clear all to see all services.</p></div>`;
+    updateBar(); updateLM(); return;
+  }
+
+  el.innerHTML=slice.map(s=>renderCard(s)).join('');
+  el.querySelectorAll('.svc-summary').forEach(el2=>{
+    el2.addEventListener('click',()=>{
+      const card=el2.closest('.svc-card');
+      const uid=card.dataset.uid;
+      const det=card.querySelector('.svc-detail');
+      if (APP.expanded.has(uid)){APP.expanded.delete(uid);card.classList.remove('open');det.classList.remove('show');}
+      else{APP.expanded.add(uid);card.classList.add('open');det.classList.add('show');}
+    });
+  });
+  updateBar(); updateLM();
+}
+
+function updateBar() {
+  const showing=Math.min(APP.visible,APP.filtered.length);
+  document.getElementById('rbCount').innerHTML=
+    `Showing <strong>${showing.toLocaleString()}</strong> of <strong>${APP.filtered.length.toLocaleString()}</strong> services`;
+}
+
+function updateLM() {
+  const w=document.getElementById('lmWrap'), b=document.getElementById('lmBtn');
+  const has=APP.filtered.length>APP.visible;
+  w.style.display=has?'flex':'none';
+  if (has){const r=APP.filtered.length-APP.visible; b.textContent=`Load ${Math.min(50,r).toLocaleString()} more (${r.toLocaleString()} remaining)`;}
+}
+
+// ── Populate UI after data is ready ─────────────────────────────
+// allLocs: optional array of all location strings (from JSON locs[]; else derived from stops)
+function populateUI(allLocs) {
+  const ops=new Set(APP.all.map(s=>s.operator));
+  const locsArr = allLocs && allLocs.length
+    ? allLocs
+    : APP.all.flatMap(s=>s.stops.map(st=>st.location)).filter(Boolean);
+  const locsSet = new Set(locsArr);
+
+  document.getElementById('statSvc').textContent=APP.all.length.toLocaleString();
+  document.getElementById('statLocs').textContent=locsSet.size.toLocaleString();
+  document.getElementById('statOps').textContent=ops.size;
+
+  const tocSel=document.getElementById('fToc');
+  while(tocSel.options.length>1) tocSel.remove(1);
+  [...ops].sort().forEach(op=>{
+    const o=document.createElement('option');
+    o.value=op; o.textContent=`${op} — ${TOC_NAMES[op]||op}`;
+    tocSel.appendChild(o);
+  });
+
+  function fillDL(id,items) {
+    const dl=document.getElementById(id);
+    dl.innerHTML='';
+    [...new Set(items)].filter(Boolean).sort().forEach(v=>{
+      const o=document.createElement('option'); o.value=v; dl.appendChild(o);
+    });
+  }
+  fillDL('dl-orig',APP.all.map(s=>s.origin));
+  fillDL('dl-dest',APP.all.map(s=>s.destination));
+  fillDL('dl-locs',[...locsSet]);
+
+  applyFilter();
+  render();
+}
+
+// ── Process a file picked by the user ────────────────────────────
+function processPickedText(text, filename) {
+  const el=document.getElementById('svcList');
+  try {
+    const isJson = filename && filename.toLowerCase().endsWith('.json');
+    if (isJson) {
+      const data=JSON.parse(text);
+      APP.all=buildServicesFromJSON(data);
+      populateUI(data.locs);
+    } else {
+      const rows=parseCSV(text);
+      if (!rows.length) throw new Error('CSV parsed but returned 0 rows — check this is wtt_stops.csv or wtt_data.json.');
+      APP.all=buildServices(rows);
+      populateUI(null);
+    }
+  } catch(err) {
+    el.innerHTML=`<div class="error-state"><h3>Parse error</h3><p>${esc(err.message)}</p></div>`;
+    document.getElementById('rbCount').textContent='Error parsing file';
+    console.error('[WTT]',err);
+  }
+}
+
+// ── File picker UI ───────────────────────────────────────────────
+function showFilePicker(hint) {
+  const el=document.getElementById('svcList');
+  el.innerHTML=`
+    <div class="file-drop" id="fileDrop">
+      <input type="file" id="fileInput" accept=".json,.csv,application/json,text/csv" />
+      <div class="file-drop-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <h3>Load WTT data file</h3>
+      <p>${hint||'Select your <code>wtt_stops.csv</code> file. The file is read locally — nothing is uploaded.'}<br>Drag &amp; drop the file here or click the button below.</p>
+      <button class="file-pick-btn" id="pickBtn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Select wtt_data.json
+      </button>
+      <div class="parse-progress" id="parseMsg"></div>
+    </div>`;
+
+  document.getElementById('rbCount').textContent='Select your WTT data file to begin';
+
+  document.getElementById('pickBtn').addEventListener('click',()=>document.getElementById('fileInput').click());
+  document.getElementById('fileInput').addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f) return; readFile(f);
+  });
+
+  const drop=document.getElementById('fileDrop');
+  drop.addEventListener('dragover',e=>{ e.preventDefault(); drop.classList.add('drag-over'); });
+  drop.addEventListener('dragleave',()=>drop.classList.remove('drag-over'));
+  drop.addEventListener('drop',e=>{ e.preventDefault(); drop.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) readFile(f); });
+}
+
+function readFile(f) {
+  document.getElementById('rbCount').textContent='Parsing timetable data…';
+  const el=document.getElementById('svcList');
+  el.innerHTML=`<div class="loading-state"><div><div class="loading-spin"></div><div class="loading-txt">Parsing WTT data…</div><div class="loading-sub">${esc(f.name)} · ${(f.size/1e6).toFixed(0)} MB</div></div></div>`;
+  setTimeout(()=>{
+    const reader=new FileReader();
+    reader.onload=e=>processPickedText(e.target.result, f.name);
+    reader.onerror=()=>{
+      document.getElementById('svcList').innerHTML=`<div class="error-state"><h3>Could not read file</h3><p>Try selecting the file again.</p></div>`;
+    };
+    reader.readAsText(f);
+  }, 50);
+}
+
+// ── Load Data ────────────────────────────────────────────────────
+// Over HTTP: fetch data/wtt_data.json (pre-processed, compact).
+// Via file://: show file picker — user selects wtt_data.json locally.
+async function loadData() {
+  if (location.protocol==='file:') {
+    showFilePicker(
+      'Select <code>data/wtt_data.json</code> from the project folder.<br>' +
+      'Generate it once by running: <code>python scripts/build_wtt.py</code>'
+    );
+    return;
+  }
+
+  const el=document.getElementById('svcList');
+  try {
+    const r=await fetch('data/wtt_data.json');
+    if (!r.ok) throw new Error(
+      `data/wtt_data.json not found (HTTP ${r.status}).<br>` +
+      `Run <code>python scripts/build_wtt.py</code> to generate it from wtt_stops.csv.`
+    );
+    const data=await r.json();
+    APP.all=buildServicesFromJSON(data);
+    populateUI(data.locs);
+  } catch(err) {
+    el.innerHTML=`<div class="error-state">
+      <h3>Unable to load WTT data</h3>
+      <p>${err.message}<br><br>
+      Run <code>python scripts/build_wtt.py</code> from the project folder to create <code>data/wtt_data.json</code>.</p>
+    </div>`;
+    document.getElementById('rbCount').textContent='Data unavailable';
+    console.error('[WTT]', err);
+  }
+}
+
+// ── Events ───────────────────────────────────────────────────────
+document.getElementById('searchBtn').addEventListener('click',()=>{applyFilter();render();});
+['fOri','fDst','fSta'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter'){applyFilter();render();}});
+});
+document.getElementById('fToc').addEventListener('change',()=>{applyFilter();render();});
+
+document.querySelectorAll('.type-chip').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const t=b.dataset.t;
+    if(APP.types.has(t)){APP.types.delete(t);b.classList.remove('on');}
+    else{APP.types.add(t);b.classList.add('on');}
+    applyFilter();render();
+  });
+});
+
+document.querySelectorAll('.day-chip').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const d=Number(b.dataset.d);
+    if(APP.days.has(d)){APP.days.delete(d);b.classList.remove('on');}
+    else{APP.days.add(d);b.classList.add('on');}
+    applyFilter();render();
+  });
+});
+
+document.querySelectorAll('.sort-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    APP.sort=b.dataset.sort;
+    document.querySelectorAll('.sort-btn').forEach(x=>x.classList.toggle('on',x===b));
+    applyFilter();render();
+  });
+});
+
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  document.getElementById('fOri').value='';
+  document.getElementById('fDst').value='';
+  document.getElementById('fSta').value='';
+  document.getElementById('fToc').value='';
+  APP.types=new Set(['EXP','PAX','ECS','FRT','NPX','LL']);
+  APP.days.clear();
+  document.querySelectorAll('.type-chip').forEach(b=>b.classList.add('on'));
+  document.querySelectorAll('.day-chip').forEach(b=>b.classList.remove('on'));
+  applyFilter();render();
+});
+
+document.getElementById('lmBtn').addEventListener('click',()=>{APP.visible+=50;render();});
+
+loadData();
+</script>
+</body>
+</html>
