@@ -710,8 +710,17 @@ function applyFilter() {
   APP.filtered = APP.all.filter(s => {
     if (!APP.types.has(s.type)) return false;
     if (APP.days.size>0 && ![...APP.days].some(d=>s.days[d]===1)) return false;
-    if (fOri && !s.origin.toLowerCase().includes(fOri)) return false;
-    if (fDst && !s.destination.toLowerCase().includes(fDst)) return false;
+    if (fOri || fDst) {
+      let oriPos = -1, dstPos = -1;
+      for (let i = 0; i < s.stops.length; i++) {
+        const loc = s.stops[i].location.toLowerCase();
+        if (fOri && oriPos === -1 && loc.includes(fOri)) oriPos = i;
+        if (fDst && loc.includes(fDst)) dstPos = i;
+      }
+      if (fOri && oriPos === -1) return false;
+      if (fDst && dstPos === -1) return false;
+      if (fOri && fDst && oriPos >= dstPos) return false;
+    }
     if (fSta && !s.stops.some(st=>st.location.toLowerCase().includes(fSta))) return false;
     if (fToc && s.operator.toLowerCase()!==fToc && !s.tocName.toLowerCase().includes(fToc)) return false;
     if (APP.book && !s.books.includes(APP.book)) return false;
