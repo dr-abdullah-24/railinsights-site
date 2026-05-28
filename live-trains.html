@@ -307,10 +307,74 @@
     }
     .toast.show { display: block; }
 
+    /* ── MOBILE PANEL FAB & DRAWER ──────────────────────────────── */
+    .panel-fab {
+      display: none;
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      height: 44px; padding: 0 22px;
+      background: var(--blue); color: white;
+      border: none; border-radius: 100px;
+      font: 700 13px var(--font);
+      cursor: pointer;
+      align-items: center; gap: 8px;
+      box-shadow: 0 4px 18px rgba(15,82,186,0.5);
+      white-space: nowrap;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.15s;
+    }
+    .panel-fab:hover { background: var(--blue-dark); transform: translateX(-50%) translateY(-2px); }
+    .panel-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(13,27,46,0.5);
+      backdrop-filter: blur(3px);
+      z-index: 150;
+    }
+    .panel-backdrop.open { display: block; }
+    .panel-handle {
+      display: none;
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      margin: 10px auto 2px;
+      flex-shrink: 0;
+    }
+    .panel-close-btn {
+      display: none;
+      position: absolute; top: 12px; right: 14px;
+      width: 32px; height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+      align-items: center; justify-content: center;
+      color: var(--text-3);
+      font-size: 18px; line-height: 1;
+      transition: all 0.15s; z-index: 10;
+    }
+    .panel-close-btn:hover { background: var(--off); color: var(--text); }
+
     /* ── RESPONSIVE ──────────────────────────────────────────────── */
     @media (max-width: 680px) {
-      .side-panel { display: none; }
-      .live-badge .live-count { display: none; }
+      .side-panel {
+        position: fixed !important;
+        bottom: 0; left: 0; right: 0;
+        width: 100% !important; height: 78vh;
+        border-radius: 16px 16px 0 0;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        transform: translateY(110%);
+        transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+        z-index: 200;
+        box-shadow: 0 -8px 32px rgba(13,27,46,0.18);
+      }
+      .side-panel.panel-open { transform: translateY(0); }
+      .panel-fab { display: flex; }
+      .panel-handle { display: block; }
+      .panel-close-btn { display: flex; }
+      .live-badge .live-count { display: inline; }
+      .nav-actions .nav-btn:not(.primary) { display: none; }
     }
   </style>
 </head>
@@ -346,6 +410,8 @@
 
   <!-- ── SIDE PANEL ────────────────────────────────────────────── -->
   <aside class="side-panel">
+    <div class="panel-handle" aria-hidden="true"></div>
+    <button class="panel-close-btn" id="panelCloseBtn" aria-label="Close panel">&#x2715;</button>
     <div class="panel-scroll">
 
       <!-- Connection status (read-only) -->
@@ -414,6 +480,14 @@
   <div id="map"></div>
 
 </div><!-- /app-shell -->
+
+<button class="panel-fab" id="panelFab" aria-label="Open filters and stats">
+  <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+    <path d="M0 1h16M0 6h16M0 11h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  </svg>
+  Filters &amp; Stats
+</button>
+<div class="panel-backdrop" id="panelBackdrop"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -807,6 +881,27 @@ function esc(v) {
 buildFilterUI();
 // Auto-connect on load
 connect();
+
+// ── MOBILE PANEL ─────────────────────────────────────────────────────────────
+(function() {
+  const fab = document.getElementById('panelFab');
+  const backdrop = document.getElementById('panelBackdrop');
+  const closeBtn = document.getElementById('panelCloseBtn');
+  const panel = document.querySelector('.side-panel');
+
+  function openPanel() {
+    panel.classList.add('panel-open');
+    backdrop.classList.add('open');
+  }
+  function closePanel() {
+    panel.classList.remove('panel-open');
+    backdrop.classList.remove('open');
+  }
+
+  if (fab) fab.addEventListener('click', openPanel);
+  if (closeBtn) closeBtn.addEventListener('click', closePanel);
+  if (backdrop) backdrop.addEventListener('click', closePanel);
+})();
 </script>
 </body>
 </html>

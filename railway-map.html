@@ -318,10 +318,74 @@
     }
     .toast.visible { display: block; }
 
+    /* ── MOBILE PANEL FAB & DRAWER ──────────────────────────────── */
+    .panel-fab {
+      display: none;
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      height: 44px; padding: 0 22px;
+      background: var(--blue); color: white;
+      border: none; border-radius: 100px;
+      font: 700 13px var(--font);
+      cursor: pointer;
+      align-items: center; gap: 8px;
+      box-shadow: 0 4px 18px rgba(15,82,186,0.5);
+      white-space: nowrap;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.15s;
+    }
+    .panel-fab:hover { background: var(--blue-dark); transform: translateX(-50%) translateY(-2px); }
+    .panel-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(13,27,46,0.5);
+      backdrop-filter: blur(3px);
+      z-index: 150;
+    }
+    .panel-backdrop.open { display: block; }
+    .panel-handle {
+      display: none;
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      margin: 10px auto 2px;
+      flex-shrink: 0;
+    }
+    .panel-close-btn {
+      display: none;
+      position: absolute; top: 12px; right: 14px;
+      width: 32px; height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+      align-items: center; justify-content: center;
+      color: var(--text-3);
+      font-size: 18px; line-height: 1;
+      transition: all 0.15s; z-index: 10;
+    }
+    .panel-close-btn:hover { background: var(--off); color: var(--text); }
+
     /* Responsive */
     @media (max-width: 700px) {
-      .side-panel { display: none; }
-      .header-search { max-width: 200px; }
+      .side-panel {
+        position: fixed !important;
+        bottom: 0; left: 0; right: 0;
+        width: 100% !important; height: 75vh;
+        border-radius: 16px 16px 0 0;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        transform: translateY(110%);
+        transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+        z-index: 200;
+        box-shadow: 0 -8px 32px rgba(13,27,46,0.18);
+      }
+      .side-panel.panel-open { transform: translateY(0); }
+      .panel-fab { display: flex; }
+      .panel-handle { display: block; }
+      .panel-close-btn { display: flex; }
+      .header-search { max-width: none; flex: 1; }
+      .nav-actions .nav-btn:not(.primary) { display: none; }
     }
   </style>
 </head>
@@ -360,6 +424,8 @@
 
   <!-- Side panel -->
   <aside class="side-panel">
+    <div class="panel-handle" aria-hidden="true"></div>
+    <button class="panel-close-btn" id="panelCloseBtn" aria-label="Close panel">&#x2715;</button>
 
     <!-- Layers -->
     <div class="panel-section">
@@ -470,6 +536,17 @@
   <!-- Leaflet map -->
   <div id="map"></div>
 </div>
+
+<button class="panel-fab" id="panelFab" aria-label="Open layers and info">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.6"/>
+    <rect x="10" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.6"/>
+    <rect x="1" y="10" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.6"/>
+    <rect x="10" y="10" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.6"/>
+  </svg>
+  Layers &amp; Info
+</button>
+<div class="panel-backdrop" id="panelBackdrop"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -874,6 +951,27 @@ function escHtml(str) {
 function capitalise(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g,' ') : str;
 }
+
+// ── MOBILE PANEL ─────────────────────────────────────────────────
+(function() {
+  const fab = document.getElementById('panelFab');
+  const backdrop = document.getElementById('panelBackdrop');
+  const closeBtn = document.getElementById('panelCloseBtn');
+  const panel = document.querySelector('.side-panel');
+
+  function openPanel() {
+    panel.classList.add('panel-open');
+    backdrop.classList.add('open');
+  }
+  function closePanel() {
+    panel.classList.remove('panel-open');
+    backdrop.classList.remove('open');
+  }
+
+  if (fab) fab.addEventListener('click', openPanel);
+  if (closeBtn) closeBtn.addEventListener('click', closePanel);
+  if (backdrop) backdrop.addEventListener('click', closePanel);
+})();
 </script>
 </body>
 </html>
