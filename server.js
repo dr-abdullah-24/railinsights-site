@@ -3,7 +3,23 @@
 // Run: npm install && npm start
 // Serves: ws://localhost:3000  and  http://localhost:3000/status
 
-const { Kafka, PartitionAssigners } = require('kafkajs');
+const { Kafka, PartitionAssigners, AssignerProtocol } = require('kafkajs');
+
+// Java/Python Kafka clients use "range" (lowercase) as their default protocol name.
+// KafkaJS uses "RoundRobin" (capitalised) — zero overlap = INCONSISTENT_GROUP_PROTOCOL.
+// This wrapper re-uses KafkaJS round-robin logic but announces the protocol as "range"
+// so we share a common name with whatever is already in the consumer group.
+const RangeCompatAssigner = ({ cluster, logger }) => {
+  const rr = PartitionAssigners.roundRobin({ cluster, logger });
+  return {
+    ...rr,
+    name: 'range',
+    protocol(subscription) {
+      const base = rr.protocol(subscription);
+      return { ...base, name: 'range' };
+    },
+  };
+};
 const WebSocket  = require('ws');
 const http       = require('http');
 const fs         = require('fs');
@@ -133,7 +149,7 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({
   groupId: 'SC-17cd3bcc-d000-4ffb-b5d6-2fe7a4742228',
-  partitionAssigners: [PartitionAssigners.roundRobin],
+  partitionAssigners: [RangeCompatAssigner, PartitionAssigners.roundRobin],
   sessionTimeout: 30000,
   heartbeatInterval: 3000,
   readUncommitted: false
