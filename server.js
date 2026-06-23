@@ -166,22 +166,36 @@ async function startConsumer() {
   await consumer.subscribe({ topic: 'TD_ALL_SIG_AREA', fromBeginning: false });
   console.log('[Kafka] Subscribed — waiting for TD messages...');
 
-  await consumer.run({
-    eachMessage: async ({ message }) => {
-      msgCount++;
-      try {
-        const arr = JSON.parse(message.value.toString());
-        let changed = false;
-        for (const item of arr) {
-          if      (item.CA_MSG) { handleCA(item.CA_MSG); changed = true; }
-          else if (item.CB_MSG) { handleCB(item.CB_MSG); changed = true; }
-          else if (item.CC_MSG) { handleCC(item.CC_MSG); changed = true; }
-          // CT_MSG = heartbeat, ignore
+  // INCONSISTENT_GROUP_PROTOCOL is non-retryable in KafkaJS — the consumer
+  // stops dead on a rolling-deploy conflict. Loop here so we wait out the
+  // old member's session timeout (30s) and then rejoin cleanly.
+  while (true) {
+    try {
+      await consumer.run({
+        eachMessage: async ({ message }) => {
+          msgCount++;
+          try {
+            const arr = JSON.parse(message.value.toString());
+            let changed = false;
+            for (const item of arr) {
+              if      (item.CA_MSG) { handleCA(item.CA_MSG); changed = true; }
+              else if (item.CB_MSG) { handleCB(item.CB_MSG); changed = true; }
+              else if (item.CC_MSG) { handleCC(item.CC_MSG); changed = true; }
+              // CT_MSG = heartbeat, ignore
+            }
+            if (changed) scheduleBroadcast();
+          } catch { /* malformed JSON — skip silently */ }
         }
-        if (changed) scheduleBroadcast();
-      } catch { /* malformed JSON — skip silently */ }
+      });
+    } catch (err) {
+      console.error('[Kafka] run() error:', err.message);
     }
-  });
+    // Consumer stopped — wait 35s (> sessionTimeout of 30s) so any conflicting
+    // member from the previous deployment expires before we try to rejoin.
+    console.warn('[Kafka] Consumer stopped — rejoining in 35s...');
+    await new Promise(r => setTimeout(r, 35_000));
+    console.log('[Kafka] Rejoining consumer group...');
+  }
 }
 
 startConsumer().catch(err => {
