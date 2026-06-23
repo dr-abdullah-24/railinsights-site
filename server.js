@@ -132,7 +132,7 @@ const kafka = new Kafka({
 });
 
 const consumer = kafka.consumer({
-  groupId: 'SC-17cd3bcc-d000-4ffb-b5d6-2fe7a4742228',
+  groupId: `railinsights-td-${Date.now()}`,
   sessionTimeout: 30000,
   heartbeatInterval: 3000,
   readUncommitted: false
