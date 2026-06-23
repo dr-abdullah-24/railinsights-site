@@ -3,7 +3,7 @@
 // Run: npm install && npm start
 // Serves: ws://localhost:3000  and  http://localhost:3000/status
 
-const { Kafka } = require('kafkajs');
+const { Kafka, PartitionAssigners } = require('kafkajs');
 const WebSocket  = require('ws');
 const http       = require('http');
 const fs         = require('fs');
@@ -132,7 +132,8 @@ const kafka = new Kafka({
 });
 
 const consumer = kafka.consumer({
-  groupId: `railinsights-td-${Date.now()}`,
+  groupId: 'SC-17cd3bcc-d000-4ffb-b5d6-2fe7a4742228',
+  partitionAssigners: [PartitionAssigners.roundRobin],
   sessionTimeout: 30000,
   heartbeatInterval: 3000,
   readUncommitted: false
