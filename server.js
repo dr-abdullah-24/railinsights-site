@@ -138,23 +138,36 @@ const consumer = kafka.consumer({
   readUncommitted: false
 });
 
-let msgCount = 0, logAt = Date.now();
+let msgCount = 0;
+
+// Periodic stats regardless of message flow — diagnoses a silent Kafka idle
+setInterval(() => {
+  console.log(`[Kafka] ${msgCount} msgs/15s | trains tracked: ${trainState.size} | WS clients: ${wss.clients.size}`);
+  msgCount = 0;
+}, 15_000);
 
 async function startConsumer() {
   console.log('[Kafka] Connecting to Confluent Cloud...');
   await consumer.connect();
+  console.log('[Kafka] Connected');
+
+  // Log non-fatal KafkaJS errors (auth failures, assignment issues, etc.)
+  consumer.on(consumer.events.CRASH, ({ payload }) => {
+    console.error('[Kafka] CRASH event:', payload.error?.message ?? payload);
+  });
+  consumer.on(consumer.events.GROUP_JOIN, ({ payload }) => {
+    console.log(`[Kafka] Joined group — memberId: ${payload.memberId}`);
+  });
+  consumer.on(consumer.events.STOP, () => {
+    console.warn('[Kafka] Consumer stopped unexpectedly');
+  });
+
   await consumer.subscribe({ topic: 'TD_ALL_SIG_AREA', fromBeginning: false });
   console.log('[Kafka] Subscribed — waiting for TD messages...');
 
   await consumer.run({
     eachMessage: async ({ message }) => {
       msgCount++;
-      const now = Date.now();
-      if (now - logAt > 15_000) {
-        console.log(`[Kafka] ${msgCount} msgs/15s | trains tracked: ${trainState.size} | WS clients: ${wss.clients.size}`);
-        msgCount = 0; logAt = now;
-      }
-
       try {
         const arr = JSON.parse(message.value.toString());
         let changed = false;
