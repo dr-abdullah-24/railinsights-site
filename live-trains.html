@@ -841,10 +841,10 @@ const TYPES = {
   express:   { label: 'Express Passenger',   color: '#0f52ba', bg: '#eaf1fd', chars: '1'    },
   passenger: { label: 'Stopping Passenger',  color: '#0891b2', bg: '#ecfeff', chars: '2'    },
   ecs:       { label: 'Empty Coaching Stock', color: '#7c3aed', bg: '#f5f3ff', chars: '5'   },
-  loco:      { label: 'Light Loco',           color: '#d97706', bg: '#fffbeb', chars: '6'   },
+  loco:      { label: 'Light Loco / Charter',  color: '#d97706', bg: '#fffbeb', chars: '06'   },
   freight:   { label: 'Freight',              color: '#059669', bg: '#f0fdf4', chars: '4789' },
   parcels:   { label: 'Parcels',              color: '#db2777', bg: '#fdf2f8', chars: '3'   },
-  special:   { label: 'Special / Other',      color: '#6b7280', bg: '#f9fafb', chars: '0'   },
+  special:   { label: 'Special / Other',      color: '#6b7280', bg: '#f9fafb', chars: ''    },
 };
 const TYPE_KEYS = Object.keys(TYPES);
 
@@ -855,8 +855,8 @@ function getType(hc) {
   if (c === '2') return 'passenger';
   if (c === '3') return 'parcels';
   if ('4789'.includes(c)) return 'freight';
+  if (c === '0' || c === '6') return 'loco';
   if (c === '5') return 'ecs';
-  if (c === '6') return 'loco';
   return 'special';
 }
 
