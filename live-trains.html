@@ -709,7 +709,7 @@
   <div class="kpi">
     <span class="kpi-label">Passenger</span>
     <div class="kpi-val" id="kpiPax">—</div>
-    <div class="kpi-sub">Class 1, 2 &amp; 9 headcodes</div>
+    <div class="kpi-sub">Class 1 &amp; 2 headcodes</div>
   </div>
   <div class="kpi">
     <span class="kpi-label">Freight</span>
@@ -838,19 +838,20 @@
 
 // ── Train type config ────────────────────────────────────────────────────────
 const TYPES = {
-  express:   { label: 'Express / Eurostar',   color: '#0f52ba', bg: '#eaf1fd', chars: '19'   },
+  express:   { label: 'Express Passenger',    color: '#0f52ba', bg: '#eaf1fd', chars: '1'    },
   passenger: { label: 'Stopping Passenger',   color: '#0891b2', bg: '#ecfeff', chars: '2'    },
   ecs:       { label: 'Empty Coaching Stock', color: '#7c3aed', bg: '#f5f3ff', chars: '5'    },
   loco:      { label: 'Light Loco',           color: '#d97706', bg: '#fffbeb', chars: '0'    },
   freight:   { label: 'Freight',              color: '#059669', bg: '#f0fdf4', chars: '34678' },
-  special:   { label: 'Special / Other',      color: '#6b7280', bg: '#f9fafb', chars: ''     },
+  special:   { label: 'Special / Eurostar',   color: '#6b7280', bg: '#f9fafb', chars: '9'    },
 };
 const TYPE_KEYS = Object.keys(TYPES);
 
 function getType(hc) {
   if (!hc) return 'special';
   const c = hc[0];
-  if (c === '1' || c === '9') return 'express';
+  if (c === '1') return 'express';
+  if (c === '9') return 'special';
   if (c === '2') return 'passenger';
   if ('34678'.includes(c)) return 'freight';
   if (c === '5') return 'ecs';
