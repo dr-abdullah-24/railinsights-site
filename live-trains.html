@@ -685,13 +685,6 @@
       </div>
     </a>
 
-    <div class="live-badge">
-      <div class="live-dot disconnected" id="headerDot"></div>
-      <span id="headerStatus">Not connected</span>
-      &nbsp;·&nbsp;
-      <span class="live-count" id="headerCount">0 trains</span>
-    </div>
-
     <div class="nav-actions">
       <a class="nav-btn" href="railway-map.html">Railway Map</a>
       <a class="nav-btn" href="berth-map.html">Berth Map</a>
@@ -1057,8 +1050,6 @@ function refreshUI() {
     setText('kpiUpdated', lastUpdate.toLocaleTimeString('en-GB'));
     setText('statUpdated', 'Updated ' + lastUpdate.toLocaleTimeString('en-GB'));
   }
-  document.getElementById('headerCount').textContent = `${total} train${total !== 1 ? 's' : ''}`;
-
   renderSpark(total);
   renderMix(counts, total);
   renderAreas(areas);
@@ -1254,13 +1245,9 @@ function flyTo(hc) {
 
 // ── Connection management ────────────────────────────────────────────────────
 function setConnState(state, text) {
-  ['connDot', 'headerDot'].forEach(id => {
-    const el = document.getElementById(id);
-    el.className = 'conn-dot ' + state;
-    if (id === 'headerDot') el.className = 'live-dot ' + state;
-  });
+  const dot = document.getElementById('connDot');
+  if (dot) dot.className = 'conn-dot ' + state;
   document.getElementById('connText').textContent = text;
-  document.getElementById('headerStatus').textContent = text;
 }
 
 const WS_URL = (() => {
