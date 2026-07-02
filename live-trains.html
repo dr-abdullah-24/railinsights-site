@@ -709,12 +709,12 @@
   <div class="kpi">
     <span class="kpi-label">Passenger</span>
     <div class="kpi-val" id="kpiPax">—</div>
-    <div class="kpi-sub">Class 1 &amp; 2 headcodes</div>
+    <div class="kpi-sub">Class 1, 2 &amp; 9 headcodes</div>
   </div>
   <div class="kpi">
     <span class="kpi-label">Freight</span>
     <div class="kpi-val" id="kpiFreight">—</div>
-    <div class="kpi-sub">Class 4 / 7 / 8 / 9</div>
+    <div class="kpi-sub">Class 3 / 4 / 6 / 7 / 8</div>
   </div>
   <div class="kpi">
     <span class="kpi-label">Berth moves / min</span>
@@ -838,25 +838,23 @@
 
 // ── Train type config ────────────────────────────────────────────────────────
 const TYPES = {
-  express:   { label: 'Express Passenger',   color: '#0f52ba', bg: '#eaf1fd', chars: '1'    },
-  passenger: { label: 'Stopping Passenger',  color: '#0891b2', bg: '#ecfeff', chars: '2'    },
-  ecs:       { label: 'Empty Coaching Stock', color: '#7c3aed', bg: '#f5f3ff', chars: '5'   },
-  loco:      { label: 'Light Loco / Charter',  color: '#d97706', bg: '#fffbeb', chars: '06'   },
-  freight:   { label: 'Freight',              color: '#059669', bg: '#f0fdf4', chars: '4789' },
-  parcels:   { label: 'Parcels',              color: '#db2777', bg: '#fdf2f8', chars: '3'   },
-  special:   { label: 'Special / Other',      color: '#6b7280', bg: '#f9fafb', chars: ''    },
+  express:   { label: 'Express / Eurostar',   color: '#0f52ba', bg: '#eaf1fd', chars: '19'   },
+  passenger: { label: 'Stopping Passenger',   color: '#0891b2', bg: '#ecfeff', chars: '2'    },
+  ecs:       { label: 'Empty Coaching Stock', color: '#7c3aed', bg: '#f5f3ff', chars: '5'    },
+  loco:      { label: 'Light Loco',           color: '#d97706', bg: '#fffbeb', chars: '0'    },
+  freight:   { label: 'Freight',              color: '#059669', bg: '#f0fdf4', chars: '34678' },
+  special:   { label: 'Special / Other',      color: '#6b7280', bg: '#f9fafb', chars: ''     },
 };
 const TYPE_KEYS = Object.keys(TYPES);
 
 function getType(hc) {
   if (!hc) return 'special';
   const c = hc[0];
-  if (c === '1') return 'express';
+  if (c === '1' || c === '9') return 'express';
   if (c === '2') return 'passenger';
-  if (c === '3') return 'parcels';
-  if ('4789'.includes(c)) return 'freight';
-  if (c === '0' || c === '6') return 'loco';
+  if ('34678'.includes(c)) return 'freight';
   if (c === '5') return 'ecs';
+  if (c === '0') return 'loco';
   return 'special';
 }
 
@@ -1018,7 +1016,7 @@ function applyFilters() {
 
 // ── UI updates ───────────────────────────────────────────────────────────────
 function zOrder(type) {
-  return { express: 800, ecs: 600, loco: 400, passenger: 200, parcels: 100, freight: 0, special: 0 }[type] ?? 0;
+  return { express: 800, ecs: 600, loco: 400, passenger: 200, freight: 0, special: 0 }[type] ?? 0;
 }
 
 function refreshUI() {
