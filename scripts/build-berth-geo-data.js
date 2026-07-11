@@ -160,11 +160,7 @@ function addBerth(rows, source) {
   const berth = clean(source.berth);
   if (!berth) return;
 
-  const key = [
-    clean(source.td),
-    berth,
-    clean(source.stanox),
-  ].join('|');
+  const key = [clean(source.td), berth, clean(source.stanox)].join('|');
 
   if (!rows.has(key)) {
     rows.set(key, {
@@ -172,18 +168,27 @@ function addBerth(rows, source) {
       berth,
       station: clean(source.station),
       stanox: clean(source.stanox),
-      platform: clean(source.platform),
-      event: clean(source.event),
-      stepType: clean(source.stepType),
-      route: clean(source.route),
-      fromLine: clean(source.fromLine),
-      toLine: clean(source.toLine),
-      offsetMetres: clean(source.offset),
-      sourceDate: clean(source.sourceDate),
+      platforms: new Set(),
+      events: new Set(),
+      routes: new Set(),
+      fromLines: new Set(),
+      toLines: new Set(),
+      offsets: new Set(),
+      sourceDates: new Set(),
       count: 0,
     });
   }
-  rows.get(key).count += 1;
+
+  const row = rows.get(key);
+  const add = (set, val) => { if (val) set.add(val); };
+  add(row.platforms, clean(source.platform));
+  add(row.events, clean(source.event));
+  add(row.routes, clean(source.route));
+  add(row.fromLines, clean(source.fromLine));
+  add(row.toLines, clean(source.toLine));
+  add(row.offsets, clean(source.offset));
+  add(row.sourceDates, clean(source.sourceDate));
+  row.count += 1;
 }
 
 function main() {
@@ -209,6 +214,8 @@ function main() {
     addBerth(rows, { ...base, berth: row.FROMBERTH });
   }
 
+  const join = set => [...set].sort().join(', ');
+
   const records = [...rows.values()].map(row => {
     const locs = locations.byStanox.get(row.stanox) || [];
     const validLoc = locs.find(loc => loc.latlon);
@@ -219,13 +226,13 @@ function main() {
       row.berth,
       row.station,
       row.stanox,
-      row.platform,
-      row.event,
-      row.route,
-      row.fromLine,
-      row.toLine,
-      row.offsetMetres,
-      row.sourceDate,
+      join(row.platforms),
+      join(row.events),
+      join(row.routes),
+      join(row.fromLines),
+      join(row.toLines),
+      join(row.offsets),
+      join(row.sourceDates),
       clean(validLoc?.name) || clean(corpusPrimary.description) || row.station,
       clean(validLoc?.tiploc) || clean(corpusPrimary.tiploc),
       clean(corpusPrimary.crs),

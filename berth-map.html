@@ -1064,7 +1064,7 @@
           ${field('Platform', item.platform || 'n/a')}
           ${field('Event', item.event || 'n/a')}
           ${field('Route', item.route || 'n/a')}
-          ${field('Offset', item.offsetMetres ? `${item.offsetMetres} m` : 'n/a')}
+          ${field('Offset', item.offsetMetres ? item.offsetMetres.split(', ').map(v => `${v} m`).join(', ') : 'n/a')}
           ${field('Grid ref', item.easting && item.northing ? `${item.easting}, ${item.northing}` : 'n/a')}
           ${field('Source date', item.sourceDate || 'n/a')}
         </div>
