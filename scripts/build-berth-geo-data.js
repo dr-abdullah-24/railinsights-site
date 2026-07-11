@@ -164,9 +164,6 @@ function addBerth(rows, source) {
     clean(source.td),
     berth,
     clean(source.stanox),
-    clean(source.platform),
-    clean(source.event),
-    clean(source.offset),
   ].join('|');
 
   if (!rows.has(key)) {
