@@ -142,7 +142,15 @@ body.product-app {
   border-right: 1px solid rgba(255,255,255,.15);
   box-shadow: 12px 0 34px rgba(0,0,0,.18);
 }
-.product-map .panel-section { border-color: rgba(255,255,255,.12); padding: 17px 18px; }
+.product-map .panel-section,
+.product-map .detail-section {
+  background: rgba(255,255,255,.045);
+  color: var(--ri-white);
+  border-color: rgba(255,255,255,.13);
+  border-radius: 0;
+  box-shadow: none;
+}
+.product-map .panel-section { padding: 17px 18px; }
 .product-map .panel-label { color: var(--ri-signal); font-size: 9px; }
 .product-map .layer-item { border-color: rgba(255,255,255,.12); background: transparent; }
 .product-map .layer-item:hover { background: rgba(255,255,255,.05); }
@@ -155,7 +163,10 @@ body.product-app {
 .product-map .feed-sub,
 .product-map .feed-empty,
 .product-map .mix-caption,
-.product-map .kpi-sub { color: rgba(255,255,255,.48); }
+.product-map .kpi-sub,
+.product-map .search-hits,
+.product-map .stat-updated,
+.product-map .detail-empty { color: rgba(255,255,255,.58); }
 .product-map .stat-card,
 .product-map .feed-card,
 .product-map .info-box { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.13); border-radius: 0; }
@@ -170,6 +181,9 @@ body.product-app {
   color: white;
   border-color: rgba(255,255,255,.18);
 }
+.product-map .search-input::placeholder { color: rgba(255,255,255,.46); }
+.product-map .search-icon,
+.product-map .search-clear { color: rgba(255,255,255,.62); }
 .product-map .header-search input {
   height: 42px;
   background: rgba(255,255,255,.07);
@@ -224,7 +238,30 @@ body.product-app {
 .live-operations .kpi-clock .kpi-sub { color: rgba(16,19,15,.62); }
 .live-operations .side-panel { width: 320px; }
 .live-operations .filter-all-btn { color: var(--ri-signal); }
-.live-operations .filter-row:hover { background: rgba(255,255,255,.05); }
+.live-operations .filter-item:hover,
+.live-operations .area-row:hover,
+.live-operations .move-row:hover { background: rgba(255,255,255,.065); }
+.live-operations .filter-count,
+.live-operations .area-meter,
+.live-operations .mix-bar { background: rgba(255,255,255,.13); }
+.live-operations .filter-count,
+.live-operations .area-count,
+.live-operations .move-arrow,
+.live-operations .move-berth,
+.live-operations .move-time { color: rgba(255,255,255,.56); }
+.live-operations .area-name,
+.live-operations .move-loc { color: rgba(255,255,255,.88); }
+.live-operations .area-code {
+  background: var(--ri-signal);
+  color: var(--ri-ink);
+}
+.live-operations .filter-track { background: rgba(255,255,255,.18); }
+.live-operations .filter-toggle input:checked + .filter-track { background: var(--ri-signal) !important; }
+.live-operations .filter-toggle input:checked + .filter-track::after { background: var(--ri-ink); }
+.live-operations .detail-row { color: rgba(255,255,255,.54); border-color: rgba(255,255,255,.1); }
+.live-operations .detail-row span:last-child { color: rgba(255,255,255,.9); }
+.live-operations .detail-locate-btn { background: var(--ri-signal); border-color: var(--ri-signal); color: var(--ri-ink); }
+.live-operations .panel-close-btn { color: white; border-color: rgba(255,255,255,.18); background: var(--ri-ink-2); }
 .live-operations .mix-bar { border-radius: 0; }
 
 /* Document/data products */
@@ -331,7 +368,6 @@ body.product-app {
   .product-app .brand { min-width: 0; }
   .product-app .brand img,
   .product-app .brand-mark img { width: 132px; height: 36px; }
-  .product-app .brand-text,
   .product-app .brand > span:last-child { display: none; }
   .product-app .nav-actions > a:not(.primary) { display: none; }
   .product-app .nav-btn.primary,
@@ -339,6 +375,15 @@ body.product-app {
   .product-map .side-panel { width: min(88vw, 330px); }
   .live-operations .kpi-strip { min-height: 74px; }
   .live-operations .kpi { padding: 11px 14px; }
+  .live-operations .brand-text { display: flex; min-width: 0; }
+  .live-operations .brand-name { display: none; }
+  .live-operations .brand-sub {
+    display: block;
+    max-width: 205px;
+    font-size: 8px;
+    line-height: 1.35;
+    white-space: normal;
+  }
   .product-document .shell { padding-left: 18px; padding-right: 18px; }
   .product-document .tool-head { margin: 0 -18px 24px; padding: 48px 18px 36px; grid-template-columns: 1fr; }
   .product-document .tool-head h1 { font-size: clamp(42px, 13.2vw, 62px); line-height: .96; letter-spacing: -.06em; }
