@@ -1,0 +1,370 @@
+/* Rail Insights product suite — shared operational interface */
+:root {
+  --ri-ink: #10130f;
+  --ri-ink-2: #191d17;
+  --ri-paper: #f0efe8;
+  --ri-white: #fafaf6;
+  --ri-line: rgba(16, 19, 15, .17);
+  --ri-signal: #d9ff43;
+  --ri-blue: #1857c9;
+  --ri-orange: #ef5b2a;
+}
+
+body.product-app {
+  background: var(--ri-paper);
+  color: var(--ri-ink);
+  font-family: 'Outfit', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.product-app ::selection { background: var(--ri-signal); color: var(--ri-ink); }
+
+/* Product command bar */
+.product-app .app-header {
+  position: relative;
+  z-index: 1000;
+  flex-shrink: 0;
+  background: var(--ri-ink);
+  color: var(--ri-white);
+  border: 0;
+  border-bottom: 3px solid var(--ri-signal);
+  backdrop-filter: none;
+}
+
+.product-app .app-header .nav {
+  width: 100%;
+  max-width: none;
+  height: 72px;
+  padding: 0 22px;
+  gap: 20px;
+}
+
+.product-app .brand { gap: 14px; min-width: 275px; }
+.product-app .brand img { width: 176px; height: 42px; object-fit: contain; object-position: left center; }
+.product-app .brand-mark { width: auto; height: auto; background: none; }
+.product-app .brand-mark img { width: 176px; height: 42px; }
+.product-app .brand-name { display: none; }
+.product-app .brand-text,
+.product-app .brand > span:last-child { display: flex; flex-direction: column; justify-content: center; }
+.product-app .brand-sub {
+  margin: 0;
+  color: var(--ri-signal);
+  font: 500 9px/1.2 'IBM Plex Mono', monospace;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.product-app .nav-actions { gap: 0; height: 100%; }
+.product-app .nav-btn,
+.product-app .nav-link {
+  height: 100%;
+  padding: 0 16px;
+  border: 0;
+  border-left: 1px solid rgba(255,255,255,.18);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: rgba(255,255,255,.68);
+  font: 500 10px/1 'IBM Plex Mono', monospace;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+.product-app .nav-btn:hover,
+.product-app .nav-link:hover,
+.product-app .nav-btn.active,
+.product-app .nav-link.active { background: rgba(255,255,255,.08); color: white; border-color: rgba(255,255,255,.18); }
+.product-app .nav-btn.active,
+.product-app .nav-link.active { box-shadow: inset 0 -3px 0 var(--ri-signal); }
+.product-app .nav-btn.primary,
+.product-app .nav-link.primary {
+  height: 42px;
+  margin-left: 12px;
+  padding: 0 18px;
+  align-self: center;
+  border: 1px solid var(--ri-signal);
+  background: var(--ri-signal);
+  color: var(--ri-ink);
+  font-weight: 600;
+}
+.product-app .nav-btn.primary:hover,
+.product-app .nav-link.primary:hover { background: white; color: var(--ri-ink); border-color: white; }
+.product-app .nav-hamburger { color: white; border-color: rgba(255,255,255,.35); background: transparent; }
+
+/* Shared operational components */
+.product-app .panel-label,
+.product-app .eyebrow,
+.product-app .f-label,
+.product-app .kpi-label,
+.product-app .vc-label,
+.product-app .panel-title {
+  color: inherit;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.product-app input,
+.product-app select,
+.product-app textarea,
+.product-app button { border-radius: 0 !important; }
+
+.product-app input:focus,
+.product-app select:focus,
+.product-app textarea:focus {
+  border-color: var(--ri-blue) !important;
+  box-shadow: 0 0 0 3px rgba(24,87,201,.13) !important;
+}
+
+/* Use the product's own clear button instead of the browser-generated one. */
+.signal-desk input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.signal-desk input[type="search"]::-webkit-search-cancel-button,
+.signal-desk input[type="search"]::-webkit-search-decoration {
+  display: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 0;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.product-app .toast { border-radius: 0; font-family: 'IBM Plex Mono', monospace; }
+
+/* Full-screen map products */
+.product-map .side-panel {
+  width: 300px;
+  background: var(--ri-ink-2);
+  color: var(--ri-white);
+  border-right: 1px solid rgba(255,255,255,.15);
+  box-shadow: 12px 0 34px rgba(0,0,0,.18);
+}
+.product-map .panel-section { border-color: rgba(255,255,255,.12); padding: 17px 18px; }
+.product-map .panel-label { color: var(--ri-signal); font-size: 9px; }
+.product-map .layer-item { border-color: rgba(255,255,255,.12); background: transparent; }
+.product-map .layer-item:hover { background: rgba(255,255,255,.05); }
+.product-map .layer-name,
+.product-map .legend-item,
+.product-map .conn-text,
+.product-map .filter-label { color: var(--ri-white); }
+.product-map .layer-note,
+.product-map .panel-hint,
+.product-map .feed-sub,
+.product-map .feed-empty,
+.product-map .mix-caption,
+.product-map .kpi-sub { color: rgba(255,255,255,.48); }
+.product-map .stat-card,
+.product-map .feed-card,
+.product-map .info-box { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.13); border-radius: 0; }
+.product-map .stat-val { color: var(--ri-signal); }
+.product-map .stat-lbl { color: rgba(255,255,255,.5); }
+.product-map .toggle-track { background: rgba(255,255,255,.16); }
+.product-map .toggle input:checked + .toggle-track { background: var(--ri-signal); }
+.product-map .toggle input:checked + .toggle-track::after { background: var(--ri-ink); }
+.product-map .search-wrap input,
+.product-map .search-input {
+  background: rgba(255,255,255,.07);
+  color: white;
+  border-color: rgba(255,255,255,.18);
+}
+.product-map .header-search input {
+  height: 42px;
+  background: rgba(255,255,255,.07);
+  color: white;
+  border: 1px solid rgba(255,255,255,.2);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+}
+.product-map .header-search input::placeholder { color: rgba(255,255,255,.42); }
+.product-map .header-search .search-icon { color: var(--ri-signal); }
+.product-map .search-results {
+  border-radius: 0;
+  border: 1px solid var(--ri-line);
+  background: var(--ri-white);
+  color: var(--ri-ink);
+}
+.product-map .search-results .search-item { color: var(--ri-ink); border-color: var(--ri-line); }
+.product-map .search-results .search-item:hover { background: #e7edff; }
+.product-map .search-results .search-item-name { color: var(--ri-ink); }
+.product-map .search-results .search-item-type { color: #686d64; }
+.product-map .search-results .search-empty { color: #686d64; }
+.product-map .panel-fab { border-radius: 0; background: var(--ri-ink); color: white; border: 1px solid var(--ri-signal); }
+
+/* Network Atlas */
+.network-atlas .brand-sub::before { content: '01 / '; color: rgba(255,255,255,.45); }
+.network-atlas .side-panel::before {
+  content: 'NETWORK ATLAS / LAYER CONTROL';
+  display: block;
+  padding: 15px 18px;
+  color: rgba(255,255,255,.45);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  font: 500 9px 'IBM Plex Mono', monospace;
+  letter-spacing: .1em;
+}
+.network-atlas .loading-bar { background: var(--ri-signal); }
+.network-atlas .leaflet-control-zoom a { border-radius: 0 !important; }
+
+/* Live Operations */
+.live-operations .brand-sub::before { content: '03 / '; color: rgba(255,255,255,.45); }
+.live-operations .kpi-strip {
+  min-height: 92px;
+  background: var(--ri-white);
+  border-bottom: 1px solid var(--ri-line);
+  box-shadow: none;
+}
+.live-operations .kpi { padding: 15px 20px; border-color: var(--ri-line); }
+.live-operations .kpi-label { color: #686d64; font-size: 9px; }
+.live-operations .kpi-val { color: var(--ri-ink); font-size: 27px; letter-spacing: -.04em; }
+.live-operations .kpi-val.blue { color: var(--ri-blue); }
+.live-operations .kpi-clock { background: var(--ri-signal); }
+.live-operations .kpi-clock .kpi-label,
+.live-operations .kpi-clock .kpi-sub { color: rgba(16,19,15,.62); }
+.live-operations .side-panel { width: 320px; }
+.live-operations .filter-all-btn { color: var(--ri-signal); }
+.live-operations .filter-row:hover { background: rgba(255,255,255,.05); }
+.live-operations .mix-bar { border-radius: 0; }
+
+/* Document/data products */
+.product-document .app-header { position: sticky; top: 0; }
+.product-document .shell { max-width: 1460px; padding-left: 36px; padding-right: 36px; }
+.product-document main.shell { padding-top: 0; }
+.product-document .tool-head {
+  position: relative;
+  margin: 0 -36px 32px;
+  padding: 64px 36px 50px;
+  display: grid;
+  align-items: end;
+  background: var(--ri-ink);
+  color: var(--ri-white);
+  border: 0;
+  overflow: hidden;
+}
+.product-document .tool-head::after {
+  content: '';
+  position: absolute;
+  width: 330px;
+  height: 3px;
+  right: -40px;
+  bottom: 74px;
+  background: var(--ri-signal);
+  transform: rotate(-13deg);
+  transform-origin: right;
+}
+.product-document .tool-head .eyebrow { color: var(--ri-signal); font-size: 9px; }
+.product-document .tool-head h1 {
+  margin: 10px 0 16px;
+  color: white;
+  font-size: clamp(52px, 6.8vw, 94px);
+  font-weight: 560;
+  line-height: .9;
+  letter-spacing: -.065em;
+}
+.product-document .tool-head .lead { max-width: 760px; color: rgba(255,255,255,.62); font-size: 16px; }
+.product-document .dataset-status,
+.product-document .validity-card {
+  position: relative;
+  z-index: 1;
+  min-width: 300px;
+  padding: 22px;
+  background: var(--ri-signal);
+  color: var(--ri-ink);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.product-document .dataset-status strong,
+.product-document .vc-range { color: var(--ri-ink); }
+.product-document .status-line,
+.product-document .vc-divider { border-color: rgba(16,19,15,.2); }
+
+/* Signal Desk */
+.signal-desk .brand-sub::before { content: '02 / '; color: rgba(255,255,255,.45); }
+.signal-desk .search-panel {
+  padding: 0;
+  border: 1px solid var(--ri-ink);
+  border-radius: 0;
+  background: var(--ri-white);
+  box-shadow: 6px 6px 0 var(--ri-ink);
+}
+.signal-desk .search-row { padding: 18px; }
+.signal-desk .quick-row { margin: 0; padding: 12px 18px; border-top: 1px solid var(--ri-line); }
+.signal-desk .search-box,
+.signal-desk .mode-tabs,
+.signal-desk .quick-chip,
+.signal-desk .geo-toggle { border-radius: 0; }
+.signal-desk .mode-tab.active { background: var(--ri-blue); color: white; }
+.signal-desk .content-grid { gap: 0; border: 1px solid var(--ri-ink); }
+.signal-desk .results-panel,
+.signal-desk .detail-panel { border: 0; border-radius: 0; box-shadow: none; }
+.signal-desk .results-panel { border-right: 1px solid var(--ri-ink); }
+.signal-desk .panel-head { background: var(--ri-ink); color: white; border: 0; }
+.signal-desk .panel-head .panel-meta { color: rgba(255,255,255,.5); }
+
+/* Timetable Intelligence */
+.timetable-intelligence .brand-sub::before { content: '04 / '; color: rgba(255,255,255,.45); }
+.timetable-intelligence .wtt-notice { border-radius: 0; border-left: 4px solid var(--ri-orange); background: #fff1eb; }
+.timetable-intelligence .filter-panel { border: 1px solid var(--ri-ink); border-radius: 0; box-shadow: 6px 6px 0 var(--ri-ink); }
+.timetable-intelligence .filter-row-1 { background: var(--ri-white); }
+.timetable-intelligence .filter-row-2 { background: #e5e4dc; border-color: var(--ri-line); }
+.timetable-intelligence .search-btn { background: var(--ri-blue); border-color: var(--ri-blue); }
+.timetable-intelligence .type-chip.on,
+.timetable-intelligence .sort-btn.on { background: var(--ri-ink); color: white; border-color: var(--ri-ink); }
+.timetable-intelligence .day-chip.on { background: var(--ri-signal); color: var(--ri-ink); border-color: var(--ri-ink); }
+.timetable-intelligence .results-bar { margin-top: 30px; border-color: var(--ri-ink); }
+.timetable-intelligence .service-card { border-radius: 0; border-color: var(--ri-line); box-shadow: none; }
+.timetable-intelligence .service-card:hover { border-color: var(--ri-blue); box-shadow: 4px 4px 0 var(--ri-blue); transform: translate(-2px,-2px); }
+
+@media (max-width: 1080px) {
+  .product-app .app-header .nav { padding: 0 16px; }
+  .product-app .brand { min-width: 220px; }
+  .product-app .brand img,
+  .product-app .brand-mark img { width: 145px; }
+  .product-app .nav-btn,
+  .product-app .nav-link { padding: 0 11px; font-size: 9px; }
+}
+
+@media (max-width: 760px) {
+  .product-app .app-header .nav { height: 64px; }
+  .product-app .brand { min-width: 0; }
+  .product-app .brand img,
+  .product-app .brand-mark img { width: 132px; height: 36px; }
+  .product-app .brand-text,
+  .product-app .brand > span:last-child { display: none; }
+  .product-app .nav-actions > a:not(.primary) { display: none; }
+  .product-app .nav-btn.primary,
+  .product-app .nav-link.primary { display: none; }
+  .product-map .side-panel { width: min(88vw, 330px); }
+  .live-operations .kpi-strip { min-height: 74px; }
+  .live-operations .kpi { padding: 11px 14px; }
+  .product-document .shell { padding-left: 18px; padding-right: 18px; }
+  .product-document .tool-head { margin: 0 -18px 24px; padding: 48px 18px 36px; grid-template-columns: 1fr; }
+  .product-document .tool-head h1 { font-size: clamp(42px, 13.2vw, 62px); line-height: .96; letter-spacing: -.06em; }
+  .product-document .tool-head .lead { max-width: 34rem; font-size: 14px; line-height: 1.6; }
+  .product-document .dataset-status,
+  .product-document .validity-card { min-width: 0; margin-top: 30px; }
+  .signal-desk .content-grid { border: 0; }
+  .signal-desk .results-panel { border: 1px solid var(--ri-ink); }
+  .signal-desk .detail-panel { border: 1px solid var(--ri-ink); }
+  .timetable-intelligence .wtt-notice { font-size: 11px; line-height: 1.55; }
+  .timetable-intelligence .filter-panel { box-shadow: 4px 4px 0 var(--ri-ink); }
+}
+
+@media (max-width: 430px) {
+  .product-app .app-header .nav { padding-inline: 14px; }
+  .product-app .brand img,
+  .product-app .brand-mark img { width: 118px; height: 32px; }
+  .product-document .tool-head { padding-top: 42px; padding-bottom: 32px; }
+  .product-document .tool-head h1 { font-size: clamp(38px, 12.6vw, 52px); }
+  .signal-desk .tool-head h1 { font-size: clamp(44px, 14vw, 56px); }
+  .product-document .dataset-status,
+  .product-document .validity-card { padding: 18px; }
+  .signal-desk .search-row { padding: 13px; }
+  .signal-desk .quick-row { padding: 10px 13px; overflow-x: auto; flex-wrap: nowrap; }
+  .signal-desk .quick-chip { flex: 0 0 auto; }
+  .live-operations .kpi { min-width: 122px; }
+  .live-operations .kpi-val { font-size: 22px; }
+  .network-atlas .side-panel::before { padding: 12px 14px; font-size: 8px; }
+}

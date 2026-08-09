@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Live Operations | Real-Time Train Movement Intelligence | Rail Insights</title>
+  <title>Live Train Map | Rail Insights</title>
   <meta name="description" content="Real-time UK live train positions from Train Describer (TD) data. All active headcodes on an interactive map with clustering, train-type filters, and headcode search." />
   <meta name="keywords" content="live UK train map, TD data, headcode tracker, real-time train positions, Rail Insights, UK rail live" />
   <meta name="author" content="Rail Insights" />
   <link rel="canonical" href="https://railinsights.co.uk/live-trains.html" />
-  <link rel="icon" href="assets/brand-icon-32.png" type="image/png" sizes="32x32" />
-  <link rel="icon" href="assets/brand-icon-192.png" type="image/png" sizes="192x192" />
-  <link rel="apple-touch-icon" href="assets/brand-icon-180.png" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/favicon-180.png" />
   <meta name="theme-color" content="#0f52ba" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -378,357 +378,34 @@
       .brand-text { display: none; }
     }
   </style>
-<style id="ri-dashboard">
-/* ═══ LIVE TRAINS · DASHBOARD LAYER (original theme) ════════════════ */
-
-/* ── KPI strip: light band under the header ────────────────────────── */
-.kpi-strip {
-  flex-shrink: 0;
-  display: flex;
-  align-items: stretch;
-  background: #fff;
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  scrollbar-width: none;
-  z-index: 400;
-}
-.kpi-strip::-webkit-scrollbar { display: none; }
-.kpi {
-  flex: 1 1 0;
-  min-width: 128px;
-  padding: 11px 18px 12px;
-  border-right: 1px solid var(--off-2);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 4px;
-}
-.kpi:last-child { border-right: none; }
-.kpi-label {
-  font: 700 9.5px/1 var(--mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  white-space: nowrap;
-}
-.kpi-val {
-  font: 800 24px/1 var(--font);
-  letter-spacing: -0.02em;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.kpi-val.blue { color: var(--blue); }
-.kpi-val.mono { font: 600 19px/1.15 var(--mono); letter-spacing: 0.04em; }
-.kpi-sub { font: 500 10px var(--mono); color: var(--text-4); letter-spacing: 0.03em; }
-#sparkline { display: block; overflow: visible; }
-#sparkline polyline { fill: none; stroke: var(--blue); stroke-width: 1.6; stroke-linejoin: round; }
-#sparkline .spark-fill { fill: rgba(15,82,186,0.10); stroke: none; }
-
-/* ── Left panel: card-based shell ──────────────────────────────────── */
-.side-panel { width: 300px; background: var(--off); }
-.panel-scroll {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.panel-scroll::-webkit-scrollbar { width: 8px; }
-.panel-scroll::-webkit-scrollbar-track { background: transparent; }
-.panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-.panel-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-4); }
-
-.panel-section,
-.detail-section {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px 13px;
-  box-shadow: var(--shadow-xs);
-  flex-shrink: 0;
-}
-.panel-label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--blue);
-}
-.panel-label::before {
-  content: '';
-  width: 3px;
-  height: 11px;
-  border-radius: 2px;
-  background: var(--blue);
-  flex-shrink: 0;
-}
-.panel-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.panel-section-head .panel-label { margin-bottom: 0; }
-
-/* Feed status card */
-.feed-card {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  background: var(--off);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 11px 13px;
-}
-.feed-card .conn-dot { width: 10px; height: 10px; }
-.feed-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.feed-sub {
-  font: 500 9px var(--mono);
-  color: var(--text-4);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-/* Filter rows */
-.filter-item {
-  padding: 7px 8px;
-  margin: 0 -8px;
-  border-bottom: none;
-  border-radius: 7px;
-}
-.filter-item:hover { background: var(--off); }
-.filter-swatch { width: 4px; height: 16px; border-radius: 2px; }
-
-/* Type mix bar under the filters */
-.mix-bar {
-  display: flex;
-  height: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: var(--off-2);
-  margin-top: 12px;
-}
-.mix-bar span { display: block; height: 100%; transition: width 0.5s ease; }
-.mix-caption { font: 500 10px var(--mono); color: var(--text-4); margin-top: 6px; letter-spacing: 0.03em; }
-
-/* Busiest TD areas */
-.area-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 6px 6px;
-  margin: 0 -6px;
-  border: none;
-  background: none;
-  border-radius: 6px;
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--font);
-  transition: background 0.12s;
-}
-.area-row:hover { background: var(--blue-pale); }
-.area-code {
-  font: 700 11px/1 var(--mono);
-  letter-spacing: 0.08em;
-  background: var(--blue-pale);
-  color: var(--blue);
-  padding: 4px 7px;
-  border-radius: 4px;
-  min-width: 34px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.area-name {
-  flex: 1;
-  font: 500 11.5px var(--font);
-  color: var(--text-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.area-meter {
-  width: 52px;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--off-2);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-.area-meter span { display: block; height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.5s; }
-.area-count {
-  font: 600 11px var(--mono);
-  color: var(--text-3);
-  min-width: 26px;
-  text-align: right;
-  flex-shrink: 0;
-}
-.panel-hint { font: 400 10.5px var(--font); color: var(--text-4); margin-top: 8px; }
-
-/* Live movements feed */
-.move-feed { display: flex; flex-direction: column; }
-.move-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 6px;
-  margin: 0 -6px;
-  border: none;
-  background: none;
-  border-radius: 6px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.12s;
-}
-.move-row:hover { background: var(--blue-pale); }
-.move-row.fresh { animation: move-flash 1.4s ease-out; }
-@keyframes move-flash {
-  0% { background: rgba(15,82,186,0.16); }
-  100% { background: transparent; }
-}
-.move-hc {
-  font: 700 11px/1 var(--mono);
-  letter-spacing: 0.06em;
-  color: #fff;
-  padding: 4px 7px;
-  border-radius: 4px;
-  min-width: 42px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.move-arrow { color: var(--text-4); flex-shrink: 0; font-size: 10px; }
-.move-where {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.move-loc {
-  font: 500 11.5px var(--font);
-  color: var(--text-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.move-berth { font: 500 9.5px var(--mono); color: var(--text-4); letter-spacing: 0.08em; }
-.move-time { font: 500 10px var(--mono); color: var(--text-4); flex-shrink: 0; }
-.feed-empty { font: 12px var(--font); color: var(--text-4); padding: 4px 0; }
-
-/* Selected-train card */
-.detail-locate-btn {
-  background: var(--blue);
-  border-color: var(--blue);
-  color: #fff;
-  font-weight: 700;
-  height: 34px;
-}
-.detail-locate-btn:hover { background: var(--blue-dark); border-color: var(--blue-dark); color: #fff; }
-
-/* Map waiting overlay */
-.map-wait {
-  position: absolute;
-  inset: 0;
-  z-index: 300;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(245,246,248,0.72);
-  backdrop-filter: blur(2px);
-  transition: opacity 0.4s;
-  pointer-events: none;
-}
-.map-wait.hidden { opacity: 0; visibility: hidden; }
-.map-wait-card {
-  background: var(--slate);
-  color: #fff;
-  border-radius: 10px;
-  padding: 18px 26px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: var(--shadow);
-}
-.map-wait-dot {
-  width: 10px; height: 10px; border-radius: 50%;
-  background: #d97706;
-  box-shadow: 0 0 10px rgba(217,119,6,0.8);
-  animation: wait-blink 1.4s ease-in-out infinite;
-}
-@keyframes wait-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
-.map-wait-txt { font: 600 13px var(--font); }
-.map-wait-sub { font: 500 10px var(--mono); color: rgba(255,255,255,0.45); letter-spacing: 0.06em; margin-top: 2px; }
-
-/* Responsive */
-@media (max-width: 900px) {
-  .kpi { min-width: 112px; padding: 9px 14px 10px; }
-  .kpi-val { font-size: 20px; }
-}
-@media (max-width: 680px) {
-  .side-panel { width: 100% !important; background: var(--off); }
-  .kpi-clock { display: none; }
-  .panel-scroll { padding-top: 4px; }
-}
-</style>
-  <link rel="stylesheet" href="assets/product-suite.css" />
 </head>
-<body class="product-app product-map live-operations">
+<body>
 
 <header class="app-header">
   <nav class="nav">
     <a class="brand" href="index.html">
-      <img src="assets/rail-insights-logo-reversed.png" alt="Rail Insights" />
+      <img src="assets/Project_logo_header.png" alt="Rail Insights" />
       <div class="brand-text">
         <span class="brand-name">Rail <span>Insights</span></span>
-        <span class="brand-sub">Live Operations / Movement Intelligence</span>
+        <span class="brand-sub">Live Train Map</span>
       </div>
     </a>
 
+    <div class="live-badge">
+      <div class="live-dot disconnected" id="headerDot"></div>
+      <span id="headerStatus">Not connected</span>
+      &nbsp;·&nbsp;
+      <span class="live-count" id="headerCount">0 trains</span>
+    </div>
+
     <div class="nav-actions">
-      <a class="nav-btn" href="railway-map.html">Network Atlas</a>
-      <a class="nav-btn" href="berth-map.html">Signal Desk</a>
-      <a class="nav-btn active" href="live-trains.html">Live Operations</a>
-      <a class="nav-btn" href="wtt.html">Timetable Intel.</a>
-      <a class="nav-btn primary" href="index.html#contact">Partner access</a>
+      <a class="nav-btn" href="railway-map.html">Railway Map</a>
+      <a class="nav-btn" href="berth-map.html">Berth Map</a>
+      <a class="nav-btn" href="wtt.html">WTT</a>
+      <a class="nav-btn primary" href="index.html#contact">Join Pilot</a>
     </div>
   </nav>
 </header>
-
-<!-- ── KPI STRIP ─────────────────────────────────────────────────── -->
-<section class="kpi-strip" aria-label="Live network statistics">
-  <div class="kpi">
-    <span class="kpi-label">Trains tracked</span>
-    <div class="kpi-val blue"><span id="kpiTotal">—</span>
-      <svg id="sparkline" width="72" height="22" viewBox="0 0 72 22" aria-hidden="true"></svg>
-    </div>
-  </div>
-  <div class="kpi">
-    <span class="kpi-label">Visible on map</span>
-    <div class="kpi-val" id="kpiVisible">—</div>
-  </div>
-  <div class="kpi">
-    <span class="kpi-label">Passenger</span>
-    <div class="kpi-val" id="kpiPax">—</div>
-    <div class="kpi-sub">Class 1 &amp; 2 headcodes</div>
-  </div>
-  <div class="kpi">
-    <span class="kpi-label">Freight</span>
-    <div class="kpi-val" id="kpiFreight">—</div>
-    <div class="kpi-sub">Class 3 / 4 / 6 / 7 / 8</div>
-  </div>
-  <div class="kpi">
-    <span class="kpi-label">Berth moves / min</span>
-    <div class="kpi-val" id="kpiRate">—</div>
-    <div class="kpi-sub">Across the whole feed</div>
-  </div>
-  <div class="kpi kpi-clock">
-    <span class="kpi-label">Last update</span>
-    <div class="kpi-val mono" id="kpiUpdated">—:—:—</div>
-    <div class="kpi-sub" id="kpiAreas">— TD areas active</div>
-  </div>
-</section>
 
 <div class="app-shell">
 
@@ -738,15 +415,11 @@
     <button class="panel-close-btn" id="panelCloseBtn" aria-label="Close panel">&#x2715;</button>
     <div class="panel-scroll">
 
-      <!-- Feed status -->
+      <!-- Connection status (read-only) -->
       <div class="panel-section">
-        <div class="panel-label">Feed status</div>
-        <div class="feed-card">
+        <div class="conn-status-row">
           <div class="conn-dot disconnected" id="connDot"></div>
-          <div class="feed-card-text">
-            <div class="conn-text" id="connText">Connecting…</div>
-            <div class="feed-sub">TD_ALL_SIG_AREA &middot; WebSocket</div>
-          </div>
+          <div class="conn-text" id="connText">Connecting…</div>
         </div>
       </div>
 
@@ -758,7 +431,7 @@
             <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/>
             <path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
           </svg>
-          <input class="search-input" id="searchInput" type="text" placeholder="Press / — e.g. 1A23 or 6E" maxlength="6" autocomplete="off" spellcheck="false" />
+          <input class="search-input" id="searchInput" type="text" placeholder="e.g. 1A23 or 6E…" maxlength="6" autocomplete="off" spellcheck="false" />
           <button class="search-clear" id="searchClear" title="Clear">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
@@ -776,24 +449,22 @@
           </div>
         </div>
         <div id="filterList"></div>
-        <div class="mix-bar" id="mixBar" aria-hidden="true"></div>
-        <div class="mix-caption" id="mixCaption">Fleet mix — waiting for data</div>
       </div>
 
-      <!-- Busiest TD areas -->
+      <!-- Stats -->
       <div class="panel-section">
-        <div class="panel-label">Busiest TD areas</div>
-        <div id="areaList"><div class="feed-empty">Waiting for data…</div></div>
-        <div class="panel-hint">Select an area to centre the map on it.</div>
-      </div>
-
-      <!-- Live movements -->
-      <div class="panel-section">
-        <div class="panel-section-head">
-          <div class="panel-label">Live movements</div>
-          <span class="stat-updated" id="statUpdated" style="margin-top:0">Waiting…</span>
+        <div class="panel-label">Statistics</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-val" id="statVisible">0</div>
+            <div class="stat-lbl">Visible</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="statTotal">0</div>
+            <div class="stat-lbl">Tracked</div>
+          </div>
         </div>
-        <div class="move-feed" id="moveFeed"><div class="feed-empty">Berth-to-berth steps will appear here as they happen.</div></div>
+        <div class="stat-updated" id="statUpdated">Waiting for data…</div>
       </div>
 
       <!-- Selected train detail -->
@@ -808,16 +479,6 @@
 
   <!-- ── MAP ───────────────────────────────────────────────────── -->
   <div id="map"></div>
-
-  <div class="map-wait" id="mapWait">
-    <div class="map-wait-card">
-      <div class="map-wait-dot"></div>
-      <div>
-        <div class="map-wait-txt">Waiting for the live TD feed…</div>
-        <div class="map-wait-sub">TRAINS APPEAR AS BERTH STEPS ARRIVE</div>
-      </div>
-    </div>
-  </div>
 
 </div><!-- /app-shell -->
 
@@ -840,12 +501,13 @@
 
 // ── Train type config ────────────────────────────────────────────────────────
 const TYPES = {
-  express:   { label: 'Express Passenger',    color: '#0f52ba', bg: '#eaf1fd', chars: '1'    },
-  passenger: { label: 'Stopping Passenger',   color: '#0891b2', bg: '#ecfeff', chars: '2'    },
-  ecs:       { label: 'Empty Coaching Stock', color: '#7c3aed', bg: '#f5f3ff', chars: '5'    },
-  loco:      { label: 'Light Loco',           color: '#d97706', bg: '#fffbeb', chars: '0'    },
-  freight:   { label: 'Freight',              color: '#059669', bg: '#f0fdf4', chars: '34678' },
-  special:   { label: 'Special',              color: '#6b7280', bg: '#f9fafb', chars: '9'    },
+  express:   { label: 'Express Passenger',   color: '#0f52ba', bg: '#eaf1fd', chars: '1'    },
+  passenger: { label: 'Stopping Passenger',  color: '#0891b2', bg: '#ecfeff', chars: '2'    },
+  ecs:       { label: 'Empty Coaching Stock', color: '#7c3aed', bg: '#f5f3ff', chars: '5'   },
+  loco:      { label: 'Light Loco',           color: '#d97706', bg: '#fffbeb', chars: '6'   },
+  freight:   { label: 'Freight',              color: '#059669', bg: '#f0fdf4', chars: '4789' },
+  parcels:   { label: 'Parcels',              color: '#db2777', bg: '#fdf2f8', chars: '3'   },
+  special:   { label: 'Special / Other',      color: '#6b7280', bg: '#f9fafb', chars: '0'   },
 };
 const TYPE_KEYS = Object.keys(TYPES);
 
@@ -853,11 +515,11 @@ function getType(hc) {
   if (!hc) return 'special';
   const c = hc[0];
   if (c === '1') return 'express';
-  if (c === '9') return 'special';
   if (c === '2') return 'passenger';
-  if ('34678'.includes(c)) return 'freight';
+  if (c === '3') return 'parcels';
+  if ('4789'.includes(c)) return 'freight';
   if (c === '5') return 'ecs';
-  if (c === '0') return 'loco';
+  if (c === '6') return 'loco';
   return 'special';
 }
 
@@ -916,12 +578,6 @@ let reconnTimer  = null;
 let reconnDelay  = 2000;
 let lastUpdate   = null;
 
-// Dashboard state
-const sparkData  = [];     // recent totals for the KPI sparkline
-const moveTimes  = [];     // timestamps of berth movements (rate metric)
-const moveLog    = [];     // most recent berth-to-berth steps
-let   firstData  = false;  // suppress movement flood on the initial snapshot
-
 // ── Marker factory ───────────────────────────────────────────────────────────
 function makeIcon(hc, type) {
   const cfg = TYPES[type] || TYPES.special;
@@ -968,8 +624,6 @@ function setMarkerVisibility(hc, show) {
 
 // ── State update from WebSocket ──────────────────────────────────────────────
 function applyState(newTrains) {
-  recordMovements(trainData, newTrains);
-
   // Remove headcodes that disappeared
   for (const hc of trainMk.keys()) {
     if (!newTrains[hc]) {
@@ -1019,44 +673,25 @@ function applyFilters() {
 
 // ── UI updates ───────────────────────────────────────────────────────────────
 function zOrder(type) {
-  return { express: 800, ecs: 600, loco: 400, passenger: 200, freight: 0, special: 0 }[type] ?? 0;
+  return { express: 800, ecs: 600, loco: 400, passenger: 200, parcels: 100, freight: 0, special: 0 }[type] ?? 0;
 }
 
 function refreshUI() {
   const total   = Object.keys(trainData).length;
   const visible = inCluster.size;
 
-  // Per-type counts + TD area aggregation
-  const counts = {};
-  const areas  = new Map(); // td → { n, latSum, lonSum }
-  for (const t of Object.values(trainData)) {
-    counts[t.type] = (counts[t.type] || 0) + 1;
-    if (t.td) {
-      const a = areas.get(t.td) || { n: 0, latSum: 0, lonSum: 0 };
-      a.n++; a.latSum += t.lat; a.lonSum += t.lon;
-      areas.set(t.td, a);
-    }
-  }
+  document.getElementById('statTotal').textContent   = total;
+  document.getElementById('statVisible').textContent = visible;
+  document.getElementById('headerCount').textContent = `${total} train${total !== 1 ? 's' : ''}`;
 
-  // KPI strip
-  setText('kpiTotal', total);
-  setText('kpiVisible', visible);
-  setText('kpiPax', (counts.express || 0) + (counts.passenger || 0));
-  setText('kpiFreight', counts.freight || 0);
-  const cutoff = Date.now() - 60_000;
-  while (moveTimes.length && moveTimes[0] < cutoff) moveTimes.shift();
-  setText('kpiRate', firstData ? moveTimes.length : '—');
-  setText('kpiAreas', `${areas.size} TD areas active`);
   if (lastUpdate) {
-    setText('kpiUpdated', lastUpdate.toLocaleTimeString('en-GB'));
-    setText('statUpdated', 'Updated ' + lastUpdate.toLocaleTimeString('en-GB'));
+    document.getElementById('statUpdated').textContent =
+      'Updated ' + lastUpdate.toLocaleTimeString('en-GB');
   }
-  renderSpark(total);
-  renderMix(counts, total);
-  renderAreas(areas);
-  renderMoves();
 
   // Update filter counts
+  const counts = {};
+  for (const t of Object.values(trainData)) counts[t.type] = (counts[t.type] || 0) + 1;
   for (const k of TYPE_KEYS) {
     const el = document.getElementById(`fc-${k}`);
     if (el) el.textContent = counts[k] || 0;
@@ -1070,148 +705,6 @@ function refreshUI() {
   } else {
     hitsEl.textContent = '';
   }
-}
-
-function setText(id, v) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = v;
-}
-
-// ── Movement detection (berth-to-berth steps between snapshots) ─────────────
-function recordMovements(oldTrains, newTrains) {
-  if (!firstData) {
-    // Initial snapshot: don't flood the feed, just arm detection
-    if (Object.keys(newTrains).length) {
-      firstData = true;
-      const wait = document.getElementById('mapWait');
-      if (wait) wait.classList.add('hidden');
-    }
-    return;
-  }
-  const now = Date.now();
-  for (const [hc, t] of Object.entries(newTrains)) {
-    const prev = oldTrains[hc];
-    if (!prev) continue; // brand-new headcode — wait for its first step
-    if (prev.berth !== t.berth || prev.td !== t.td) {
-      moveTimes.push(now);
-      moveLog.unshift({ hc, type: t.type, name: t.name, td: t.td, berth: t.berth, ts: now });
-      if (moveLog.length > 8) moveLog.pop();
-    }
-  }
-}
-
-// ── KPI sparkline (recent tracked-train totals) ──────────────────────────────
-let lastSparkStamp = 0;
-function renderSpark(total) {
-  if (lastUpdate && lastUpdate.getTime() !== lastSparkStamp) {
-    lastSparkStamp = lastUpdate.getTime();
-    sparkData.push(total);
-    if (sparkData.length > 48) sparkData.shift();
-  }
-  const svg = document.getElementById('sparkline');
-  if (!svg || sparkData.length < 2) return;
-  const W = 72, H = 22, P = 2;
-  const min = Math.min(...sparkData), max = Math.max(...sparkData);
-  const span = Math.max(max - min, 1);
-  const pts = sparkData.map((v, i) => {
-    const x = P + (i / (sparkData.length - 1)) * (W - P * 2);
-    const y = H - P - ((v - min) / span) * (H - P * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  svg.innerHTML =
-    `<polygon class="spark-fill" points="${P},${H - P} ${pts.join(' ')} ${W - P},${H - P}"/>` +
-    `<polyline points="${pts.join(' ')}"/>`;
-}
-
-// ── Fleet mix bar (proportions by type) ──────────────────────────────────────
-function renderMix(counts, total) {
-  const bar = document.getElementById('mixBar');
-  const cap = document.getElementById('mixCaption');
-  if (!bar) return;
-  if (!total) {
-    bar.innerHTML = '';
-    if (cap) cap.textContent = 'Fleet mix — waiting for data';
-    return;
-  }
-  bar.innerHTML = TYPE_KEYS
-    .filter(k => counts[k])
-    .map(k => `<span style="width:${(counts[k] / total * 100).toFixed(2)}%;background:${TYPES[k].color}"></span>`)
-    .join('');
-  if (cap) {
-    const top = TYPE_KEYS.filter(k => counts[k]).sort((a, b) => counts[b] - counts[a])[0];
-    cap.textContent = top
-      ? `Fleet mix — ${TYPES[top].label.toLowerCase()} leads at ${Math.round(counts[top] / total * 100)}%`
-      : 'Fleet mix';
-  }
-}
-
-// ── Busiest TD areas ──────────────────────────────────────────────────────────
-function renderAreas(areas) {
-  const list = document.getElementById('areaList');
-  if (!list) return;
-  const top = [...areas.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 5);
-  if (!top.length) {
-    list.innerHTML = '<div class="feed-empty">Waiting for data…</div>';
-    return;
-  }
-  const maxN = top[0][1].n;
-  list.innerHTML = top.map(([td, a]) => `
-    <button class="area-row" onclick="flyToArea('${esc(td)}')" title="Centre map on TD area ${esc(td)}">
-      <span class="area-code">${esc(td)}</span>
-      <span class="area-name">${esc(areaExampleName(td))}</span>
-      <span class="area-meter"><span style="width:${Math.round(a.n / maxN * 100)}%"></span></span>
-      <span class="area-count">${a.n}</span>
-    </button>`).join('');
-}
-
-// A representative location name for a TD area, from the trains inside it
-function areaExampleName(td) {
-  for (const t of Object.values(trainData)) {
-    if (t.td === td && t.name) return t.name;
-  }
-  return 'TD area';
-}
-
-function flyToArea(td) {
-  let n = 0, latSum = 0, lonSum = 0;
-  for (const t of Object.values(trainData)) {
-    if (t.td === td) { n++; latSum += t.lat; lonSum += t.lon; }
-  }
-  if (!n) return;
-  if (window.innerWidth <= 680 && window.closeMobilePanel) closeMobilePanel();
-  map.flyTo([latSum / n, lonSum / n], Math.max(map.getZoom(), 10), { duration: 0.9 });
-  showToast(`Centred on TD area ${td} — ${n} train${n !== 1 ? 's' : ''}`);
-}
-
-// ── Live movements feed ───────────────────────────────────────────────────────
-function renderMoves() {
-  const feed = document.getElementById('moveFeed');
-  if (!feed) return;
-  if (!moveLog.length) {
-    feed.innerHTML = '<div class="feed-empty">Berth-to-berth steps will appear here as they happen.</div>';
-    return;
-  }
-  const now = Date.now();
-  feed.innerHTML = moveLog.map(m => {
-    const cfg = TYPES[m.type] || TYPES.special;
-    return `
-    <button class="move-row${now - m.ts < 1500 ? ' fresh' : ''}" onclick="flyTo('${esc(m.hc)}')" title="Centre map on ${esc(m.hc)}">
-      <span class="move-hc" style="background:${cfg.color}">${esc(m.hc)}</span>
-      <span class="move-arrow">&#9654;</span>
-      <span class="move-where">
-        <span class="move-loc">${esc(m.name || 'Unknown location')}</span>
-        <span class="move-berth">${esc(m.td || '—')} ${esc(m.berth || '')}</span>
-      </span>
-      <span class="move-time">${relTime(now - m.ts)}</span>
-    </button>`;
-  }).join('');
-}
-
-function relTime(ms) {
-  const s = Math.round(ms / 1000);
-  if (s < 5)  return 'now';
-  if (s < 60) return s + 's';
-  return Math.round(s / 60) + 'm';
 }
 
 function selectTrain(hc, t) {
@@ -1239,16 +732,19 @@ function selectTrain(hc, t) {
 function flyTo(hc) {
   const mk = trainMk.get(hc);
   if (!mk) return;
-  if (window.innerWidth <= 680 && window.closeMobilePanel) closeMobilePanel();
   map.flyTo(mk.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.8 });
   mk.openPopup();
 }
 
 // ── Connection management ────────────────────────────────────────────────────
 function setConnState(state, text) {
-  const dot = document.getElementById('connDot');
-  if (dot) dot.className = 'conn-dot ' + state;
+  ['connDot', 'headerDot'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'conn-dot ' + state;
+    if (id === 'headerDot') el.className = 'live-dot ' + state;
+  });
   document.getElementById('connText').textContent = text;
+  document.getElementById('headerStatus').textContent = text;
 }
 
 const WS_URL = (() => {
@@ -1406,18 +902,7 @@ connect();
   if (fab) fab.addEventListener('click', openPanel);
   if (closeBtn) closeBtn.addEventListener('click', closePanel);
   if (backdrop) backdrop.addEventListener('click', closePanel);
-  window.closeMobilePanel = closePanel;
 })();
-
-// ── Keyboard shortcut: press "/" to search ──────────────────────────────────
-document.addEventListener('keydown', (e) => {
-  if (e.key === '/' && document.activeElement !== searchInput &&
-      !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) {
-    e.preventDefault();
-    searchInput.focus();
-    searchInput.select();
-  }
-});
 </script>
 </body>
 </html>

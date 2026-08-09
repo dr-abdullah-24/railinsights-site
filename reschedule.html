@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Path Optimiser · Rail Insights</title>
+  <meta name="description" content="Timetable path optimisation tool. Import a WTT slice, run the in-browser optimiser and visualise placement, capacity utilisation and shift patterns." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/favicon-180.png" />
+  <meta name="theme-color" content="#0f52ba" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --white: #ffffff;
+      --off: #f5f6f8;
+      --off-2: #eceef2;
+      --blue: #0f52ba;
+      --blue-dark: #0a3d8f;
+      --blue-pale: #eaf1fd;
+      --blue-mid: #c5d8f8;
+      --slate: #0d1b2e;
+      --text: #0d1b2e;
+      --text-2: #3b4a5c;
+      --text-3: #6b7a8e;
+      --text-4: #9aa4b0;
+      --green: #0a7c4c;
+      --green-pale: #ecfdf5;
+      --amber: #b45309;
+      --amber-bg: #fffbeb;
+      --red: #b91c1c;
+      --red-pale: #fef2f2;
+      --purple: #7c3aed;
+      --border: #dde1e8;
+      --border-2: #c8cdd7;
+      --shadow-xs: 0 1px 2px rgba(13,27,46,0.06);
+      --shadow-sm: 0 2px 8px rgba(13,27,46,0.08);
+      --shadow: 0 8px 28px rgba(13,27,46,0.1);
+      --r: 8px;
+      --r-lg: 14px;
+      --font: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { min-height: 100vh; background: var(--off); color: var(--text); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    button, input, select, textarea { font: inherit; }
+
+    /* ── NAV ─────────────────────────────────────────────────── */
+    .app-header { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.96); border-bottom: 1px solid var(--border); backdrop-filter: blur(18px); }
+    .nav { max-width: 1440px; margin: 0 auto; height: 68px; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+    .brand-mark img { height: 40px; width: auto; object-fit: contain; display: block; }
+    .brand-name { font-weight: 800; font-size: 17px; letter-spacing: -0.02em; }
+    .brand-name span { color: var(--blue); }
+    .brand-sub { color: var(--text-4); font: 500 10px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+    .nav-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .nav-link { height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--r); background: white; color: var(--text-2); display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-xs); cursor: pointer; }
+    .nav-link.primary { background: var(--blue); border-color: var(--blue); color: white; }
+    .nav-link:hover { border-color: var(--border-2); }
+
+    /* ── SHELL ────────────────────────────────────────────────── */
+    .shell { max-width: 1440px; margin: 0 auto; padding: 28px 32px 48px; }
+    .tool-head { margin-bottom: 22px; }
+    .eyebrow { color: var(--blue); font: 700 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-size: clamp(30px,4vw,44px); line-height: 1.05; letter-spacing: -0.03em; font-weight: 800; margin-bottom: 14px; }
+    .lead { max-width: 780px; color: var(--text-2); font-size: 15px; line-height: 1.65; }
+    .lead code { font: 600 12.5px/1 var(--mono); background: var(--off-2); padding: 2px 6px; border-radius: 4px; color: var(--text); }
+
+    /* ── PANELS ───────────────────────────────────────────────── */
+    .panel { background: white; border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-xs); overflow: hidden; margin-bottom: 16px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: #fbfcfe; }
+    .panel-title { font: 700 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-2); display: flex; align-items: center; gap: 10px; }
+    .panel-title-badge { background: var(--blue-pale); color: var(--blue); border: 1px solid var(--blue-mid); border-radius: 3px; padding: 2px 6px; font: 700 9px/1 var(--mono); letter-spacing: 0.08em; }
+    .panel-body { padding: 16px; }
+    .panel-body.tight { padding: 12px 16px; }
+
+    /* ── ACTIONS BAR ──────────────────────────────────────────── */
+    .actions-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .btn { height: 40px; padding: 0 18px; border-radius: var(--r); border: 1px solid var(--border-2); background: white; color: var(--text); font: 700 13px/1 var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.14s; box-shadow: var(--shadow-xs); }
+    .btn:hover { border-color: var(--blue); color: var(--blue); }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: white; }
+    .btn.primary:hover { background: var(--blue-dark); color: white; }
+    .btn.primary:disabled { background: var(--text-4); border-color: var(--text-4); cursor: not-allowed; }
+    .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+    .btn.ghost:hover { background: var(--off); border-color: var(--border); }
+    .btn.small { height: 30px; padding: 0 12px; font-size: 12px; }
+    .btn.danger:hover { border-color: #fca5a5; color: var(--red); background: var(--red-pale); }
+
+    /* ── CONFIG GRID ──────────────────────────────────────────── */
+    .cfg-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+    @media (max-width: 960px) { .cfg-grid { grid-template-columns: 1fr; } }
+
+    .cp-table { width: 100%; border-collapse: collapse; font: 500 12px/1 var(--mono); }
+    .cp-table th { text-align: left; font: 700 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-4); padding: 8px 10px; border-bottom: 1px solid var(--border); background: #fbfcfe; }
+    .cp-table td { padding: 6px 10px; border-bottom: 1px solid rgba(13,27,46,0.05); vertical-align: middle; }
+    .cp-table td.rownum { color: var(--text-4); font-weight: 700; width: 28px; }
+    .cp-table td.hi { background: #fef2f2; }
+    .cp-input { width: 100%; height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 5px; background: white; font: 500 12px/1 var(--mono); color: var(--text); outline: none; }
+    .cp-input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(15,82,186,0.1); }
+    .cp-input.small { width: 70px; }
+    .cp-input.medium { width: 120px; }
+    .cp-tag { font: 700 9px/1 var(--mono); letter-spacing: 0.08em; color: var(--red); background: var(--red-pale); border: 1px solid #fecaca; border-radius: 3px; padding: 3px 5px; }
+
+    .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+    .param { display: flex; flex-direction: column; gap: 4px; }
+    .param label { font: 700 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }
+    .param input, .param select { height: 34px; padding: 0 10px; border: 1px solid var(--border-2); border-radius: 6px; background: white; font: 500 12.5px/1 var(--mono); color: var(--text); outline: none; }
+    .param input:focus, .param select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(15,82,186,0.1); }
+    .param .hint { font: 500 10px/1.4 var(--mono); color: var(--text-4); margin-top: 2px; }
+
+    /* ── KPI CARDS ────────────────────────────────────────────── */
+    .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+    .kpi { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow-xs); position: relative; overflow: hidden; }
+    .kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--border); }
+    .kpi.ok::before { background: var(--green); }
+    .kpi.warn::before { background: var(--amber); }
+    .kpi.bad::before { background: var(--red); }
+    .kpi-label { font: 700 9px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-4); margin-bottom: 8px; }
+    .kpi-value { font: 700 22px/1 var(--font); color: var(--text); letter-spacing: -0.02em; }
+    .kpi-sub { font: 500 10px/1 var(--mono); color: var(--text-3); margin-top: 4px; }
+    .kpi-value .unit { font-size: 13px; color: var(--text-3); font-weight: 600; margin-left: 3px; }
+
+    /* ── VIZ ──────────────────────────────────────────────────── */
+    .viz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 1000px) { .viz-grid { grid-template-columns: 1fr; } }
+
+    .viz-svg { width: 100%; height: auto; display: block; background: white; }
+    .viz-svg text { font-family: var(--mono); }
+    .train-line { stroke-width: 1.25; fill: none; opacity: 0.75; }
+    .train-line.hilite { stroke-width: 2.4; opacity: 1; }
+    .train-line.baseline { stroke: var(--text-3); stroke-dasharray: 2 2; }
+    .train-line.milp { stroke: var(--blue); }
+    .train-line.shifted { stroke: var(--amber); }
+    .train-line.dropped { stroke: var(--red); opacity: 0.35; }
+    .train-line.unchanged { stroke: var(--green); }
+
+    .viz-toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #fbfcfe; }
+    .viz-toggle { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: white; color: var(--text-3); font: 700 10px/1 var(--mono); cursor: pointer; letter-spacing: 0.04em; text-transform: uppercase; transition: all 0.12s; }
+    .viz-toggle:hover { border-color: var(--border-2); color: var(--text-2); }
+    .viz-toggle.on { background: var(--blue); border-color: var(--blue); color: white; }
+    .viz-hint { font: 500 10px/1 var(--mono); color: var(--text-4); margin-left: auto; }
+
+    /* ── SOLUTION TABLE ──────────────────────────────────────── */
+    .sol-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--border); background: #fbfcfe; }
+    .sol-search { height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 5px; background: white; font: 500 12px/1 var(--mono); width: 200px; outline: none; }
+    .sol-search:focus { border-color: var(--blue); }
+    .sol-count { font: 500 11px/1 var(--mono); color: var(--text-3); margin-left: auto; }
+
+    .sol-table { width: 100%; border-collapse: collapse; font: 500 12px/1 var(--mono); }
+    .sol-table thead th { text-align: left; font: 700 9px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-4); padding: 8px 12px; border-bottom: 1px solid var(--border); background: white; position: sticky; top: 0; cursor: pointer; user-select: none; }
+    .sol-table thead th:hover { color: var(--text-2); background: var(--off); }
+    .sol-table tbody tr { border-bottom: 1px solid rgba(13,27,46,0.04); }
+    .sol-table tbody tr:hover { background: var(--off); }
+    .sol-table tbody td { padding: 7px 12px; }
+    .sol-hc { color: var(--text); font-weight: 700; }
+    .sol-status { display: inline-block; font: 700 9px/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 6px; border-radius: 3px; }
+    .sol-status.slot { background: var(--green-pale); color: var(--green); }
+    .sol-status.shifted { background: var(--amber-bg); color: var(--amber); }
+    .sol-status.dropped { background: var(--red-pale); color: var(--red); }
+    .sol-scroll { max-height: 480px; overflow-y: auto; }
+
+    /* ── HISTOGRAM ────────────────────────────────────────────── */
+    .hist-bar rect { fill: var(--blue); transition: fill 0.15s; }
+    .hist-bar:hover rect { fill: var(--blue-dark); }
+    .hist-bar.slot rect { fill: var(--green); }
+
+    /* ── HEATMAP ──────────────────────────────────────────────── */
+    .heat-cell { stroke: white; stroke-width: 1; }
+    .heat-cell.over { stroke: var(--red); stroke-width: 1.5; }
+
+    /* ── SOLVE STATUS ─────────────────────────────────────────── */
+    .status-line { font: 500 11.5px/1.4 var(--mono); color: var(--text-3); padding: 8px 14px; background: #fbfcfe; border-top: 1px solid var(--border); }
+    .status-line.ok { color: var(--green); background: var(--green-pale); }
+    .status-line.err { color: var(--red); background: var(--red-pale); }
+    .status-line.working { color: var(--blue); background: var(--blue-pale); }
+    .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--blue-mid); border-top-color: var(--blue); border-radius: 50%; animation: sp 0.7s linear infinite; margin-right: 6px; vertical-align: -2px; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+
+    /* ── MODAL ────────────────────────────────────────────────── */
+    .modal-bg { position: fixed; inset: 0; z-index: 200; background: rgba(13,27,46,0.55); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-bg.open { display: flex; }
+    .modal { background: white; border-radius: var(--r-lg); max-width: 780px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+    .modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font: 700 14px/1 var(--font); }
+    .modal-close { background: none; border: 0; font-size: 22px; color: var(--text-3); cursor: pointer; padding: 0 6px; }
+    .modal-body { padding: 18px; overflow: auto; }
+    .modal-body textarea { width: 100%; min-height: 260px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font: 500 12px/1.55 var(--mono); resize: vertical; outline: none; }
+    .modal-body textarea:focus { border-color: var(--blue); }
+    .modal-foot { padding: 12px 18px; border-top: 1px solid var(--border); background: #fbfcfe; display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ── FOOT ─────────────────────────────────────────────────── */
+    footer { border-top: 1px solid var(--border); padding: 22px 32px; text-align: center; font: 500 11px/1.6 var(--mono); color: var(--text-4); }
+    footer a { color: var(--text-3); text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <nav class="nav">
+    <a href="index.html" class="brand">
+      <span class="brand-mark"><img src="assets/Project_logo_header.png" alt="Rail Insights" onerror="this.style.display='none'"/></span>
+      <div>
+        <div class="brand-name">Rail<span>Insights</span></div>
+        <div class="brand-sub">Path Optimiser</div>
+      </div>
+    </a>
+    <div class="nav-actions">
+      <a href="wtt.html" class="nav-link">WTT</a>
+      <a href="live-trains.html" class="nav-link">Live TD</a>
+      <a href="berth-map.html" class="nav-link">Berth Map</a>
+      <a href="index.html" class="nav-link primary">Home</a>
+    </div>
+  </nav>
+</header>
+
+<main class="shell">
+
+  <!-- HEAD ─────────────────────────────────────────────────────── -->
+  <div class="tool-head">
+    <div class="eyebrow">Optimisation Studio</div>
+    <h1>Path Optimiser</h1>
+    <p class="lead">
+      Import a schedule slice, define your checkpoint capacities and permitted shift window,
+      then run the in-browser optimiser to place as many services as possible without
+      violating any capacity constraint. Compare scenarios side-by-side, and export
+      the resulting plan for downstream planning tools.
+    </p>
+  </div>
+
+  <!-- ACTIONS ──────────────────────────────────────────────────── -->
+  <section class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Actions</div>
+      <div class="panel-title" id="datasetSummary" style="color: var(--text-3); font-weight: 500; letter-spacing: 0.04em;">0 services loaded</div>
+    </div>
+    <div class="panel-body tight">
+      <div class="actions-bar">
+        <button class="btn" id="btnSample">Load sample · 249 services</button>
+        <button class="btn" id="btnImport">Import…</button>
+        <button class="btn primary" id="btnSolve" disabled>Optimise</button>
+        <button class="btn" id="btnGreedy">Fast heuristic</button>
+        <button class="btn" id="btnExport" disabled>Export solution</button>
+        <button class="btn ghost small" id="btnSaveScen" disabled>Save as scenario</button>
+        <select class="btn small" id="scenSelect" style="max-width: 200px;">
+          <option value="">— compare with —</option>
+        </select>
+        <button class="btn small danger" id="btnClearScen">Clear scenarios</button>
+      </div>
+    </div>
+    <div class="status-line" id="statusLine">Ready. Click <strong>Load sample</strong> or <strong>Import</strong> to begin.</div>
+  </section>
+
+  <!-- CONFIG ──────────────────────────────────────────────────── -->
+  <section class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Config</div>
+      <button class="btn small ghost" id="btnResetCfg">Reset defaults</button>
+    </div>
+    <div class="panel-body">
+      <div class="cfg-grid">
+        <div>
+          <table class="cp-table">
+            <thead>
+              <tr><th>#</th><th>Checkpoint</th><th>Offset (min)</th><th>Capacity</th><th>Blocked</th></tr>
+            </thead>
+            <tbody id="cpBody"></tbody>
+          </table>
+          <div style="font: 500 10px/1.5 var(--mono); color: var(--text-4); padding: 8px 4px 0;">
+            Offset = running time from origin. Capacity = concurrent services allowed per window. All fields editable.
+          </div>
+        </div>
+        <div>
+          <div class="param-grid">
+            <div class="param">
+              <label>Window (min)</label>
+              <input type="number" id="cfgHeadway" value="15" min="1" max="60" />
+              <span class="hint">Conflict-detection window</span>
+            </div>
+            <div class="param">
+              <label>Shift range ± (min)</label>
+              <input type="number" id="cfgShiftMax" value="60" min="0" max="180" />
+              <span class="hint">Symmetric earlier / later window</span>
+            </div>
+            <div class="param">
+              <label>Shift step (min)</label>
+              <input type="number" id="cfgShiftStep" value="5" min="1" max="30" />
+              <span class="hint">Granularity of shift options</span>
+            </div>
+            <div class="param">
+              <label>Tuning weight</label>
+              <input type="number" id="cfgPenalty" value="0.001" min="0" max="0.05" step="0.0005" />
+              <span class="hint">Preference for smaller shifts</span>
+            </div>
+            <div class="param">
+              <label>Method</label>
+              <select id="cfgSolver">
+                <option value="highs">Optimal</option>
+                <option value="greedy">Fast heuristic</option>
+              </select>
+              <span class="hint">Optimal = guaranteed best</span>
+            </div>
+            <div class="param">
+              <label>Time limit (s)</label>
+              <input type="number" id="cfgTimeLimit" value="30" min="1" max="600" />
+              <span class="hint">Wall-clock cap</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPI ──────────────────────────────────────────────────────── -->
+  <section id="kpiSection" style="display:none">
+    <div class="kpi-row" id="kpiRow"></div>
+    <div style="height:16px"></div>
+  </section>
+
+  <!-- TRAIN GRAPH ─────────────────────────────────────────────── -->
+  <section class="panel" id="graphPanel" style="display:none">
+    <div class="panel-head">
+      <div class="panel-title">Train Graph <span class="panel-title-badge">Time × Distance</span></div>
+    </div>
+    <div class="viz-toolbar" id="graphToolbar">
+      <button class="viz-toggle on" data-mode="milp">Solution</button>
+      <button class="viz-toggle" data-mode="baseline">Baseline</button>
+      <button class="viz-toggle" data-mode="diff">Diff overlay</button>
+      <button class="viz-toggle" data-mode="dropped">Dropped only</button>
+      <span class="viz-hint" id="graphHint">Hover a line for details</span>
+    </div>
+    <div class="panel-body" id="graphHost"></div>
+  </section>
+
+  <!-- HEATMAP + HIST ──────────────────────────────────────────── -->
+  <div class="viz-grid" id="lowerViz" style="display:none">
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Capacity Utilisation</div>
+      </div>
+      <div class="panel-body" id="heatHost"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Shift Distribution</div>
+      </div>
+      <div class="panel-body" id="histHost"></div>
+    </section>
+  </div>
+
+  <!-- SOLUTION TABLE ──────────────────────────────────────────── -->
+  <section class="panel" id="solPanel" style="display:none">
+    <div class="panel-head">
+      <div class="panel-title">Solution</div>
+    </div>
+    <div class="sol-toolbar">
+      <input class="sol-search" id="solSearch" placeholder="Search headcode…" />
+      <button class="btn small viz-toggle on" data-solf="all">All</button>
+      <button class="btn small viz-toggle" data-solf="slot">Unchanged</button>
+      <button class="btn small viz-toggle" data-solf="shifted">Shifted</button>
+      <button class="btn small viz-toggle" data-solf="dropped">Dropped</button>
+      <span class="sol-count" id="solCount"></span>
+    </div>
+    <div class="sol-scroll">
+      <table class="sol-table" id="solTable">
+        <thead>
+          <tr>
+            <th data-col="hc">Headcode</th>
+            <th data-col="status">Status</th>
+            <th data-col="shift">Shift (min)</th>
+            <th data-col="base">Base start</th>
+            <th data-col="new">New start</th>
+            <th data-col="bottleneck">Peak load @ berth</th>
+          </tr>
+        </thead>
+        <tbody id="solBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  © Rail Insights · Path Optimiser · <a href="index.html">Home</a>
+</footer>
+
+<!-- IMPORT MODAL ─────────────────────────────────────────────── -->
+<div class="modal-bg" id="importModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Import trains</div>
+      <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font: 500 12px/1.6 var(--mono); color: var(--text-3); margin-bottom: 10px;">
+        Paste JSON or CSV. JSON schema:
+        <code>{"trains":[{"headcode":"…","times":[m0,m1,…,mK]},…]}</code>
+        where <code>times</code> length = number of checkpoints, values are minutes since midnight.
+        CSV: first column headcode, remaining columns are checkpoint minutes.
+      </p>
+      <textarea id="importText" spellcheck="false" placeholder="Paste JSON or CSV…"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="btnImportGo">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- HIGHS-WASM ──────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/highs@1.14.2/build/highs.js"></script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+const DEFAULT_CHECKPOINTS = [
+  { code: 'CP1', name: 'Checkpoint 1', offset:  0, capacity: 20, blocked: 0 },
+  { code: 'CP2', name: 'Checkpoint 2', offset:  3, capacity:  8, blocked: 0 },
+  { code: 'CP3', name: 'Checkpoint 3', offset:  8, capacity:  4, blocked: 0 },
+  { code: 'CP4', name: 'Checkpoint 4', offset: 12, capacity:  2, blocked: 0 },
+  { code: 'CP5', name: 'Checkpoint 5', offset: 16, capacity:  5, blocked: 0 },
+  { code: 'CP6', name: 'Checkpoint 6', offset: 20, capacity:  4, blocked: 0 },
+  { code: 'CP7', name: 'Checkpoint 7', offset: 26, capacity: 10, blocked: 0 },
+  { code: 'CP8', name: 'Checkpoint 8', offset: 32, capacity:  4, blocked: 0 },
+  { code: 'CP9', name: 'Checkpoint 9', offset: 40, capacity:  3, blocked: 0 }
+];
+
+const State = {
+  checkpoints: JSON.parse(JSON.stringify(DEFAULT_CHECKPOINTS)),
+  trains: [],
+  solution: null,
+  scenarios: JSON.parse(localStorage.getItem('rs_scen') || '[]'),
+  graphMode: 'milp',
+  solFilter: 'all',
+  solSearchText: '',
+  solSortCol: 'hc',
+  solSortDir: 1
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   UTIL
+   ═══════════════════════════════════════════════════════════════ */
+const $ = (id) => document.getElementById(id);
+const fmtHHMM = (m) => {
+  m = ((m % 1440) + 1440) % 1440;
+  const h = Math.floor(m / 60), s = m % 60;
+  return `${String(h).padStart(2,'0')}:${String(Math.floor(s)).padStart(2,'0')}`;
+};
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function setStatus(msg, kind = '') {
+  const el = $('statusLine');
+  el.className = 'status-line ' + kind;
+  el.innerHTML = msg;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SAMPLE DATA (249 synthetic freight trains)
+   Reproducible via a seeded PRNG so the same numbers appear every load.
+   ═══════════════════════════════════════════════════════════════ */
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function generateSample() {
+  const rand = mulberry32(4022);
+  const cps = State.checkpoints;
+  const N = 249;
+  const trains = [];
+  // TOC-ish 2-char prefixes for freight headcodes
+  const prefixes = ['4O','4M','6O','6M','4L','6L','4E','6E','4A','6A'];
+  // Distribute base start times roughly uniformly across 05:00 – 23:00
+  // but with clustering around peak windows to make the problem realistic.
+  const peaks = [ {c: 6*60, w: 60}, {c: 10*60, w: 90}, {c: 14*60, w: 90}, {c: 18*60, w: 60}, {c: 21*60, w: 60} ];
+  for (let i = 0; i < N; i++) {
+    // Pick a peak with weight proportional to its width
+    const peak = peaks[Math.floor(rand() * peaks.length)];
+    // Box-Muller-ish: sum two uniforms for a triangular distribution around peak.c
+    const jitter = (rand() + rand() - 1) * peak.w;
+    let base = Math.round(peak.c + jitter);
+    base = clamp(base, 5*60, 23*60);
+    const times = cps.map((cp, k) => {
+      const noise = Math.round((rand() - 0.5) * 2); // ±1 min jitter per checkpoint
+      return base + cp.offset + noise;
+    });
+    const pfx = prefixes[Math.floor(rand() * prefixes.length)];
+    const num = String(10 + Math.floor(rand() * 90));
+    const hc = `${pfx}${num}`;
+    trains.push({ id: i, headcode: hc, times });
+  }
+  State.trains = trains;
+  refreshDatasetSummary();
+  setStatus(`Loaded <strong>${N}</strong> sample services across ${cps.length} checkpoints.`, 'ok');
+  $('btnSolve').disabled = false;
+}
+
+function refreshDatasetSummary() {
+  $('datasetSummary').textContent = `${State.trains.length} services · ${State.checkpoints.length} checkpoints`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG RENDER
+   ═══════════════════════════════════════════════════════════════ */
+function renderConfig() {
+  const tb = $('cpBody');
+  tb.innerHTML = State.checkpoints.map((cp, i) => `
+    <tr class="${cp.capacity <= 2 ? '' : ''}">
+      <td class="rownum">${i + 1}</td>
+      <td>
+        <input class="cp-input medium" data-i="${i}" data-f="name" value="${cp.name}" />
+        <span style="font-size:10px;color:var(--text-4);margin-left:4px">${cp.code}</span>
+      </td>
+      <td><input class="cp-input small" type="number" data-i="${i}" data-f="offset" value="${cp.offset}" /></td>
+      <td>
+        <input class="cp-input small" type="number" data-i="${i}" data-f="capacity" value="${cp.capacity}" min="0" />
+        ${cp.capacity <= 2 ? '<span class="cp-tag" style="margin-left:6px">BOTTLENECK</span>' : ''}
+      </td>
+      <td><input class="cp-input small" type="number" data-i="${i}" data-f="blocked" value="${cp.blocked}" min="0" /></td>
+    </tr>
+  `).join('');
+  tb.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const i = +e.target.dataset.i, f = e.target.dataset.f;
+      const v = f === 'name' ? e.target.value : Number(e.target.value);
+      State.checkpoints[i][f] = v;
+    });
+  });
+}
+
+function readParams() {
+  return {
+    headway: Math.max(1, +$('cfgHeadway').value || 15),
+    shiftMax: Math.max(0, +$('cfgShiftMax').value || 60),
+    shiftStep: Math.max(1, +$('cfgShiftStep').value || 5),
+    penalty: +$('cfgPenalty').value || 0.001,
+    solver: $('cfgSolver').value,
+    timeLimit: Math.max(1, +$('cfgTimeLimit').value || 30)
+  };
+}
+
+function makeShifts(p) {
+  const arr = [];
+  for (let s = -p.shiftMax; s <= p.shiftMax; s += p.shiftStep) arr.push(s);
+  return arr;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Model builder — emits solver input.
+   ═══════════════════════════════════════════════════════════════ */
+function buildModel() {
+  const p = readParams();
+  const shifts = makeShifts(p);
+  const cps = State.checkpoints;
+  const trains = State.trains;
+  const W = p.headway;
+  const DAY = 24 * 60;
+
+  // Enumerate feasible (t,i) pairs and precompute per-checkpoint window
+  const vars = [];
+  for (let t = 0; t < trains.length; t++) {
+    for (let i = 0; i < shifts.length; i++) {
+      const s = shifts[i];
+      const arrivals = trains[t].times.map(m => m + s);
+      // Feasibility: all arrivals in [0, DAY)
+      if (arrivals.some(a => a < 0 || a >= DAY)) continue;
+      const windows = arrivals.map(a => Math.floor(a / W));
+      const coef = 1 - p.penalty * Math.abs(s);
+      vars.push({ name: `x_${t}_${i}`, t, i, s, coef, windows });
+    }
+  }
+
+  // C1 groups
+  const perTrain = new Map();
+  vars.forEach(v => {
+    if (!perTrain.has(v.t)) perTrain.set(v.t, []);
+    perTrain.get(v.t).push(v.name);
+  });
+
+  // C2 groups: key = k * 1_000_000 + w  →  var names
+  const perKW = new Map();
+  vars.forEach(v => {
+    v.windows.forEach((w, k) => {
+      const key = k * 1_000_000 + w;
+      if (!perKW.has(key)) perKW.set(key, []);
+      perKW.get(key).push(v.name);
+    });
+  });
+
+  return { p, shifts, vars, perTrain, perKW };
+}
+
+function emitLP(model) {
+  const { vars, perTrain, perKW } = model;
+  const cps = State.checkpoints;
+  const parts = [];
+
+  // Objective
+  parts.push('Maximize');
+  {
+    const chunks = [];
+    let line = ' obj:';
+    for (const v of vars) {
+      const term = ` ${v.coef >= 0 ? '+' : '-'} ${Math.abs(v.coef).toFixed(6)} ${v.name}`;
+      if (line.length + term.length > 500) { chunks.push(line); line = ' '; }
+      line += term;
+    }
+    chunks.push(line);
+    parts.push(chunks.join('\n'));
+  }
+
+  // Constraints
+  parts.push('Subject To');
+  const conLines = [];
+  // C1 — per train
+  for (const [t, names] of perTrain) {
+    if (!names.length) continue;
+    conLines.push(...chunkSum(`c1_${t}`, names, 1));
+  }
+  // C2 — per checkpoint × window
+  for (const [key, names] of perKW) {
+    const k = Math.floor(key / 1_000_000);
+    const w = key - k * 1_000_000;
+    const cap = Math.max(0, cps[k].capacity - cps[k].blocked);
+    if (names.length <= cap) continue; // trivially satisfied
+    conLines.push(...chunkSum(`c2_${k}_${w}`, names, cap));
+  }
+  parts.push(conLines.join('\n'));
+
+  // Bounds default 0..1 for binaries — no explicit bounds section
+
+  // Binary
+  parts.push('Binary');
+  {
+    const chunks = [];
+    let line = '';
+    for (const v of vars) {
+      const t = ' ' + v.name;
+      if (line.length + t.length > 500) { chunks.push(line); line = ''; }
+      line += t;
+    }
+    if (line) chunks.push(line);
+    parts.push(chunks.join('\n'));
+  }
+
+  parts.push('End');
+  return parts.join('\n');
+}
+
+// Chunk a big Σ constraint across multiple LP lines under a single label.
+// CPLEX LP allows breaking a line, but naming applies to the first line only.
+function chunkSum(label, names, rhs) {
+  const out = [];
+  const MAX = 400;
+  let line = ` ${label}:`;
+  let first = true;
+  for (const n of names) {
+    const term = first ? ` ${n}` : ` + ${n}`;
+    if (line.length + term.length > MAX) {
+      out.push(line);
+      line = '  ';   // continuation, no label
+    }
+    line += term;
+    first = false;
+  }
+  line += ` <= ${rhs}`;
+  out.push(line);
+  return out;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Solve entry point
+   ═══════════════════════════════════════════════════════════════ */
+let _highsPromise = null;
+async function getHighs() {
+  if (!_highsPromise) {
+    const factory = window.Module || window.Highs;
+    if (typeof factory !== 'function') throw new Error('Solver failed to load (no runtime global)');
+    _highsPromise = factory({
+      locateFile: (f) => `https://cdn.jsdelivr.net/npm/highs@1.14.2/build/${f}`,
+      print: () => {},        // suppress solver stdout
+      printErr: () => {}
+    });
+  }
+  return _highsPromise;
+}
+
+async function runOptimiser() {
+  if (!State.trains.length) { setStatus('No services loaded.', 'err'); return; }
+  const p = readParams();
+  setStatus(`<span class="spin"></span> Preparing…`, 'working');
+  await new Promise(r => setTimeout(r, 10));
+
+  const model = buildModel();
+
+  if (p.solver === 'greedy') {
+    return runGreedy(model);
+  }
+
+  const lp = emitLP(model);
+  setStatus(`<span class="spin"></span> Optimising…`, 'working');
+  await new Promise(r => setTimeout(r, 20));
+
+  let highs;
+  try { highs = await getHighs(); }
+  catch (e) { setStatus('Failed to initialise optimiser. Check internet: ' + e.message, 'err'); return; }
+
+  const t0 = performance.now();
+  let sol;
+  try {
+    sol = highs.solve(lp, { time_limit: p.timeLimit });
+  } catch (e) {
+    setStatus('Optimiser failed: ' + (e.message || e), 'err');
+    console.error(e);
+    return;
+  }
+  const t1 = performance.now();
+
+  const parsed = parseSolution(sol, model);
+  parsed.solveTime = (t1 - t0) / 1000;
+  parsed.solverName = 'Optimal';
+  parsed.solverStatus = sol.Status;
+  State.solution = parsed;
+  renderAll();
+  setStatus(`Solved in <strong>${parsed.solveTime.toFixed(2)}s</strong> · placed <strong>${parsed.placed}/${State.trains.length}</strong> (${(100*parsed.placed/State.trains.length).toFixed(1)}%)`, 'ok');
+}
+
+function runGreedy(model) {
+  // First-fit by base departure time. Try shift = 0, then ±5, ±10, …
+  const cps = State.checkpoints;
+  const p = model.p;
+  const shifts = model.shifts;
+  const W = p.headway;
+
+  // Occupancy [k][windowKey] = count
+  const occ = new Map();
+  const capOf = k => cps[k].capacity - cps[k].blocked;
+  const key = (k, w) => k * 1_000_000 + w;
+  const canPlace = (arrivals) => arrivals.every((a, k) => (occ.get(key(k, Math.floor(a / W))) || 0) < capOf(k));
+  const place = (arrivals) => arrivals.forEach((a, k) => {
+    const K = key(k, Math.floor(a / W)); occ.set(K, (occ.get(K) || 0) + 1);
+  });
+
+  // Sort by earliest base departure to mimic operational priority
+  const order = State.trains.map((t, i) => ({ i, base: t.times[0] })).sort((a, b) => a.base - b.base);
+
+  // For each train pick smallest |s|; ties by sign default to negative (earlier)
+  const orderedShifts = shifts.slice().sort((a, b) => Math.abs(a) - Math.abs(b) || a - b);
+
+  const assignments = new Map(); // t → shiftIndex
+  for (const { i: t } of order) {
+    let placed = false;
+    for (const s of orderedShifts) {
+      const arrivals = State.trains[t].times.map(m => m + s);
+      if (arrivals.some(a => a < 0 || a >= 24 * 60)) continue;
+      if (!canPlace(arrivals)) continue;
+      place(arrivals);
+      assignments.set(t, shifts.indexOf(s));
+      placed = true;
+      break;
+    }
+  }
+
+  // Build parsed solution shape
+  const perTrainAssign = new Map();
+  for (const [t, iShift] of assignments) perTrainAssign.set(t, iShift);
+
+  const parsed = buildParsed(perTrainAssign, model);
+  parsed.solverName = 'Heuristic';
+  parsed.solveTime = 0;
+  State.solution = parsed;
+  renderAll();
+  setStatus(`Heuristic · placed <strong>${parsed.placed}/${State.trains.length}</strong> (${(100*parsed.placed/State.trains.length).toFixed(1)}%)`, 'ok');
+  return parsed;
+}
+
+function parseSolution(sol, model) {
+  // sol.Columns is a map: varName → { Primal, ... }
+  const cols = sol.Columns || {};
+  const assign = new Map(); // t → iShift
+  for (const v of model.vars) {
+    const cell = cols[v.name];
+    if (!cell) continue;
+    const val = +cell.Primal;
+    if (val > 0.5) assign.set(v.t, v.i);
+  }
+  return buildParsed(assign, model);
+}
+
+function buildParsed(assign, model) {
+  const { shifts } = model;
+  const cps = State.checkpoints;
+  const out = {
+    trains: State.trains.map((tr, t) => {
+      const iShift = assign.get(t);
+      if (iShift === undefined) {
+        return { id: t, headcode: tr.headcode, status: 'dropped', shift: null, baseTimes: tr.times, newTimes: null };
+      }
+      const s = shifts[iShift];
+      const newTimes = tr.times.map(m => m + s);
+      return {
+        id: t, headcode: tr.headcode,
+        status: s === 0 ? 'slot' : 'shifted',
+        shift: s,
+        baseTimes: tr.times,
+        newTimes
+      };
+    }),
+    shifts
+  };
+
+  out.placed = out.trains.filter(t => t.status !== 'dropped').length;
+  out.slot   = out.trains.filter(t => t.status === 'slot').length;
+  out.shifted = out.trains.filter(t => t.status === 'shifted').length;
+  out.dropped = out.trains.filter(t => t.status === 'dropped').length;
+  out.meanAbsShift = (out.trains.filter(t => t.shift !== null && t.shift !== 0)
+                        .reduce((a, t) => a + Math.abs(t.shift), 0)
+                     / Math.max(1, out.shifted));
+
+  // Peak berth load per placed train (used for the solution-table column)
+  const W = model.p.headway;
+  const occ = new Map();
+  for (const t of out.trains) {
+    if (t.status === 'dropped') continue;
+    t.newTimes.forEach((a, k) => {
+      const key = k * 1_000_000 + Math.floor(a / W);
+      occ.set(key, (occ.get(key) || 0) + 1);
+    });
+  }
+  out.peakByTrain = out.trains.map(t => {
+    if (t.status === 'dropped') return { k: -1, load: 0, cap: 0 };
+    let best = { k: 0, load: 0, cap: cps[0].capacity };
+    t.newTimes.forEach((a, k) => {
+      const key = k * 1_000_000 + Math.floor(a / W);
+      const load = occ.get(key) || 0;
+      const util = load / Math.max(1, cps[k].capacity - cps[k].blocked);
+      const currentUtil = best.load / Math.max(1, cps[best.k].capacity - cps[best.k].blocked);
+      if (util > currentUtil) best = { k, load, cap: cps[k].capacity - cps[k].blocked };
+    });
+    return best;
+  });
+
+  // Full occupancy grid for heatmap
+  out.occGrid = occ;
+
+  return out;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — KPIs
+   ═══════════════════════════════════════════════════════════════ */
+function renderKpis() {
+  const s = State.solution;
+  if (!s) return;
+  const N = State.trains.length;
+  const placedRate = 100 * s.placed / N;
+  const conflictRate = 100 * s.dropped / N;
+  const meanShift = s.meanAbsShift;
+  const kpis = [
+    { label: 'Placed rate', value: placedRate.toFixed(1), unit: '%', sub: `${s.placed} / ${N}`, klass: placedRate >= 70 ? 'ok' : placedRate >= 50 ? 'warn' : 'bad' },
+    { label: 'Conflict rate', value: conflictRate.toFixed(1), unit: '%', sub: `${s.dropped} irresolvable`, klass: conflictRate <= 25 ? 'ok' : conflictRate <= 40 ? 'warn' : 'bad' },
+    { label: 'Unchanged', value: s.slot, unit: '', sub: `${(100*s.slot/N).toFixed(1)}% at booked time`, klass: 'ok' },
+    { label: 'Rescheduled', value: s.shifted, unit: '', sub: `${(100*s.shifted/N).toFixed(1)}%`, klass: 'ok' },
+    { label: 'Mean |shift|', value: (isFinite(meanShift) ? meanShift.toFixed(1) : '0.0'), unit: 'min', sub: `across rescheduled`, klass: 'ok' },
+    { label: 'Method', value: s.solverName, unit: '', sub: `${(s.solveTime || 0).toFixed(2)}s`, klass: 'ok' }
+  ];
+  $('kpiRow').innerHTML = kpis.map(k => `
+    <div class="kpi ${k.klass}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}${k.unit ? `<span class="unit">${k.unit}</span>` : ''}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>
+  `).join('');
+  $('kpiSection').style.display = '';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — Train graph (SVG, time × checkpoint)
+   ═══════════════════════════════════════════════════════════════ */
+function renderTrainGraph() {
+  const host = $('graphHost');
+  const s = State.solution;
+  if (!s) { host.innerHTML = ''; return; }
+  const cps = State.checkpoints;
+  const H = 44 * cps.length + 60;
+  const W = Math.max(host.clientWidth || 900, 640);
+  const pad = { l: 130, r: 20, t: 20, b: 40 };
+  const iw = W - pad.l - pad.r;
+  const ih = H - pad.t - pad.b;
+
+  // X: minutes from 04:00 → 26:00
+  const xMin = 4 * 60, xMax = 26 * 60;
+  const x = (m) => pad.l + iw * (m - xMin) / (xMax - xMin);
+  const y = (k) => pad.t + ih * (k / (cps.length - 1));
+
+  const mode = State.graphMode;
+  const showBase = mode === 'baseline' || mode === 'diff';
+  const showMilp = mode === 'milp' || mode === 'diff';
+  const showDropped = mode === 'dropped' || mode === 'diff';
+
+  const lines = [];
+  for (const t of s.trains) {
+    if (t.status === 'dropped') {
+      if (showDropped) {
+        const pts = t.baseTimes.map((m, k) => `${x(m).toFixed(1)},${y(k).toFixed(1)}`).join(' ');
+        lines.push(`<polyline class="train-line dropped" data-hc="${t.headcode}" points="${pts}" />`);
+      }
+      continue;
+    }
+    if (showBase) {
+      const pts = t.baseTimes.map((m, k) => `${x(m).toFixed(1)},${y(k).toFixed(1)}`).join(' ');
+      lines.push(`<polyline class="train-line baseline" data-hc="${t.headcode}" points="${pts}" />`);
+    }
+    if (showMilp) {
+      const klass = t.status === 'slot' ? 'unchanged' : 'shifted';
+      const pts = t.newTimes.map((m, k) => `${x(m).toFixed(1)},${y(k).toFixed(1)}`).join(' ');
+      lines.push(`<polyline class="train-line ${klass}" data-hc="${t.headcode}" data-shift="${t.shift}" points="${pts}" />`);
+    }
+  }
+
+  // Y-axis labels + gridlines
+  const yLabels = cps.map((cp, k) => `
+    <text x="${pad.l - 8}" y="${y(k) + 3}" text-anchor="end" fill="var(--text-2)" font-size="10.5" font-weight="600">${cp.name}</text>
+    <text x="${pad.l - 8}" y="${y(k) + 14}" text-anchor="end" fill="var(--text-4)" font-size="9">n=${cp.capacity - cp.blocked}</text>
+    <line x1="${pad.l}" x2="${W - pad.r}" y1="${y(k)}" y2="${y(k)}" stroke="var(--border)" stroke-width="0.75" stroke-dasharray="1 3" />
+  `).join('');
+
+  // X-axis: hourly ticks
+  const xTicks = [];
+  for (let m = xMin; m <= xMax; m += 60) {
+    const xv = x(m);
+    xTicks.push(`<line x1="${xv}" x2="${xv}" y1="${pad.t}" y2="${H - pad.b}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="1 3" />
+                 <text x="${xv}" y="${H - pad.b + 14}" text-anchor="middle" fill="var(--text-4)" font-size="9.5">${String(Math.floor(m/60)%24).padStart(2,'0')}:00</text>`);
+  }
+
+  // Legend
+  const legend = `
+    <g transform="translate(${W - pad.r - 240}, ${pad.t + 8})">
+      <rect width="240" height="60" fill="white" stroke="var(--border)" rx="4"/>
+      <line x1="10" x2="34" y1="18" y2="18" stroke="var(--text-3)" stroke-width="1.4" stroke-dasharray="2 2"/>
+      <text x="42" y="21" font-size="10" fill="var(--text-2)" font-weight="600">Baseline</text>
+      <line x1="10" x2="34" y1="34" y2="34" stroke="var(--green)" stroke-width="1.8"/>
+      <text x="42" y="37" font-size="10" fill="var(--text-2)" font-weight="600">Unchanged</text>
+      <line x1="120" x2="144" y1="18" y2="18" stroke="var(--amber)" stroke-width="1.8"/>
+      <text x="152" y="21" font-size="10" fill="var(--text-2)" font-weight="600">Shifted</text>
+      <line x1="120" x2="144" y1="34" y2="34" stroke="var(--red)" stroke-width="1.6"/>
+      <text x="152" y="37" font-size="10" fill="var(--text-2)" font-weight="600">Dropped</text>
+    </g>`;
+
+  host.innerHTML = `
+    <svg class="viz-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+      <rect width="${W}" height="${H}" fill="white"/>
+      ${xTicks.join('')}
+      ${yLabels}
+      ${lines.join('')}
+      ${legend}
+    </svg>
+  `;
+
+  host.querySelectorAll('polyline').forEach(pl => {
+    pl.addEventListener('mouseenter', () => {
+      pl.classList.add('hilite');
+      $('graphHint').textContent = `${pl.dataset.hc}${pl.dataset.shift ? ` · shift ${pl.dataset.shift >= 0 ? '+' : ''}${pl.dataset.shift} min` : ''}`;
+    });
+    pl.addEventListener('mouseleave', () => {
+      pl.classList.remove('hilite');
+      $('graphHint').textContent = 'Hover a line for details';
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — Berth heatmap
+   ═══════════════════════════════════════════════════════════════ */
+function renderHeatmap() {
+  const host = $('heatHost');
+  const s = State.solution;
+  if (!s) { host.innerHTML = ''; return; }
+  const cps = State.checkpoints;
+  const p = readParams();
+  const W = p.headway;
+
+  // X: 15-min windows across 04:00–26:00
+  const wMin = Math.floor(4*60 / W), wMax = Math.ceil(26*60 / W);
+  const nW = wMax - wMin;
+  const cellW = 10, cellH = 20;
+  const pad = { l: 130, r: 10, t: 10, b: 30 };
+  const svgW = pad.l + cellW * nW + pad.r;
+  const svgH = pad.t + cellH * cps.length + pad.b;
+
+  const rects = [];
+  for (let k = 0; k < cps.length; k++) {
+    const cap = Math.max(1, cps[k].capacity - cps[k].blocked);
+    for (let wi = 0; wi < nW; wi++) {
+      const w = wMin + wi;
+      const load = s.occGrid.get(k * 1_000_000 + w) || 0;
+      const util = load / cap;
+      const over = load > cap;
+      const c = util === 0 ? '#f5f6f8' :
+                util < 0.4 ? '#dbeafe' :
+                util < 0.7 ? '#93c5fd' :
+                util < 1.0 ? '#3b82f6' :
+                util <= 1.0001 ? '#1e40af' : '#dc2626';
+      rects.push(`<rect class="heat-cell ${over ? 'over' : ''}" x="${pad.l + wi*cellW}" y="${pad.t + k*cellH}" width="${cellW}" height="${cellH}" fill="${c}"><title>${cps[k].name} · ${fmtHHMM(w*W)} · ${load}/${cap}</title></rect>`);
+    }
+  }
+  const yLabels = cps.map((cp, k) =>
+    `<text x="${pad.l - 6}" y="${pad.t + k*cellH + cellH/2 + 3}" text-anchor="end" font-size="10" fill="var(--text-2)" font-weight="600">${cp.name}</text>`
+  ).join('');
+  const xLabels = [];
+  for (let wi = 0; wi < nW; wi += 4) { // every hour
+    const w = wMin + wi;
+    xLabels.push(`<text x="${pad.l + wi*cellW}" y="${svgH - pad.b + 14}" font-size="9" fill="var(--text-4)">${String(Math.floor((w*W/60))%24).padStart(2,'0')}h</text>`);
+  }
+  host.innerHTML = `
+    <svg class="viz-svg" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet">
+      <rect width="${svgW}" height="${svgH}" fill="white"/>
+      ${rects.join('')}
+      ${yLabels}
+      ${xLabels.join('')}
+    </svg>
+    <div style="font: 500 10px/1.5 var(--mono); color: var(--text-4); padding-top: 8px;">
+      Cell = window occupancy. Blue scale = utilisation 0 → 100%. Red-outlined = capacity violation (should not occur under the Optimal method).
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — Shift histogram
+   ═══════════════════════════════════════════════════════════════ */
+function renderHistogram() {
+  const host = $('histHost');
+  const s = State.solution;
+  if (!s) { host.innerHTML = ''; return; }
+  const shifts = s.shifts;
+  const counts = new Map(shifts.map(sh => [sh, 0]));
+  let dropped = 0;
+  for (const t of s.trains) {
+    if (t.status === 'dropped') { dropped++; continue; }
+    counts.set(t.shift, (counts.get(t.shift) || 0) + 1);
+  }
+  const maxC = Math.max(...counts.values(), dropped, 1);
+  const barW = 22, gap = 4;
+  const pad = { l: 40, r: 20, t: 20, b: 40 };
+  const totalBars = shifts.length + 1;
+  const iw = totalBars * (barW + gap);
+  const ih = 200;
+  const W = pad.l + iw + pad.r;
+  const H = pad.t + ih + pad.b;
+
+  const bars = [];
+  shifts.forEach((sh, i) => {
+    const c = counts.get(sh);
+    const h = ih * (c / maxC);
+    const xv = pad.l + i * (barW + gap);
+    const isSlot = sh === 0;
+    bars.push(`<g class="hist-bar ${isSlot ? 'slot' : ''}">
+      <rect x="${xv}" y="${pad.t + ih - h}" width="${barW}" height="${h}"><title>Shift ${sh >= 0 ? '+' : ''}${sh} min · ${c} trains</title></rect>
+      <text x="${xv + barW/2}" y="${pad.t + ih + 12}" font-size="9" fill="var(--text-3)" text-anchor="middle" font-weight="600">${sh}</text>
+      ${c > 0 ? `<text x="${xv + barW/2}" y="${pad.t + ih - h - 4}" font-size="9" fill="var(--text-3)" text-anchor="middle" font-weight="600">${c}</text>` : ''}
+    </g>`);
+  });
+  // dropped bar
+  {
+    const c = dropped;
+    const h = ih * (c / maxC);
+    const xv = pad.l + shifts.length * (barW + gap);
+    bars.push(`<g class="hist-bar">
+      <rect x="${xv}" y="${pad.t + ih - h}" width="${barW}" height="${h}" fill="var(--red)"><title>Dropped · ${c}</title></rect>
+      <text x="${xv + barW/2}" y="${pad.t + ih + 12}" font-size="9" fill="var(--red)" text-anchor="middle" font-weight="700">DROP</text>
+      ${c > 0 ? `<text x="${xv + barW/2}" y="${pad.t + ih - h - 4}" font-size="9" fill="var(--red)" text-anchor="middle" font-weight="700">${c}</text>` : ''}
+    </g>`);
+  }
+  host.innerHTML = `
+    <svg class="viz-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+      <rect width="${W}" height="${H}" fill="white"/>
+      <line x1="${pad.l}" x2="${W - pad.r}" y1="${pad.t + ih}" y2="${pad.t + ih}" stroke="var(--border)"/>
+      ${bars.join('')}
+      <text x="${W/2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--text-3)" font-weight="600">Shift assigned (min) · DROP = irresolvable</text>
+    </svg>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER — Solution table
+   ═══════════════════════════════════════════════════════════════ */
+function renderSolutionTable() {
+  const s = State.solution;
+  if (!s) return;
+  const cps = State.checkpoints;
+  let rows = s.trains.map((t, i) => ({
+    hc: t.headcode,
+    status: t.status,
+    shift: t.shift,
+    base: t.baseTimes[0],
+    _new: t.status === 'dropped' ? null : t.newTimes[0],
+    peak: s.peakByTrain[i]
+  }));
+  // filter
+  if (State.solFilter !== 'all') rows = rows.filter(r => r.status === State.solFilter);
+  if (State.solSearchText) {
+    const q = State.solSearchText.toLowerCase();
+    rows = rows.filter(r => r.hc.toLowerCase().includes(q));
+  }
+  const col = State.solSortCol, dir = State.solSortDir;
+  rows.sort((a, b) => {
+    let va, vb;
+    if (col === 'new')             { va = a._new;              vb = b._new; }
+    else if (col === 'bottleneck') { va = a.peak ? a.peak.load : 0; vb = b.peak ? b.peak.load : 0; }
+    else                            { va = a[col]; vb = b[col]; }
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'string') return dir * va.localeCompare(vb);
+    return dir * (va - vb);
+  });
+
+  $('solCount').textContent = `${rows.length} rows`;
+  $('solBody').innerHTML = rows.map(r => `
+    <tr>
+      <td class="sol-hc">${r.hc}</td>
+      <td><span class="sol-status ${r.status}">${r.status.toUpperCase()}</span></td>
+      <td>${r.shift == null ? '—' : (r.shift >= 0 ? '+' : '') + r.shift}</td>
+      <td>${fmtHHMM(r.base)}</td>
+      <td>${r._new == null ? '—' : fmtHHMM(r._new)}</td>
+      <td>${r.peak && r.peak.k >= 0 ? `${cps[r.peak.k].code} <span style="color:var(--text-4)">${r.peak.load}/${r.peak.cap}</span>` : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function renderAll() {
+  renderKpis();
+  renderTrainGraph();
+  renderHeatmap();
+  renderHistogram();
+  renderSolutionTable();
+  $('graphPanel').style.display = '';
+  $('lowerViz').style.display = '';
+  $('solPanel').style.display = '';
+  $('btnExport').disabled = false;
+  $('btnSaveScen').disabled = false;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   IMPORT / EXPORT / SCENARIOS
+   ═══════════════════════════════════════════════════════════════ */
+function importText(text) {
+  text = text.trim();
+  if (!text) return null;
+  let trains = null;
+  // JSON?
+  if (text[0] === '{' || text[0] === '[') {
+    try {
+      const obj = JSON.parse(text);
+      const arr = Array.isArray(obj) ? obj : (obj.trains || obj.data || null);
+      if (!arr || !Array.isArray(arr)) throw new Error('No "trains" array');
+      trains = arr.map((t, i) => ({
+        id: i,
+        headcode: t.headcode || t.hc || `T${i}`,
+        times: (t.times || t.arrivals || []).map(Number)
+      }));
+    } catch (e) { throw new Error('JSON parse: ' + e.message); }
+  } else {
+    // CSV: headcode,t1,t2,...
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // detect header
+    const first = lines[0].split(',').map(s => s.trim());
+    const hasHeader = /headcode|hc/i.test(first[0]) || isNaN(Number(first[1] || ''));
+    const rows = hasHeader ? lines.slice(1) : lines;
+    trains = rows.map((line, i) => {
+      const cells = line.split(',').map(s => s.trim());
+      return { id: i, headcode: cells[0] || `T${i}`, times: cells.slice(1).map(Number) };
+    });
+  }
+  // validate
+  if (!trains.length) throw new Error('No trains parsed');
+  const K = State.checkpoints.length;
+  const bad = trains.find(t => t.times.length !== K || t.times.some(x => !Number.isFinite(x)));
+  if (bad) throw new Error(`Each train must have ${K} finite time values (checkpoint count). First bad row: ${bad.headcode}`);
+  return trains;
+}
+
+function exportSolution() {
+  const s = State.solution;
+  if (!s) return;
+  const payload = {
+    meta: {
+      exportedAt: new Date().toISOString(),
+      solver: s.solverName,
+      solveTime: s.solveTime,
+      params: readParams()
+    },
+    checkpoints: State.checkpoints,
+    kpis: {
+      total: State.trains.length,
+      placed: s.placed, slot: s.slot, shifted: s.shifted, dropped: s.dropped,
+      meanAbsShift: s.meanAbsShift
+    },
+    trains: s.trains.map(t => ({
+      headcode: t.headcode,
+      status: t.status,
+      shift: t.shift,
+      baseTimes: t.baseTimes,
+      newTimes: t.newTimes
+    }))
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reschedule_${new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function saveScenario() {
+  const s = State.solution;
+  if (!s) return;
+  const name = prompt('Scenario name?', `Run ${State.scenarios.length + 1}`);
+  if (!name) return;
+  State.scenarios.push({
+    name, savedAt: new Date().toISOString(),
+    kpis: {
+      total: State.trains.length,
+      placed: s.placed, slot: s.slot, shifted: s.shifted, dropped: s.dropped,
+      meanAbsShift: s.meanAbsShift,
+      solver: s.solverName
+    }
+  });
+  localStorage.setItem('rs_scen', JSON.stringify(State.scenarios));
+  refreshScenarioSelect();
+}
+
+function refreshScenarioSelect() {
+  const sel = $('scenSelect');
+  sel.innerHTML = '<option value="">— compare with —</option>' +
+    State.scenarios.map((sc, i) => `<option value="${i}">${sc.name} · ${sc.kpis.placed}/${sc.kpis.total}</option>`).join('');
+}
+
+function clearScenarios() {
+  if (!confirm('Clear all saved scenarios?')) return;
+  State.scenarios = [];
+  localStorage.removeItem('rs_scen');
+  refreshScenarioSelect();
+}
+
+function compareScenario(i) {
+  const other = State.scenarios[i];
+  const s = State.solution;
+  if (!other || !s) return;
+  const dP = s.placed - other.kpis.placed;
+  const dD = s.dropped - other.kpis.dropped;
+  setStatus(
+    `Compare vs <strong>${other.name}</strong>: placed Δ ${dP >= 0 ? '+' : ''}${dP}, ` +
+    `dropped Δ ${dD >= 0 ? '+' : ''}${dD}, ` +
+    `mean|shift| Δ ${(s.meanAbsShift - (other.kpis.meanAbsShift || 0)).toFixed(1)} min ` +
+    `(current: ${s.solverName} ${s.placed}/${State.trains.length} vs saved: ${other.kpis.solver} ${other.kpis.placed}/${other.kpis.total})`,
+    dP >= 0 ? 'ok' : 'err'
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WIRE UP
+   ═══════════════════════════════════════════════════════════════ */
+function init() {
+  renderConfig();
+  refreshScenarioSelect();
+
+  $('btnSample').addEventListener('click', () => generateSample());
+  $('btnSolve').addEventListener('click', () => runOptimiser());
+  $('btnGreedy').addEventListener('click', () => {
+    const prev = $('cfgSolver').value;
+    $('cfgSolver').value = 'greedy';
+    runOptimiser().finally(() => { $('cfgSolver').value = prev; });
+  });
+  $('btnExport').addEventListener('click', exportSolution);
+  $('btnSaveScen').addEventListener('click', saveScenario);
+  $('btnClearScen').addEventListener('click', clearScenarios);
+  $('scenSelect').addEventListener('change', (e) => { if (e.target.value !== '') compareScenario(+e.target.value); });
+
+  $('btnResetCfg').addEventListener('click', () => {
+    State.checkpoints = JSON.parse(JSON.stringify(DEFAULT_CHECKPOINTS));
+    $('cfgHeadway').value = 15; $('cfgShiftMax').value = 60; $('cfgShiftStep').value = 5;
+    $('cfgPenalty').value = 0.001; $('cfgSolver').value = 'highs'; $('cfgTimeLimit').value = 30;
+    renderConfig();
+    setStatus('Config reset to defaults.', '');
+  });
+
+  // Import modal
+  const modal = $('importModal');
+  $('btnImport').addEventListener('click', () => { modal.classList.add('open'); $('importText').focus(); });
+  modal.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => modal.classList.remove('open')));
+  $('btnImportGo').addEventListener('click', () => {
+    try {
+      const trains = importText($('importText').value);
+      State.trains = trains;
+      refreshDatasetSummary();
+      $('btnSolve').disabled = false;
+      modal.classList.remove('open');
+      setStatus(`Imported <strong>${trains.length}</strong> services.`, 'ok');
+    } catch (e) {
+      setStatus('Import failed: ' + e.message, 'err');
+    }
+  });
+
+  // Graph toolbar
+  $('graphToolbar').querySelectorAll('.viz-toggle').forEach(b => {
+    b.addEventListener('click', () => {
+      $('graphToolbar').querySelectorAll('.viz-toggle').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      State.graphMode = b.dataset.mode;
+      renderTrainGraph();
+    });
+  });
+
+  // Solution table filters + search + sort
+  document.querySelectorAll('[data-solf]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('[data-solf]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      State.solFilter = b.dataset.solf;
+      renderSolutionTable();
+    });
+  });
+  $('solSearch').addEventListener('input', (e) => { State.solSearchText = e.target.value; renderSolutionTable(); });
+  document.querySelectorAll('#solTable thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (State.solSortCol === col) State.solSortDir *= -1;
+      else { State.solSortCol = col; State.solSortDir = 1; }
+      renderSolutionTable();
+    });
+  });
+
+  // Re-render graph on resize
+  let resizeTO;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTO);
+    resizeTO = setTimeout(() => { if (State.solution) { renderTrainGraph(); renderHeatmap(); renderHistogram(); } }, 200);
+  });
+
+  setStatus('Ready. Click <strong>Load sample</strong> for a demo dataset, or <strong>Import</strong> your own schedule slice.', '');
+}
+
+init();
+</script>
+</body>
+</html>
