@@ -233,6 +233,7 @@ body.product-app {
 .live-operations .kpi-label { color: #686d64; font-size: 9px; }
 .live-operations .kpi-val { color: var(--ri-ink); font-size: 27px; letter-spacing: -.04em; }
 .live-operations .kpi-val.blue { color: var(--ri-blue); }
+.live-operations .kpi-sub { color: #686d64; }
 .live-operations .kpi-clock { background: var(--ri-signal); }
 .live-operations .kpi-clock .kpi-label,
 .live-operations .kpi-clock .kpi-sub { color: rgba(16,19,15,.62); }
