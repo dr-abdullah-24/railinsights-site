@@ -780,26 +780,10 @@
         <div class="mix-caption" id="mixCaption">Fleet mix — waiting for data</div>
       </div>
 
-      <!-- Busiest TD areas -->
-      <div class="panel-section">
-        <div class="panel-label">Busiest TD areas</div>
-        <div id="areaList"><div class="feed-empty">Waiting for data…</div></div>
-        <div class="panel-hint">Select an area to centre the map on it.</div>
-      </div>
-
-      <!-- Live movements -->
-      <div class="panel-section">
-        <div class="panel-section-head">
-          <div class="panel-label">Live movements</div>
-          <span class="stat-updated" id="statUpdated" style="margin-top:0">Waiting…</span>
-        </div>
-        <div class="move-feed" id="moveFeed"><div class="feed-empty">Berth-to-berth steps will appear here as they happen.</div></div>
-      </div>
-
       <!-- Selected train detail -->
       <div class="detail-section" id="detailSection">
         <div class="panel-label">Selected train</div>
-        <div class="detail-empty" id="detailEmpty">Click a marker on the map</div>
+        <div class="detail-empty" id="detailEmpty">Select a train to inspect its complete observed trajectory.</div>
         <div id="detailBody" style="display:none"></div>
       </div>
 
@@ -818,13 +802,14 @@
       <div class="twin-map-actions">
         <button type="button" onclick="resetNationalView()">UK view</button>
         <button type="button" onclick="fitActiveNetwork()">Fit active</button>
+        <button type="button" id="trajectoryBtn" class="active" onclick="toggleTrajectories()">Trails on</button>
         <button type="button" id="wallboardBtn" onclick="toggleWallboard()">Wallboard</button>
       </div>
     </div>
 
     <div class="twin-provenance">
       <span class="provenance-pulse"></span>
-      <div><strong>Live TD evidence</strong><span>Positions are resolved from signalling berths, not GPS.</span></div>
+      <div><strong>Live TD + session trails</strong><span>Solid paths connect mapped berths observed since this screen opened; not GPS.</span></div>
     </div>
 
     <div class="twin-legend" aria-label="Train classification legend">
@@ -854,7 +839,6 @@
   <aside class="twin-rail" aria-label="Operational intelligence rail">
     <header class="twin-rail-head">
       <div><span>National twin</span><strong>Operational state</strong></div>
-      <time id="twinClock">--:--:--</time>
     </header>
 
     <section class="twin-module twin-health">
@@ -976,7 +960,7 @@ const clusterGroup = L.markerClusterGroup({
   }
 });
 map.addLayer(clusterGroup);
-const movementTraceLayer = L.layerGroup().addTo(map);
+const trajectoryLayer = L.layerGroup().addTo(map);
 
 // ── State ────────────────────────────────────────────────────────────────────
 let trainData    = {};           // headcode → server train info
@@ -995,6 +979,9 @@ const sparkData  = [];     // recent totals for the KPI sparkline
 const moveTimes  = [];     // timestamps of berth movements (rate metric)
 const moveLog    = [];     // most recent berth-to-berth steps
 let   firstData  = false;  // suppress movement flood on the initial snapshot
+const trainTrajectories = new Map(); // headcode -> every distinct berth state observed in this session
+const trajectoryLines = new Map();   // headcode -> L.Polyline
+let trajectoriesVisible = true;
 
 // ── Marker factory ───────────────────────────────────────────────────────────
 function makeIcon(hc, type) {
@@ -1056,6 +1043,7 @@ function applyState(newTrains) {
   // Add / update
   for (const [hc, t] of Object.entries(newTrains)) {
     if (!t.lat || !t.lon) continue;
+    recordTrajectoryPoint(hc, t);
 
     if (trainMk.has(hc)) {
       const mk = trainMk.get(hc);
@@ -1069,8 +1057,9 @@ function applyState(newTrains) {
       }).bindPopup('', { maxWidth: 260 });
 
       mk.on('popupopen', () => {
-        mk.setPopupContent(buildPopup(hc, t));
-        selectTrain(hc, t);
+        const current = trainData[hc] || t;
+        mk.setPopupContent(buildPopup(hc, current));
+        selectTrain(hc, current);
       });
 
       trainMk.set(hc, mk);
@@ -1127,8 +1116,6 @@ function refreshUI() {
   }
   renderSpark(total);
   renderMix(counts, total);
-  renderAreas(areas);
-  renderMoves();
   renderTwinAreas(areas);
   renderTwinEvents();
   refreshTwinTelemetry(areas);
@@ -1181,7 +1168,6 @@ function recordMovements(oldTrains, newTrains) {
         fromBerth: prev.berth,
         ts: now
       });
-      drawMovementTrace(prev, t, t.type);
       if (moveLog.length > 8) moveLog.pop();
     }
   }
@@ -1294,19 +1280,98 @@ function renderMoves() {
   }).join('');
 }
 
-function drawMovementTrace(from, to, type) {
-  if (!from || !to || !Number.isFinite(from.lat) || !Number.isFinite(from.lon) ||
-      !Number.isFinite(to.lat) || !Number.isFinite(to.lon)) return;
-  if (from.lat === to.lat && from.lon === to.lon) return;
+function recordTrajectoryPoint(hc, state) {
+  const lat = Number(state.lat);
+  const lon = Number(state.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+  const points = trainTrajectories.get(hc) || [];
+  const last = points[points.length - 1];
+  if (last && last.td === state.td && last.berth === state.berth && last.lat === lat && last.lon === lon) return;
+  points.push({
+    lat,
+    lon,
+    name: state.name || 'Mapped berth',
+    td: state.td || '',
+    berth: state.berth || '',
+    ts: Number(state.ts) || Date.now(),
+    observedAt: Date.now()
+  });
+  trainTrajectories.set(hc, points);
+  renderTrajectory(hc, state.type);
+}
+
+function renderTrajectory(hc, type) {
+  const points = trainTrajectories.get(hc) || [];
+  const existing = trajectoryLines.get(hc);
+  if (points.length < 2) {
+    if (existing) {
+      trajectoryLayer.removeLayer(existing);
+      trajectoryLines.delete(hc);
+    }
+    return;
+  }
+
+  const segments = [[]];
+  for (const point of points) {
+    const segment = segments[segments.length - 1];
+    const previous = segment[segment.length - 1];
+    if (previous && geoDistanceKm(previous[0], previous[1], point.lat, point.lon) > 120) {
+      segments.push([]);
+    }
+    segments[segments.length - 1].push([point.lat, point.lon]);
+  }
+  const drawable = segments.filter(segment => segment.length > 1);
+  if (!drawable.length) return;
   const cfg = TYPES[type] || TYPES.special;
-  const trace = L.polyline([[from.lat, from.lon], [to.lat, to.lon]], {
-    color: cfg.color,
-    weight: 2,
-    opacity: .9,
-    className: 'movement-trace',
-    interactive: false
-  }).addTo(movementTraceLayer);
-  setTimeout(() => movementTraceLayer.removeLayer(trace), 45000);
+  const selected = selectedHc === hc;
+  if (existing) {
+    existing.setLatLngs(drawable);
+    existing.setStyle({ color: cfg.color, weight: selected ? 5 : 3, opacity: selected ? 1 : .62 });
+  } else {
+    const line = L.polyline(drawable, {
+      color: cfg.color,
+      weight: selected ? 5 : 3,
+      opacity: selected ? 1 : .62,
+      lineCap: 'round',
+      lineJoin: 'round',
+      className: 'train-trajectory',
+      interactive: false
+    });
+    trajectoryLines.set(hc, line);
+    if (trajectoriesVisible) trajectoryLayer.addLayer(line);
+  }
+}
+
+function geoDistanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = value => value * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function highlightTrajectory(hc) {
+  for (const [key, line] of trajectoryLines) {
+    const state = trainData[key];
+    const cfg = TYPES[state?.type] || TYPES.special;
+    line.setStyle({ color: cfg.color, weight: key === hc ? 5 : 3, opacity: key === hc ? 1 : (hc ? .34 : .62) });
+    if (key === hc && trajectoriesVisible) line.bringToFront();
+  }
+}
+
+function toggleTrajectories() {
+  trajectoriesVisible = !trajectoriesVisible;
+  if (trajectoriesVisible) {
+    for (const line of trajectoryLines.values()) trajectoryLayer.addLayer(line);
+    highlightTrajectory(selectedHc);
+  } else {
+    trajectoryLayer.clearLayers();
+  }
+  const button = document.getElementById('trajectoryBtn');
+  if (button) {
+    button.textContent = trajectoriesVisible ? 'Trails on' : 'Trails off';
+    button.classList.toggle('active', trajectoriesVisible);
+  }
 }
 
 function renderTwinAreas(areas) {
@@ -1439,8 +1504,6 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 setInterval(() => {
-  const clock = document.getElementById('twinClock');
-  if (clock) clock.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
   refreshTwinTelemetry();
   renderTwinEvents();
 }, 1000);
@@ -1455,6 +1518,8 @@ function relTime(ms) {
 function selectTrain(hc, t) {
   selectedHc = hc;
   const cfg = TYPES[t.type] || TYPES.special;
+  const trajectory = trainTrajectories.get(hc) || [];
+  highlightTrajectory(hc);
   const time = t.ts ? new Date(t.ts).toLocaleTimeString('en-GB') : '—';
 
   document.getElementById('detailEmpty').style.display = 'none';
@@ -1467,11 +1532,31 @@ function selectTrain(hc, t) {
     <div class="detail-row"><span>TD Area</span><span>${esc(t.td || '—')}</span></div>
     <div class="detail-row"><span>Berth</span><span>${esc(t.berth || '—')}</span></div>
     <div class="detail-row"><span>Last seen</span><span>${time}</span></div>
+    <div class="detail-row"><span>Observed since</span><span>${trajectory.length ? new Date(trajectory[0].observedAt).toLocaleTimeString('en-GB') : time}</span></div>
+    <div class="detail-row"><span>Trajectory states</span><span>${trajectory.length}</span></div>
     <div class="detail-row"><span>Coordinates</span><span>${t.lat.toFixed(4)}, ${t.lon.toFixed(4)}</span></div>
+    <button class="detail-locate-btn secondary" onclick="fitTrajectory('${hc}')">
+      Show complete observed path
+    </button>
     <button class="detail-locate-btn" onclick="flyTo('${hc}')">
       &#8982; Centre map on this train
     </button>
   `;
+}
+
+function fitTrajectory(hc) {
+  const points = trainTrajectories.get(hc) || [];
+  if (!points.length) return;
+  if (!trajectoriesVisible) toggleTrajectories();
+  highlightTrajectory(hc);
+  if (window.innerWidth <= 680 && window.closeMobilePanel) closeMobilePanel();
+  if (points.length === 1) {
+    map.flyTo([points[0].lat, points[0].lon], Math.max(map.getZoom(), 12), { duration: .8 });
+    showToast(`${hc}: one location observed in this session`);
+    return;
+  }
+  map.fitBounds(points.map(point => [point.lat, point.lon]), { padding: [70, 70], maxZoom: 13, animate: true });
+  showToast(`${hc}: showing ${points.length} observed berth states`);
 }
 
 function flyTo(hc) {

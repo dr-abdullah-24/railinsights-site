@@ -237,7 +237,7 @@ body.product-app {
 .live-operations .kpi-clock { background: var(--ri-signal); }
 .live-operations .kpi-clock .kpi-label,
 .live-operations .kpi-clock .kpi-sub { color: rgba(16,19,15,.62); }
-.live-operations .side-panel { width: 320px; }
+.live-operations .side-panel { width: 284px; }
 .live-operations .filter-all-btn { color: var(--ri-signal); }
 .live-operations .filter-item:hover,
 .live-operations .area-row:hover,
@@ -462,11 +462,10 @@ body.product-app {
   border-color: rgba(217,255,67,.72);
   box-shadow: 0 0 0 4px rgba(217,255,67,.08), 0 4px 18px rgba(0,0,0,.55);
 }
-.live-operations .movement-trace {
-  stroke-dasharray: 5 7;
-  animation: twin-trace 1.1s linear infinite;
+.live-operations .train-trajectory {
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,.75));
 }
-@keyframes twin-trace { to { stroke-dashoffset: -24; } }
 
 .twin-map-head,
 .twin-provenance,
@@ -510,6 +509,7 @@ body.product-app {
   cursor: pointer;
 }
 .twin-map-actions button:hover { color: var(--ri-ink); border-color: var(--ri-signal); background: var(--ri-signal); }
+.twin-map-actions button.active { color: var(--ri-ink); border-color: var(--ri-signal); background: var(--ri-signal); }
 .twin-provenance {
   left: 16px; bottom: 50px;
   display: flex;
@@ -548,8 +548,8 @@ body.product-app {
 .twin-rail {
   position: relative;
   z-index: 210;
-  width: 318px;
-  flex: 0 0 318px;
+  width: 300px;
+  flex: 0 0 300px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -564,13 +564,12 @@ body.product-app {
   padding: 13px 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   border-bottom: 1px solid var(--twin-line);
 }
 .twin-rail-head div { display: flex; flex-direction: column; gap: 3px; }
 .twin-rail-head span { color: var(--ri-signal); font: 500 8px/1 'IBM Plex Mono', monospace; letter-spacing: .13em; text-transform: uppercase; }
 .twin-rail-head strong { font-size: 15px; font-weight: 560; }
-.twin-rail-head time { color: white; font: 500 15px/1 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
 .twin-module { padding: 14px 16px 15px; border-bottom: 1px solid rgba(255,255,255,.09); }
 .twin-module-title { margin-bottom: 12px; color: rgba(255,255,255,.52); font: 500 8px/1 'IBM Plex Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
 .twin-module-title span { margin-right: 7px; color: var(--ri-signal); }
@@ -629,7 +628,18 @@ body.product-app {
 .twin-empty { padding: 8px 0; color: var(--twin-muted); font-size: 10px; }
 .twin-rail-foot { padding: 9px 16px; color: rgba(255,255,255,.36); font: 500 7px/1.4 'IBM Plex Mono', monospace; letter-spacing: .05em; }
 .twin-rail-foot span { margin-right: 6px; color: var(--ri-signal); }
-.live-operations .map-wait { left: 320px; right: 318px; }
+.live-operations .map-wait { left: 0; right: 0; }
+.live-operations .detail-locate-btn.secondary {
+  margin-top: 12px;
+  background: transparent;
+  border-color: rgba(217,255,67,.55);
+  color: var(--ri-signal);
+}
+.live-operations .detail-locate-btn.secondary:hover {
+  background: rgba(217,255,67,.08);
+  border-color: var(--ri-signal);
+  color: var(--ri-signal);
+}
 
 .live-operations.wallboard .app-header { display: none; }
 .live-operations.wallboard .kpi-strip { min-height: 80px; }
