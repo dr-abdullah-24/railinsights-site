@@ -49,12 +49,12 @@ const trainState = new Map();
 function classifyTrain(hc) {
   if (!hc) return 'special';
   switch (hc[0]) {
+    case '0': return 'loco';
     case '1': return 'express';
     case '2': return 'passenger';
-    case '3': return 'parcels';
     case '5': return 'ecs';
-    case '6': return 'loco';
-    case '4': case '7': case '8': case '9': return 'freight';
+    case '3': case '4': case '6': case '7': case '8': return 'freight';
+    case '9': return 'special';
     default:  return 'special';
   }
 }

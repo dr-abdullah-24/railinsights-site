@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Live Operations | Real-Time Train Movement Intelligence | Rail Insights</title>
-  <meta name="description" content="Real-time UK live train positions from Train Describer (TD) data. All active headcodes on an interactive map with clustering, train-type filters, and headcode search." />
+  <title>UK Rail Network Digital Twin | Live Operations | Rail Insights</title>
+  <meta name="description" content="A signalling-led UK rail network digital twin built from live Train Describer berth states, headcodes and movement transitions." />
   <meta name="keywords" content="live UK train map, TD data, headcode tracker, real-time train positions, Rail Insights, UK rail live" />
   <meta name="author" content="Rail Insights" />
   <link rel="canonical" href="https://railinsights.co.uk/live-trains.html" />
@@ -689,7 +689,7 @@
     <div class="nav-actions">
       <a class="nav-btn" href="railway-map.html">Network Atlas</a>
       <a class="nav-btn" href="berth-map.html">Signal Desk</a>
-      <a class="nav-btn active" href="live-trains.html">Live Operations</a>
+      <a class="nav-btn active" href="live-trains.html">Network Twin</a>
       <a class="nav-btn" href="wtt.html">Timetable Intel.</a>
       <a class="nav-btn primary" href="index.html#contact">Partner access</a>
     </div>
@@ -699,13 +699,13 @@
 <!-- ── KPI STRIP ─────────────────────────────────────────────────── -->
 <section class="kpi-strip" aria-label="Live network statistics">
   <div class="kpi">
-    <span class="kpi-label">Trains tracked</span>
+    <span class="kpi-label">Mapped states</span>
     <div class="kpi-val blue"><span id="kpiTotal">—</span>
       <svg id="sparkline" width="72" height="22" viewBox="0 0 72 22" aria-hidden="true"></svg>
     </div>
   </div>
   <div class="kpi">
-    <span class="kpi-label">Visible on map</span>
+    <span class="kpi-label">In current view</span>
     <div class="kpi-val" id="kpiVisible">—</div>
   </div>
   <div class="kpi">
@@ -719,12 +719,12 @@
     <div class="kpi-sub">Class 3 / 4 / 6 / 7 / 8</div>
   </div>
   <div class="kpi">
-    <span class="kpi-label">Berth moves / min</span>
+    <span class="kpi-label">Transitions / min</span>
     <div class="kpi-val" id="kpiRate">—</div>
-    <div class="kpi-sub">Across the whole feed</div>
+    <div class="kpi-sub">Observed TD berth changes</div>
   </div>
   <div class="kpi kpi-clock">
-    <span class="kpi-label">Last update</span>
+    <span class="kpi-label">Latest network state</span>
     <div class="kpi-val mono" id="kpiUpdated">—:—:—</div>
     <div class="kpi-sub" id="kpiAreas">— TD areas active</div>
   </div>
@@ -807,7 +807,39 @@
   </aside>
 
   <!-- ── MAP ───────────────────────────────────────────────────── -->
-  <div id="map"></div>
+  <section class="twin-map-stage" aria-label="UK rail network digital twin map">
+    <div id="map"></div>
+
+    <div class="twin-map-head" aria-label="Map status">
+      <div>
+        <span class="twin-overline">GB NETWORK / LIVE STATE</span>
+        <strong>Signalling-led digital twin</strong>
+      </div>
+      <div class="twin-map-actions">
+        <button type="button" onclick="resetNationalView()">UK view</button>
+        <button type="button" onclick="fitActiveNetwork()">Fit active</button>
+        <button type="button" id="wallboardBtn" onclick="toggleWallboard()">Wallboard</button>
+      </div>
+    </div>
+
+    <div class="twin-provenance">
+      <span class="provenance-pulse"></span>
+      <div><strong>Live TD evidence</strong><span>Positions are resolved from signalling berths, not GPS.</span></div>
+    </div>
+
+    <div class="twin-legend" aria-label="Train classification legend">
+      <span><i style="--legend:#1857c9"></i>Express</span>
+      <span><i style="--legend:#13a6be"></i>Stopping</span>
+      <span><i style="--legend:#8b5cf6"></i>ECS</span>
+      <span><i style="--legend:#f59e0b"></i>Light loco</span>
+      <span><i style="--legend:#16a36a"></i>Freight</span>
+    </div>
+
+    <div class="twin-ticker" aria-live="polite">
+      <span class="ticker-label">Network pulse</span>
+      <div id="twinTicker">Waiting for the first live signalling state...</div>
+    </div>
+  </section>
 
   <div class="map-wait" id="mapWait">
     <div class="map-wait-card">
@@ -819,6 +851,47 @@
     </div>
   </div>
 
+  <aside class="twin-rail" aria-label="Operational intelligence rail">
+    <header class="twin-rail-head">
+      <div><span>National twin</span><strong>Operational state</strong></div>
+      <time id="twinClock">--:--:--</time>
+    </header>
+
+    <section class="twin-module twin-health">
+      <div class="twin-module-title"><span>01</span> Data confidence</div>
+      <div class="health-primary">
+        <span id="twinHealthDot" class="health-dot waiting"></span>
+        <div><strong id="twinHealthState">Synchronising</strong><small id="twinHealthNote">Waiting for a network state</small></div>
+      </div>
+      <div class="health-grid">
+        <div><span>Feed age</span><strong id="twinFeedAge">--</strong></div>
+        <div><span>Mapped</span><strong id="twinMapped">--</strong></div>
+        <div><span>TD areas</span><strong id="twinAreas">--</strong></div>
+      </div>
+    </section>
+
+    <section class="twin-module">
+      <div class="twin-module-title"><span>02</span> State freshness</div>
+      <div class="freshness-bar" aria-hidden="true"><i id="freshNow"></i><i id="freshAgeing"></i><i id="freshStale"></i></div>
+      <div class="freshness-key">
+        <div><i class="fresh"></i><span>Recent &lt;2m</span><strong id="freshNowCount">0</strong></div>
+        <div><i class="ageing"></i><span>Ageing 2–10m</span><strong id="freshAgeingCount">0</strong></div>
+        <div><i class="stale"></i><span>Stale &gt;10m</span><strong id="freshStaleCount">0</strong></div>
+      </div>
+    </section>
+
+    <section class="twin-module twin-sectors">
+      <div class="twin-module-title"><span>03</span> Active control sectors</div>
+      <div id="twinAreaList" class="twin-area-list"><div class="twin-empty">Awaiting area activity...</div></div>
+    </section>
+
+    <section class="twin-module twin-transitions">
+      <div class="twin-module-title"><span>04</span> Latest transitions</div>
+      <div id="twinEventList" class="twin-event-list"><div class="twin-empty">No transitions observed yet.</div></div>
+    </section>
+
+    <footer class="twin-rail-foot"><span>MODEL</span> TD berth occupancy + SMART geospatial resolution</footer>
+  </aside>
 </div><!-- /app-shell -->
 
 <button class="panel-fab" id="panelFab" aria-label="Open filters and stats">
@@ -903,6 +976,7 @@ const clusterGroup = L.markerClusterGroup({
   }
 });
 map.addLayer(clusterGroup);
+const movementTraceLayer = L.layerGroup().addTo(map);
 
 // ── State ────────────────────────────────────────────────────────────────────
 let trainData    = {};           // headcode → server train info
@@ -1055,6 +1129,9 @@ function refreshUI() {
   renderMix(counts, total);
   renderAreas(areas);
   renderMoves();
+  renderTwinAreas(areas);
+  renderTwinEvents();
+  refreshTwinTelemetry(areas);
 
   // Update filter counts
   for (const k of TYPE_KEYS) {
@@ -1094,7 +1171,17 @@ function recordMovements(oldTrains, newTrains) {
     if (!prev) continue; // brand-new headcode — wait for its first step
     if (prev.berth !== t.berth || prev.td !== t.td) {
       moveTimes.push(now);
-      moveLog.unshift({ hc, type: t.type, name: t.name, td: t.td, berth: t.berth, ts: now });
+      moveLog.unshift({
+        hc,
+        type: t.type,
+        name: t.name,
+        fromName: prev.name,
+        td: t.td,
+        berth: t.berth,
+        fromBerth: prev.berth,
+        ts: now
+      });
+      drawMovementTrace(prev, t, t.type);
       if (moveLog.length > 8) moveLog.pop();
     }
   }
@@ -1207,6 +1294,157 @@ function renderMoves() {
   }).join('');
 }
 
+function drawMovementTrace(from, to, type) {
+  if (!from || !to || !Number.isFinite(from.lat) || !Number.isFinite(from.lon) ||
+      !Number.isFinite(to.lat) || !Number.isFinite(to.lon)) return;
+  if (from.lat === to.lat && from.lon === to.lon) return;
+  const cfg = TYPES[type] || TYPES.special;
+  const trace = L.polyline([[from.lat, from.lon], [to.lat, to.lon]], {
+    color: cfg.color,
+    weight: 2,
+    opacity: .9,
+    className: 'movement-trace',
+    interactive: false
+  }).addTo(movementTraceLayer);
+  setTimeout(() => movementTraceLayer.removeLayer(trace), 45000);
+}
+
+function renderTwinAreas(areas) {
+  const list = document.getElementById('twinAreaList');
+  if (!list) return;
+  const top = [...areas.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 7);
+  if (!top.length) {
+    list.innerHTML = '<div class="twin-empty">Awaiting area activity...</div>';
+    return;
+  }
+  const maxN = top[0][1].n || 1;
+  list.innerHTML = top.map(([td, a]) => `
+    <button class="twin-area-row" onclick="flyToArea('${esc(td)}')" title="Centre on TD area ${esc(td)}">
+      <span class="twin-area-code">${esc(td)}</span>
+      <span class="twin-area-name">${esc(areaExampleName(td))}</span>
+      <span class="twin-area-meter"><i style="width:${Math.round(a.n / maxN * 100)}%"></i></span>
+      <span class="twin-area-count">${a.n}</span>
+    </button>`).join('');
+}
+
+function renderTwinEvents() {
+  const list = document.getElementById('twinEventList');
+  if (!list) return;
+  if (!moveLog.length) {
+    list.innerHTML = '<div class="twin-empty">No transitions observed yet.</div>';
+    return;
+  }
+  const now = Date.now();
+  list.innerHTML = moveLog.slice(0, 5).map(m => {
+    const cfg = TYPES[m.type] || TYPES.special;
+    return `<div class="twin-event">
+      <strong style="color:${cfg.color}">${esc(m.hc)}</strong>
+      <span>${esc(m.name || m.td || 'Mapped berth')}</span>
+      <time>${relTime(now - m.ts)}</time>
+    </div>`;
+  }).join('');
+}
+
+function refreshTwinTelemetry(areasArg) {
+  const now = Date.now();
+  const values = Object.values(trainData);
+  let recent = 0, ageing = 0, stale = 0;
+  const areaCount = areasArg instanceof Map
+    ? areasArg.size
+    : new Set(values.map(t => t.td).filter(Boolean)).size;
+
+  for (const t of values) {
+    const age = t.ts ? Math.max(0, now - Number(t.ts)) : Infinity;
+    if (age < 120000) recent++;
+    else if (age < 600000) ageing++;
+    else stale++;
+  }
+
+  const total = Math.max(values.length, 1);
+  setText('freshNowCount', recent);
+  setText('freshAgeingCount', ageing);
+  setText('freshStaleCount', stale);
+  setWidth('freshNow', recent / total * 100);
+  setWidth('freshAgeing', ageing / total * 100);
+  setWidth('freshStale', stale / total * 100);
+  setText('twinMapped', values.length || '--');
+  setText('twinAreas', areaCount || '--');
+
+  const feedAge = lastUpdate ? Math.max(0, now - lastUpdate.getTime()) : null;
+  setText('twinFeedAge', feedAge === null ? '--' : (feedAge < 1000 ? '<1s' : `${Math.floor(feedAge / 1000)}s`));
+  const dot = document.getElementById('twinHealthDot');
+  const state = document.getElementById('twinHealthState');
+  const note = document.getElementById('twinHealthNote');
+  if (dot && state && note) {
+    if (feedAge === null) {
+      dot.className = 'health-dot waiting';
+      state.textContent = 'Synchronising';
+      note.textContent = 'Waiting for a network state';
+    } else if (feedAge < 15000) {
+      dot.className = 'health-dot good';
+      state.textContent = 'Network state live';
+      note.textContent = `${recent.toLocaleString()} recent berth states`;
+    } else {
+      dot.className = 'health-dot degraded';
+      state.textContent = 'Feed ageing';
+      note.textContent = `No state received for ${Math.floor(feedAge / 1000)} seconds`;
+    }
+  }
+
+  const ticker = document.getElementById('twinTicker');
+  if (ticker) {
+    const latest = moveLog[0];
+    ticker.textContent = latest
+      ? `${latest.hc} entered ${latest.name || latest.td || 'a mapped berth'} / ${latest.td || '--'} ${latest.berth || ''} / ${relTime(now - latest.ts)} ago`
+      : values.length
+        ? `${values.length.toLocaleString()} mapped train states across ${areaCount} active TD areas / awaiting the next berth transition`
+        : 'Waiting for the first live signalling state...';
+  }
+}
+
+function setWidth(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = `${Math.max(0, Math.min(100, value))}%`;
+}
+
+function resetNationalView() {
+  map.flyTo([53.2, -1.5], 7, { duration: .8 });
+}
+
+function fitActiveNetwork() {
+  const points = Object.values(trainData)
+    .filter(t => Number.isFinite(t.lat) && Number.isFinite(t.lon))
+    .map(t => [t.lat, t.lon]);
+  if (!points.length) return showToast('Waiting for mapped train states');
+  map.fitBounds(points, { padding: [54, 54], maxZoom: 10, animate: true });
+}
+
+async function toggleWallboard() {
+  document.body.classList.toggle('wallboard');
+  const active = document.body.classList.contains('wallboard');
+  setText('wallboardBtn', active ? 'Exit wallboard' : 'Wallboard');
+  setTimeout(() => map.invalidateSize(), 120);
+  try {
+    if (active && !document.fullscreenElement) await document.documentElement.requestFullscreen();
+    else if (!active && document.fullscreenElement) await document.exitFullscreen();
+  } catch {}
+}
+
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && document.body.classList.contains('wallboard')) {
+    document.body.classList.remove('wallboard');
+    setText('wallboardBtn', 'Wallboard');
+    setTimeout(() => map.invalidateSize(), 120);
+  }
+});
+
+setInterval(() => {
+  const clock = document.getElementById('twinClock');
+  if (clock) clock.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  refreshTwinTelemetry();
+  renderTwinEvents();
+}, 1000);
+
 function relTime(ms) {
   const s = Math.round(ms / 1000);
   if (s < 5)  return 'now';
@@ -1253,6 +1491,11 @@ function setConnState(state, text) {
 
 const WS_URL = (() => {
   const h = location.hostname;
+  const feedMode = new URLSearchParams(location.search).get('feed');
+  if (feedMode === 'mock') return 'ws://localhost:3001';
+  if (feedMode === 'live') {
+    return 'wss://railinsights-site-5jfi.onrender.com';
+  }
   if (h === 'localhost' || h === '127.0.0.1' || h === '') return 'ws://localhost:3000';
   return 'wss://railinsights-site-5jfi.onrender.com';  
 })();
