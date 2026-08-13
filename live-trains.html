@@ -723,22 +723,7 @@
   <section class="twin-map-stage" aria-label="UK rail network digital twin map">
     <div id="map"></div>
 
-    <div class="twin-map-head" aria-label="Map status">
-      <div>
-        <span class="twin-overline">GB NETWORK / LIVE STATE</span>
-        <strong>Signalling-led digital twin</strong>
-      </div>
-      <div class="twin-map-actions">
-        <button type="button" onclick="resetNationalView()">UK view</button>
-        <button type="button" onclick="fitActiveNetwork()">Fit active</button>
-        <button type="button" id="wallboardBtn" onclick="toggleWallboard()">Wallboard</button>
-      </div>
-    </div>
-
-    <div class="twin-provenance">
-      <span class="provenance-pulse"></span>
-      <div><strong>Live TD + session trails</strong><span>Solid paths connect mapped berths observed since this screen opened; not GPS.</span></div>
-    </div>
+    <button class="map-wallboard" type="button" id="wallboardBtn" onclick="toggleWallboard()">Wallboard</button>
 
     <aside class="train-inspector" id="trainInspector" aria-label="Selected train trajectory" aria-live="polite">
       <button class="train-inspector-close" type="button" onclick="closeTrainInspector()" aria-label="Close selected train">&#x2715;</button>

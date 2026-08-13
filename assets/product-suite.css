@@ -440,7 +440,7 @@ body.product-app {
 }
 .live-operations .leaflet-overlay-pane { filter: saturate(1.2); }
 .live-operations .leaflet-control-zoom {
-  margin-top: 104px !important;
+  margin-top: 12px !important;
   border-color: rgba(217,255,67,.35) !important;
 }
 .live-operations .leaflet-control-zoom a {
@@ -462,6 +462,30 @@ body.product-app {
   stroke-dasharray: none;
   filter: drop-shadow(0 0 3px rgba(0,0,0,.75));
 }
+.map-wallboard {
+  position: absolute;
+  z-index: 470;
+  top: 16px;
+  left: 16px;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(217,255,67,.48);
+  background: rgba(8,12,9,.9);
+  color: var(--ri-signal);
+  font: 600 8px/1 'IBM Plex Mono', monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+.map-wallboard:hover,
+.map-wallboard.active {
+  color: var(--ri-ink);
+  border-color: var(--ri-signal);
+  background: var(--ri-signal);
+}
+
 
 .twin-map-head,
 .twin-provenance,
@@ -521,9 +545,9 @@ body.product-app {
   position: absolute;
   z-index: 470;
   left: 16px;
-  bottom: 98px;
+  bottom: 50px;
   width: min(290px, calc(100% - 32px));
-  max-height: calc(100% - 210px);
+  max-height: calc(100% - 120px);
   padding: 15px;
   overflow-y: auto;
   color: #f3f6ef;
@@ -732,4 +756,8 @@ body.product-app {
   .twin-ticker { height: 32px; }
   .ticker-label { padding-inline: 9px; }
   #twinTicker { padding-inline: 9px; font-size: 8px; }
+}
+@media (max-width: 680px) {
+  .map-wallboard { top: 10px; left: 10px; min-height: 31px; padding-inline: 10px; }
+  .live-operations .leaflet-control-zoom { margin-top: 10px !important; }
 }
