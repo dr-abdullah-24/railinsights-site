@@ -16,8 +16,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
 
   <style>
     :root {
@@ -272,18 +270,6 @@
     }
 
     /* ── CLUSTER ICONS ──────────────────────────────────────────── */
-    .train-cluster {
-      border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      font: 700 12px var(--font); color: white;
-      box-shadow: 0 2px 8px rgba(15,82,186,0.45);
-      border: 2.5px solid white;
-      background: var(--blue);
-    }
-    .train-cluster.sm  { width: 32px; height: 32px; font-size: 11px; }
-    .train-cluster.md  { width: 40px; height: 40px; font-size: 13px; }
-    .train-cluster.lg  { width: 50px; height: 50px; font-size: 15px; }
-    .train-cluster.xl  { width: 60px; height: 60px; font-size: 17px; box-shadow: 0 3px 12px rgba(15,82,186,0.5); }
-
     /* ── POPUP ──────────────────────────────────────────────────── */
     .popup-inner { padding: 13px 15px; }
     .popup-hc { font: 800 20px/1 var(--mono); letter-spacing: 0.06em; margin-bottom: 3px; }
@@ -766,20 +752,6 @@
         <div class="search-hits" id="searchHits"></div>
       </div>
 
-      <!-- Filters -->
-      <div class="panel-section">
-        <div class="filter-all-row">
-          <div class="panel-label" style="margin-bottom:0">Train Types</div>
-          <div style="display:flex;gap:8px">
-            <button class="filter-all-btn" onclick="setAllFilters(true)">All on</button>
-            <button class="filter-all-btn" onclick="setAllFilters(false)">All off</button>
-          </div>
-        </div>
-        <div id="filterList"></div>
-        <div class="mix-bar" id="mixBar" aria-hidden="true"></div>
-        <div class="mix-caption" id="mixCaption">Fleet mix — waiting for data</div>
-      </div>
-
       <!-- Selected train detail -->
       <div class="detail-section" id="detailSection">
         <div class="panel-label">Selected train</div>
@@ -802,7 +774,6 @@
       <div class="twin-map-actions">
         <button type="button" onclick="resetNationalView()">UK view</button>
         <button type="button" onclick="fitActiveNetwork()">Fit active</button>
-        <button type="button" id="trajectoryBtn" class="active" onclick="toggleTrajectories()">Trails on</button>
         <button type="button" id="wallboardBtn" onclick="toggleWallboard()">Wallboard</button>
       </div>
     </div>
@@ -812,12 +783,13 @@
       <div><strong>Live TD + session trails</strong><span>Solid paths connect mapped berths observed since this screen opened; not GPS.</span></div>
     </div>
 
-    <div class="twin-legend" aria-label="Train classification legend">
-      <span><i style="--legend:#1857c9"></i>Express</span>
-      <span><i style="--legend:#13a6be"></i>Stopping</span>
-      <span><i style="--legend:#8b5cf6"></i>ECS</span>
-      <span><i style="--legend:#f59e0b"></i>Light loco</span>
-      <span><i style="--legend:#16a36a"></i>Freight</span>
+    <div class="twin-legend" aria-label="Clickable train type filters">
+      <button type="button" class="twin-filter active" data-type="express" onclick="toggleMapFilter('express')"><i style="--legend:#1857c9"></i><span>Express</span><b id="legend-express">0</b></button>
+      <button type="button" class="twin-filter active" data-type="passenger" onclick="toggleMapFilter('passenger')"><i style="--legend:#13a6be"></i><span>Stopping</span><b id="legend-passenger">0</b></button>
+      <button type="button" class="twin-filter active" data-type="ecs" onclick="toggleMapFilter('ecs')"><i style="--legend:#8b5cf6"></i><span>ECS</span><b id="legend-ecs">0</b></button>
+      <button type="button" class="twin-filter active" data-type="loco" onclick="toggleMapFilter('loco')"><i style="--legend:#f59e0b"></i><span>Light loco</span><b id="legend-loco">0</b></button>
+      <button type="button" class="twin-filter active" data-type="freight" onclick="toggleMapFilter('freight')"><i style="--legend:#16a36a"></i><span>Freight</span><b id="legend-freight">0</b></button>
+      <button type="button" class="twin-filter active" data-type="special" onclick="toggleMapFilter('special')"><i style="--legend:#7b8580"></i><span>Special</span><b id="legend-special">0</b></button>
     </div>
 
     <div class="twin-ticker" aria-live="polite">
@@ -878,11 +850,11 @@
   </aside>
 </div><!-- /app-shell -->
 
-<button class="panel-fab" id="panelFab" aria-label="Open filters and stats">
+<button class="panel-fab" id="panelFab" aria-label="Open train controls">
   <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
     <path d="M0 1h16M0 6h16M0 11h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
   </svg>
-  Filters &amp; Stats
+  Train controls
 </button>
 <div class="panel-backdrop" id="panelBackdrop"></div>
 
@@ -890,7 +862,6 @@
 
 <!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script src="data/berth-locations.js"></script>
 <script>
 'use strict';
@@ -937,35 +908,14 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19
 }).addTo(map);
 
-// Cluster group
-const clusterGroup = L.markerClusterGroup({
-  maxClusterRadius: 45,
-  disableClusteringAtZoom: 13,
-  spiderfyOnMaxZoom: true,
-  showCoverageOnHover: false,
-  animate: true,
-  iconCreateFunction(cluster) {
-    const n = cluster.getChildCount();
-    let cls, sz;
-    if      (n <  10) { cls = 'sm'; sz = 32; }
-    else if (n <  50) { cls = 'md'; sz = 40; }
-    else if (n < 200) { cls = 'lg'; sz = 50; }
-    else              { cls = 'xl'; sz = 60; }
-    return L.divIcon({
-      html: `<div class="train-cluster ${cls}">${n > 999 ? '999+' : n}</div>`,
-      className: '',
-      iconSize:   [sz, sz],
-      iconAnchor: [sz / 2, sz / 2],
-    });
-  }
-});
-map.addLayer(clusterGroup);
+// Individual train layer: no clustering, so every mapped headcode remains visible.
+const trainLayer = L.layerGroup().addTo(map);
 const trajectoryLayer = L.layerGroup().addTo(map);
 
 // ── State ────────────────────────────────────────────────────────────────────
 let trainData    = {};           // headcode → server train info
 const trainMk    = new Map();    // headcode → L.Marker
-const inCluster  = new Set();    // headcodes currently rendered in clusterGroup
+const visibleTrains = new Set(); // headcodes currently rendered in trainLayer
 const activeFilters = new Set(TYPE_KEYS);
 let searchQuery  = '';
 let selectedHc   = null;
@@ -981,7 +931,6 @@ const moveLog    = [];     // most recent berth-to-berth steps
 let   firstData  = false;  // suppress movement flood on the initial snapshot
 const trainTrajectories = new Map(); // headcode -> every distinct berth state observed in this session
 const trajectoryLines = new Map();   // headcode -> L.Polyline
-let trajectoriesVisible = true;
 
 // ── Marker factory ───────────────────────────────────────────────────────────
 function makeIcon(hc, type) {
@@ -1022,9 +971,9 @@ function shouldShow(hc, t) {
 function setMarkerVisibility(hc, show) {
   const mk = trainMk.get(hc);
   if (!mk) return;
-  const vis = inCluster.has(hc);
-  if (show && !vis) { clusterGroup.addLayer(mk); inCluster.add(hc); }
-  else if (!show && vis) { clusterGroup.removeLayer(mk); inCluster.delete(hc); }
+  const visible = visibleTrains.has(hc);
+  if (show && !visible) { trainLayer.addLayer(mk); visibleTrains.add(hc); }
+  else if (!show && visible) { trainLayer.removeLayer(mk); visibleTrains.delete(hc); }
 }
 
 // ── State update from WebSocket ──────────────────────────────────────────────
@@ -1035,7 +984,7 @@ function applyState(newTrains) {
   for (const hc of trainMk.keys()) {
     if (!newTrains[hc]) {
       const mk = trainMk.get(hc);
-      if (inCluster.has(hc)) { clusterGroup.removeLayer(mk); inCluster.delete(hc); }
+      if (visibleTrains.has(hc)) { trainLayer.removeLayer(mk); visibleTrains.delete(hc); }
       trainMk.delete(hc);
     }
   }
@@ -1063,7 +1012,7 @@ function applyState(newTrains) {
       });
 
       trainMk.set(hc, mk);
-      if (shouldShow(hc, t)) { clusterGroup.addLayer(mk); inCluster.add(hc); }
+      if (shouldShow(hc, t)) { trainLayer.addLayer(mk); visibleTrains.add(hc); }
     }
   }
 
@@ -1087,7 +1036,7 @@ function zOrder(type) {
 
 function refreshUI() {
   const total   = Object.keys(trainData).length;
-  const visible = inCluster.size;
+  const visible = visibleTrains.size;
 
   // Per-type counts + TD area aggregation
   const counts = {};
@@ -1124,6 +1073,7 @@ function refreshUI() {
   for (const k of TYPE_KEYS) {
     const el = document.getElementById(`fc-${k}`);
     if (el) el.textContent = counts[k] || 0;
+    setText(`legend-${k}`, counts[k] || 0);
   }
 
   // Search hits
@@ -1326,19 +1276,19 @@ function renderTrajectory(hc, type) {
   const selected = selectedHc === hc;
   if (existing) {
     existing.setLatLngs(drawable);
-    existing.setStyle({ color: cfg.color, weight: selected ? 5 : 3, opacity: selected ? 1 : .62 });
+    existing.setStyle({ color: cfg.color, weight: 5, opacity: 1 });
   } else {
     const line = L.polyline(drawable, {
       color: cfg.color,
-      weight: selected ? 5 : 3,
-      opacity: selected ? 1 : .62,
+      weight: 5,
+      opacity: 1,
       lineCap: 'round',
       lineJoin: 'round',
       className: 'train-trajectory',
       interactive: false
     });
     trajectoryLines.set(hc, line);
-    if (trajectoriesVisible) trajectoryLayer.addLayer(line);
+    if (selected) trajectoryLayer.addLayer(line);
   }
 }
 
@@ -1351,27 +1301,10 @@ function geoDistanceKm(lat1, lon1, lat2, lon2) {
 }
 
 function highlightTrajectory(hc) {
-  for (const [key, line] of trajectoryLines) {
-    const state = trainData[key];
-    const cfg = TYPES[state?.type] || TYPES.special;
-    line.setStyle({ color: cfg.color, weight: key === hc ? 5 : 3, opacity: key === hc ? 1 : (hc ? .34 : .62) });
-    if (key === hc && trajectoriesVisible) line.bringToFront();
-  }
-}
-
-function toggleTrajectories() {
-  trajectoriesVisible = !trajectoriesVisible;
-  if (trajectoriesVisible) {
-    for (const line of trajectoryLines.values()) trajectoryLayer.addLayer(line);
-    highlightTrajectory(selectedHc);
-  } else {
-    trajectoryLayer.clearLayers();
-  }
-  const button = document.getElementById('trajectoryBtn');
-  if (button) {
-    button.textContent = trajectoriesVisible ? 'Trails on' : 'Trails off';
-    button.classList.toggle('active', trajectoriesVisible);
-  }
+  trajectoryLayer.clearLayers();
+  if (!hc) return;
+  const line = trajectoryLines.get(hc);
+  if (line) trajectoryLayer.addLayer(line);
 }
 
 function renderTwinAreas(areas) {
@@ -1547,7 +1480,6 @@ function selectTrain(hc, t) {
 function fitTrajectory(hc) {
   const points = trainTrajectories.get(hc) || [];
   if (!points.length) return;
-  if (!trajectoriesVisible) toggleTrajectories();
   highlightTrajectory(hc);
   if (window.innerWidth <= 680 && window.closeMobilePanel) closeMobilePanel();
   if (points.length === 1) {
@@ -1676,6 +1608,21 @@ function setAllFilters(on) {
   applyFilters();
 }
 
+function toggleMapFilter(type) {
+  const button = document.querySelector(`.twin-filter[data-type="${type}"]`);
+  const turningOn = !activeFilters.has(type);
+  if (turningOn) activeFilters.add(type); else activeFilters.delete(type);
+  if (button) {
+    button.classList.toggle('active', turningOn);
+    button.setAttribute('aria-pressed', String(turningOn));
+  }
+  if (!turningOn && selectedHc && trainData[selectedHc]?.type === type) {
+    selectedHc = null;
+    highlightTrajectory(null);
+  }
+  applyFilters();
+}
+
 // ── Search ───────────────────────────────────────────────────────────────────
 const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
@@ -1711,7 +1658,7 @@ function esc(v) {
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-buildFilterUI();
+document.querySelectorAll('.twin-filter').forEach(button => button.setAttribute('aria-pressed', 'true'));
 // Auto-connect on load
 connect();
 
