@@ -517,6 +517,53 @@ body.product-app {
 .twin-provenance div { display: flex; flex-direction: column; gap: 2px; }
 .twin-provenance strong { color: var(--ri-signal); font: 500 8px/1 'IBM Plex Mono', monospace; letter-spacing: .09em; text-transform: uppercase; }
 .twin-provenance span:last-child { color: rgba(255,255,255,.58); font-size: 10px; }
+.train-inspector {
+  position: absolute;
+  z-index: 470;
+  left: 16px;
+  bottom: 98px;
+  width: min(290px, calc(100% - 32px));
+  max-height: calc(100% - 210px);
+  padding: 15px;
+  overflow-y: auto;
+  color: #f3f6ef;
+  background: rgba(12,17,13,.96);
+  border: 1px solid rgba(255,255,255,.16);
+  border-left: 3px solid var(--ri-signal);
+  box-shadow: 0 18px 46px rgba(0,0,0,.48);
+  backdrop-filter: blur(18px);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition: opacity .18s ease, transform .18s ease, visibility .18s;
+}
+.train-inspector.open { opacity: 1; visibility: visible; transform: translateY(0); }
+.train-inspector-label {
+  margin: 0 34px 12px 0;
+  color: var(--ri-signal);
+  font: 600 8px/1 'IBM Plex Mono', monospace;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.train-inspector-close {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.16);
+  background: transparent;
+  color: rgba(255,255,255,.68);
+  cursor: pointer;
+}
+.train-inspector-close:hover { color: var(--ri-ink); border-color: var(--ri-signal); background: var(--ri-signal); }
+.train-inspector .detail-hc { font-size: 27px; line-height: 1; }
+.train-inspector .detail-type-badge { margin: 7px 0 13px; }
+.train-inspector .detail-row { color: rgba(255,255,255,.6); border-color: rgba(255,255,255,.1); }
+.train-inspector .detail-row span:last-child { color: white; }
+.train-inspector .detail-locate-btn { min-height: 36px; }
 .twin-legend {
   right: 16px; bottom: 50px;
   padding: 4px;
@@ -656,7 +703,6 @@ body.product-app {
 
 .live-operations.wallboard .app-header { display: none; }
 .live-operations.wallboard .kpi-strip { min-height: 68px; height: 68px; }
-.live-operations.wallboard .side-panel { display: none; }
 .live-operations.wallboard .map-wait { left: 0; }
 .live-operations.wallboard .twin-map-head strong { font-size: 22px; }
 
@@ -678,9 +724,10 @@ body.product-app {
   .twin-map-actions button { min-height: 30px; padding: 0 8px; }
   .twin-map-actions button:last-child { display: none; }
   .twin-provenance { left: 10px; right: 10px; bottom: 96px; }
+  .train-selected .twin-provenance { display: none; }
+  .train-inspector { left: 10px; bottom: 96px; width: min(290px, calc(100% - 20px)); max-height: calc(100% - 180px); }
   .twin-provenance span:last-child { font-size: 9px; }
   .twin-legend { left: 10px; right: 10px; bottom: 46px; }
-  .live-operations .panel-fab { bottom: 46px; }
   .live-operations .leaflet-control-zoom { margin-top: 79px !important; }
   .twin-ticker { height: 32px; }
   .ticker-label { padding-inline: 9px; }

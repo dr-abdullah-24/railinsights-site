@@ -719,49 +719,6 @@
 <div class="app-shell">
 
   <!-- ── SIDE PANEL ────────────────────────────────────────────── -->
-  <aside class="side-panel">
-    <div class="panel-handle" aria-hidden="true"></div>
-    <button class="panel-close-btn" id="panelCloseBtn" aria-label="Close panel">&#x2715;</button>
-    <div class="panel-scroll">
-
-      <!-- Feed status -->
-      <div class="panel-section">
-        <div class="panel-label">Feed status</div>
-        <div class="feed-card">
-          <div class="conn-dot disconnected" id="connDot"></div>
-          <div class="feed-card-text">
-            <div class="conn-text" id="connText">Connecting…</div>
-            <div class="feed-sub">TD_ALL_SIG_AREA &middot; WebSocket</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Search -->
-      <div class="panel-section">
-        <div class="panel-label">Search headcode</div>
-        <div class="search-wrap">
-          <svg class="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-          <input class="search-input" id="searchInput" type="text" placeholder="Press / — e.g. 1A23 or 6E" maxlength="6" autocomplete="off" spellcheck="false" />
-          <button class="search-clear" id="searchClear" title="Clear">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          </button>
-        </div>
-        <div class="search-hits" id="searchHits"></div>
-      </div>
-
-      <!-- Selected train detail -->
-      <div class="detail-section" id="detailSection">
-        <div class="panel-label">Selected train</div>
-        <div class="detail-empty" id="detailEmpty">Select a train to inspect its complete observed trajectory.</div>
-        <div id="detailBody" style="display:none"></div>
-      </div>
-
-    </div><!-- /panel-scroll -->
-  </aside>
-
   <!-- ── MAP ───────────────────────────────────────────────────── -->
   <section class="twin-map-stage" aria-label="UK rail network digital twin map">
     <div id="map"></div>
@@ -782,6 +739,12 @@
       <span class="provenance-pulse"></span>
       <div><strong>Live TD + session trails</strong><span>Solid paths connect mapped berths observed since this screen opened; not GPS.</span></div>
     </div>
+
+    <aside class="train-inspector" id="trainInspector" aria-label="Selected train trajectory" aria-live="polite">
+      <button class="train-inspector-close" type="button" onclick="closeTrainInspector()" aria-label="Close selected train">&#x2715;</button>
+      <div class="train-inspector-label">Selected train / observed trajectory</div>
+      <div id="detailBody"></div>
+    </aside>
 
     <div class="twin-legend" aria-label="Clickable train type filters">
       <button type="button" class="twin-filter active" data-type="express" onclick="toggleMapFilter('express')"><i style="--legend:#1857c9"></i><span>Express</span><b id="legend-express">0</b></button>
@@ -850,14 +813,6 @@
   </aside>
 </div><!-- /app-shell -->
 
-<button class="panel-fab" id="panelFab" aria-label="Open train controls">
-  <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
-    <path d="M0 1h16M0 6h16M0 11h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-  </svg>
-  Train controls
-</button>
-<div class="panel-backdrop" id="panelBackdrop"></div>
-
 <div class="toast" id="toast"></div>
 
 <!-- Scripts -->
@@ -901,7 +856,8 @@ if (window.BERTH_DATA) {
 }
 
 // ── Leaflet map ──────────────────────────────────────────────────────────────
-const map = L.map('map', { center: [53.2, -1.5], zoom: 7, zoomControl: true });
+const map = L.map('map', { center: [53.2, -1.5], zoom: 7, zoomControl: false });
+L.control.zoom({ position: 'topright' }).addTo(map);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -917,7 +873,6 @@ let trainData    = {};           // headcode → server train info
 const trainMk    = new Map();    // headcode → L.Marker
 const visibleTrains = new Set(); // headcodes currently rendered in trainLayer
 const activeFilters = new Set(TYPE_KEYS);
-let searchQuery  = '';
 let selectedHc   = null;
 let ws           = null;
 let reconnTimer  = null;
@@ -943,29 +898,9 @@ function makeIcon(hc, type) {
   });
 }
 
-function buildPopup(hc, t) {
-  const cfg  = TYPES[t.type] || TYPES.special;
-  const time = t.ts ? new Date(t.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
-  const ago  = t.ts ? Math.round((Date.now() - t.ts) / 1000) : null;
-  const agoStr = ago !== null ? (ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`) : '—';
-  return `
-    <div class="popup-inner">
-      <div class="popup-hc" style="color:${cfg.color}">${hc}</div>
-      <div class="popup-type-tag" style="background:${cfg.bg};color:${cfg.color}">${cfg.label}</div>
-      <div class="popup-row"><span>Location</span><strong>${esc(t.name || 'Unknown')}</strong></div>
-      <div class="popup-row"><span>TD Area</span><strong>${esc(t.td || '—')}</strong></div>
-      <div class="popup-row"><span>Berth</span><strong>${esc(t.berth || '—')}</strong></div>
-      <hr class="popup-divider">
-      <div class="popup-age">Last seen ${time} (${agoStr})</div>
-      <div class="popup-coords">${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}</div>
-    </div>`;
-}
-
 // ── Visibility logic ─────────────────────────────────────────────────────────
 function shouldShow(hc, t) {
-  if (!activeFilters.has(t.type)) return false;
-  if (searchQuery && !hc.startsWith(searchQuery)) return false;
-  return true;
+  return activeFilters.has(t.type);
 }
 
 function setMarkerVisibility(hc, show) {
@@ -997,17 +932,15 @@ function applyState(newTrains) {
     if (trainMk.has(hc)) {
       const mk = trainMk.get(hc);
       mk.setLatLng([t.lat, t.lon]);
-      mk.setPopupContent(buildPopup(hc, t));
       setMarkerVisibility(hc, shouldShow(hc, t));
     } else {
       const mk = L.marker([t.lat, t.lon], {
         icon: makeIcon(hc, t.type),
         zIndexOffset: zOrder(t.type),
-      }).bindPopup('', { maxWidth: 260 });
+      });
 
-      mk.on('popupopen', () => {
+      mk.on('click', () => {
         const current = trainData[hc] || t;
-        mk.setPopupContent(buildPopup(hc, current));
         selectTrain(hc, current);
       });
 
@@ -1076,14 +1009,6 @@ function refreshUI() {
     setText(`legend-${k}`, counts[k] || 0);
   }
 
-  // Search hits
-  const hitsEl = document.getElementById('searchHits');
-  if (searchQuery) {
-    const n = Object.keys(trainData).filter(hc => hc.startsWith(searchQuery)).length;
-    hitsEl.textContent = n ? `${n} match${n !== 1 ? 'es' : ''} in tracked data` : 'No matches';
-  } else {
-    hitsEl.textContent = '';
-  }
 }
 
 function setText(id, v) {
@@ -1201,7 +1126,6 @@ function flyToArea(td) {
     if (t.td === td) { n++; latSum += t.lat; lonSum += t.lon; }
   }
   if (!n) return;
-  if (window.innerWidth <= 680 && window.closeMobilePanel) closeMobilePanel();
   map.flyTo([latSum / n, lonSum / n], Math.max(map.getZoom(), 10), { duration: 0.9 });
   showToast(`Centred on TD area ${td} — ${n} train${n !== 1 ? 's' : ''}`);
 }
@@ -1455,9 +1379,9 @@ function selectTrain(hc, t) {
   highlightTrajectory(hc);
   const time = t.ts ? new Date(t.ts).toLocaleTimeString('en-GB') : '—';
 
-  document.getElementById('detailEmpty').style.display = 'none';
+  document.body.classList.add('train-selected');
+  document.getElementById('trainInspector').classList.add('open');
   const body = document.getElementById('detailBody');
-  body.style.display = 'block';
   body.innerHTML = `
     <div class="detail-hc" style="color:${cfg.color}">${hc}</div>
     <div class="detail-type-badge" style="background:${cfg.bg};color:${cfg.color}">${cfg.label}</div>
@@ -1477,11 +1401,17 @@ function selectTrain(hc, t) {
   `;
 }
 
+function closeTrainInspector() {
+  selectedHc = null;
+  highlightTrajectory(null);
+  document.body.classList.remove('train-selected');
+  document.getElementById('trainInspector').classList.remove('open');
+}
+
 function fitTrajectory(hc) {
   const points = trainTrajectories.get(hc) || [];
   if (!points.length) return;
   highlightTrajectory(hc);
-  if (window.innerWidth <= 680 && window.closeMobilePanel) closeMobilePanel();
   if (points.length === 1) {
     map.flyTo([points[0].lat, points[0].lon], Math.max(map.getZoom(), 12), { duration: .8 });
     showToast(`${hc}: one location observed in this session`);
@@ -1494,16 +1424,13 @@ function fitTrajectory(hc) {
 function flyTo(hc) {
   const mk = trainMk.get(hc);
   if (!mk) return;
-  if (window.innerWidth <= 680 && window.closeMobilePanel) closeMobilePanel();
   map.flyTo(mk.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.8 });
-  mk.openPopup();
 }
 
 // ── Connection management ────────────────────────────────────────────────────
 function setConnState(state, text) {
-  const dot = document.getElementById('connDot');
-  if (dot) dot.className = 'conn-dot ' + state;
-  document.getElementById('connText').textContent = text;
+  document.body.dataset.feedState = state;
+  document.body.dataset.feedLabel = text;
 }
 
 const WS_URL = (() => {
@@ -1554,60 +1481,6 @@ function onFail() {
   reconnDelay = Math.min(reconnDelay * 1.5, 30000);
 }
 
-// ── Filter UI ────────────────────────────────────────────────────────────────
-function buildFilterUI() {
-  const list = document.getElementById('filterList');
-  list.innerHTML = TYPE_KEYS.map(k => {
-    const cfg = TYPES[k];
-    return `
-      <div class="filter-item" id="fi-${k}" onclick="toggleFilter('${k}')">
-        <div class="filter-left">
-          <div class="filter-swatch" style="background:${cfg.color}"></div>
-          <div class="filter-label">${cfg.label}</div>
-        </div>
-        <div class="filter-right">
-          <span class="filter-count" id="fc-${k}">0</span>
-          <label class="filter-toggle" onclick="event.stopPropagation()">
-            <input type="checkbox" id="ft-${k}" checked onchange="toggleFilter('${k}')">
-            <span class="filter-track" style="--on-color:${cfg.color}"></span>
-          </label>
-        </div>
-      </div>`;
-  }).join('');
-
-  // Colour the toggle-on state per type
-  document.querySelectorAll('.filter-track').forEach((el, i) => {
-    const cfg = TYPES[TYPE_KEYS[i]];
-    el.style.setProperty('--on-color', cfg.color);
-  });
-  // Make checked toggles use type colour
-  const style = document.createElement('style');
-  TYPE_KEYS.forEach(k => {
-    const cfg = TYPES[k];
-    style.textContent += `#ft-${k}:checked + .filter-track { background: ${cfg.color}; }\n`;
-  });
-  document.head.appendChild(style);
-}
-
-function toggleFilter(k) {
-  const cb = document.getElementById(`ft-${k}`);
-  const checked = cb.checked;
-  const item = document.getElementById(`fi-${k}`);
-  item.classList.toggle('off', !checked);
-  if (checked) activeFilters.add(k); else activeFilters.delete(k);
-  applyFilters();
-}
-
-function setAllFilters(on) {
-  for (const k of TYPE_KEYS) {
-    const cb = document.getElementById(`ft-${k}`);
-    cb.checked = on;
-    document.getElementById(`fi-${k}`).classList.toggle('off', !on);
-    if (on) activeFilters.add(k); else activeFilters.delete(k);
-  }
-  applyFilters();
-}
-
 function toggleMapFilter(type) {
   const button = document.querySelector(`.twin-filter[data-type="${type}"]`);
   const turningOn = !activeFilters.has(type);
@@ -1617,29 +1490,10 @@ function toggleMapFilter(type) {
     button.setAttribute('aria-pressed', String(turningOn));
   }
   if (!turningOn && selectedHc && trainData[selectedHc]?.type === type) {
-    selectedHc = null;
-    highlightTrajectory(null);
+    closeTrainInspector();
   }
   applyFilters();
 }
-
-// ── Search ───────────────────────────────────────────────────────────────────
-const searchInput = document.getElementById('searchInput');
-const searchClear = document.getElementById('searchClear');
-
-searchInput.addEventListener('input', () => {
-  searchQuery = searchInput.value.trim().toUpperCase();
-  searchClear.classList.toggle('show', searchQuery.length > 0);
-  applyFilters();
-});
-
-searchClear.addEventListener('click', () => {
-  searchInput.value = '';
-  searchQuery = '';
-  searchClear.classList.remove('show');
-  applyFilters();
-  searchInput.focus();
-});
 
 // ── Toast ────────────────────────────────────────────────────────────────────
 let toastTimer;
@@ -1661,38 +1515,6 @@ function esc(v) {
 document.querySelectorAll('.twin-filter').forEach(button => button.setAttribute('aria-pressed', 'true'));
 // Auto-connect on load
 connect();
-
-// ── MOBILE PANEL ─────────────────────────────────────────────────────────────
-(function() {
-  const fab = document.getElementById('panelFab');
-  const backdrop = document.getElementById('panelBackdrop');
-  const closeBtn = document.getElementById('panelCloseBtn');
-  const panel = document.querySelector('.side-panel');
-
-  function openPanel() {
-    panel.classList.add('panel-open');
-    backdrop.classList.add('open');
-  }
-  function closePanel() {
-    panel.classList.remove('panel-open');
-    backdrop.classList.remove('open');
-  }
-
-  if (fab) fab.addEventListener('click', openPanel);
-  if (closeBtn) closeBtn.addEventListener('click', closePanel);
-  if (backdrop) backdrop.addEventListener('click', closePanel);
-  window.closeMobilePanel = closePanel;
-})();
-
-// ── Keyboard shortcut: press "/" to search ──────────────────────────────────
-document.addEventListener('keydown', (e) => {
-  if (e.key === '/' && document.activeElement !== searchInput &&
-      !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) {
-    e.preventDefault();
-    searchInput.focus();
-    searchInput.select();
-  }
-});
 </script>
 </body>
 </html>
