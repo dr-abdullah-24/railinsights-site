@@ -462,6 +462,12 @@ body.product-app {
   stroke-dasharray: none;
   filter: drop-shadow(0 0 3px rgba(0,0,0,.75));
 }
+.live-operations .uk-national-boundary {
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 3px rgba(217,255,67,.5));
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
 .map-wallboard {
   position: absolute;
   z-index: 470;

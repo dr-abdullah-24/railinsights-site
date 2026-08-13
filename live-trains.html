@@ -803,6 +803,7 @@
 <!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/berth-locations.js"></script>
+<script src="data/uk-boundary.js"></script>
 <script>
 'use strict';
 
@@ -848,6 +849,68 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 19
 }).addTo(map);
+
+map.createPane('ukBoundaryPane');
+map.getPane('ukBoundaryPane').style.zIndex = 350;
+map.getPane('ukBoundaryPane').style.pointerEvents = 'none';
+
+if (window.UK_BOUNDARY) {
+  L.geoJSON(window.UK_BOUNDARY, {
+    pane: 'ukBoundaryPane',
+    interactive: false,
+    style: {
+      color: '#d9ff43',
+      weight: 2,
+      opacity: 0.78,
+      fillColor: '#d9ff43',
+      fillOpacity: 0.025,
+      className: 'uk-national-boundary'
+    }
+  }).addTo(map);
+}
+
+function pointInRing(lon, lat, ring) {
+  let inside = false;
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+    const [x1, y1] = ring[index];
+    const [x2, y2] = ring[previous];
+    const crossesLatitude = (y1 > lat) !== (y2 > lat);
+    const crossingLongitude = (x2 - x1) * (lat - y1) / ((y2 - y1) || Number.EPSILON) + x1;
+    if (crossesLatitude && lon < crossingLongitude) inside = !inside;
+  }
+  return inside;
+}
+
+const ukMaskGeometry = (window.UK_OPERATIONAL_MASK || window.UK_BOUNDARY)?.geometry;
+const ukMaskPolygons = !ukMaskGeometry
+  ? []
+  : ukMaskGeometry.type === 'Polygon' ? [ukMaskGeometry.coordinates] : ukMaskGeometry.coordinates;
+const ukPolygonBounds = ukMaskPolygons.map(polygon => polygon[0].reduce((bounds, point) => ({
+  minLon: Math.min(bounds.minLon, point[0]),
+  minLat: Math.min(bounds.minLat, point[1]),
+  maxLon: Math.max(bounds.maxLon, point[0]),
+  maxLat: Math.max(bounds.maxLat, point[1])
+}), { minLon: Infinity, minLat: Infinity, maxLon: -Infinity, maxLat: -Infinity }));
+
+function pointInUkBoundary(lat, lon) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !ukMaskPolygons.length) return false;
+  return ukMaskPolygons.some((polygon, index) => {
+    const bounds = ukPolygonBounds[index];
+    if (lon < bounds.minLon || lon > bounds.maxLon || lat < bounds.minLat || lat > bounds.maxLat) return false;
+    if (!polygon.length || !pointInRing(lon, lat, polygon[0])) return false;
+    return !polygon.slice(1).some(hole => pointInRing(lon, lat, hole));
+  });
+}
+
+function trainsInsideUk(trains) {
+  const accepted = {};
+  for (const [headcode, train] of Object.entries(trains || {})) {
+    const lat = Number(train.lat);
+    const lon = Number(train.lon);
+    if (pointInUkBoundary(lat, lon)) accepted[headcode] = train;
+  }
+  return accepted;
+}
 
 // Individual train layer: no clustering, so every mapped headcode remains visible.
 const trainLayer = L.layerGroup().addTo(map);
@@ -897,7 +960,8 @@ function setMarkerVisibility(hc, show) {
 }
 
 // ── State update from WebSocket ──────────────────────────────────────────────
-function applyState(newTrains) {
+function applyState(incomingTrains) {
+  const newTrains = trainsInsideUk(incomingTrains);
   recordMovements(trainData, newTrains);
 
   // Remove headcodes that disappeared
