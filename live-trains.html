@@ -936,6 +936,8 @@ function applyState(newTrains) {
 
   trainData = newTrains;
   lastUpdate = new Date();
+  if (selectedHc && trainData[selectedHc]) selectTrain(selectedHc, trainData[selectedHc]);
+  else if (selectedHc) closeTrainInspector();
   refreshUI();
 }
 
@@ -1209,6 +1211,51 @@ function geoDistanceKm(lat1, lon1, lat2, lon2) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function normaliseEventTime(value, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return fallback;
+  return numeric < 1e12 ? numeric * 1000 : numeric;
+}
+
+function lastObservedSpeed(hc) {
+  const points = trainTrajectories.get(hc) || [];
+  if (points.length < 2) return null;
+
+  const latest = points[points.length - 1];
+  let previous = null;
+  let distanceKm = 0;
+  for (let index = points.length - 2; index >= 0; index--) {
+    const candidate = points[index];
+    const candidateDistance = geoDistanceKm(candidate.lat, candidate.lon, latest.lat, latest.lon);
+    if (candidateDistance >= 0.05) {
+      previous = candidate;
+      distanceKm = candidateDistance;
+      break;
+    }
+  }
+  if (!previous || distanceKm > 120) return null;
+
+  const start = normaliseEventTime(previous.ts, previous.observedAt);
+  const end = normaliseEventTime(latest.ts, latest.observedAt);
+  const elapsedMs = end - start;
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 3000 || elapsedMs > 30 * 60 * 1000) return null;
+
+  const mph = (distanceKm * 0.621371) / (elapsedMs / 3_600_000);
+  if (!Number.isFinite(mph) || mph < 1 || mph > 200) return null;
+
+  const elapsedSeconds = Math.round(elapsedMs / 1000);
+  const confidence = distanceKm >= 1 && distanceKm <= 25 && elapsedSeconds >= 15 && elapsedSeconds <= 900
+    ? 'medium confidence'
+    : 'low confidence';
+  return {
+    mph: Math.round(mph),
+    elapsed: elapsedSeconds < 60 ? `${elapsedSeconds}s` : `${Math.round(elapsedSeconds / 60)}m`,
+    from: previous.name || `${previous.td} ${previous.berth}`,
+    to: latest.name || `${latest.td} ${latest.berth}`,
+    confidence
+  };
+}
+
 function highlightTrajectory(hc) {
   trajectoryLayer.clearLayers();
   if (!hc) return;
@@ -1363,6 +1410,9 @@ function selectTrain(hc, t) {
   const trajectory = trainTrajectories.get(hc) || [];
   highlightTrajectory(hc);
   const time = t.ts ? new Date(t.ts).toLocaleTimeString('en-GB') : '—';
+  const speed = lastObservedSpeed(hc);
+  const speedDetail = speed ? `${speed.elapsed} � ${speed.confidence}` : 'Awaiting two distinct mapped berths';
+  const speedMeta = speed ? speed.elapsed + ' / ' + speed.confidence : 'Awaiting two distinct mapped berths';
 
   document.body.classList.add('train-selected');
   document.getElementById('trainInspector').classList.add('open');
@@ -1370,6 +1420,14 @@ function selectTrain(hc, t) {
   body.innerHTML = `
     <div class="detail-hc" style="color:${cfg.color}">${hc}</div>
     <div class="detail-type-badge" style="background:${cfg.bg};color:${cfg.color}">${cfg.label}</div>
+    <div class="observed-speed ${speed ? '' : 'unavailable'}">
+      <span>Last observed segment speed</span>
+      <strong>${speed ? `${speed.mph}<small>mph</small>` : '-'}</strong>
+      <small>${speedMeta}</small>
+      ${speed ? `<em>${esc(speed.from)}  ${esc(speed.to)}</em>` : ''}
+      ${speed ? `<div class="speed-route">${esc(speed.from)} to ${esc(speed.to)}</div>` : ''}
+    </div>
+
     <div class="detail-row"><span>Location</span><span>${esc(t.name || 'Unknown')}</span></div>
     <div class="detail-row"><span>TD Area</span><span>${esc(t.td || '—')}</span></div>
     <div class="detail-row"><span>Berth</span><span>${esc(t.berth || '—')}</span></div>
