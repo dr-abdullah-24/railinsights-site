@@ -282,7 +282,14 @@
     .delay-mins { font: 800 14px/1 var(--mono); color: var(--red); min-width: 36px; flex-shrink: 0; }
     .delay-info { flex: 1; min-width: 0; }
     .delay-loc  { font: 500 11.5px var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .delay-meta { font: 500 9px var(--mono); color: var(--text-3); margin-top: 1px; }
+    .delay-timing {
+      font: 700 12px/1 var(--mono); color: var(--text-2);
+      margin-top: 3px; letter-spacing: .03em;
+    }
+    .delay-timing .planned { color: var(--text-3); }
+    .delay-timing .actual  { color: var(--red); }
+    .delay-timing .arrow   { color: var(--text-3); margin: 0 4px; }
+    .delay-meta { font: 500 9px var(--mono); color: var(--text-3); margin-top: 2px; }
     .delay-tag  {
       font: 600 8px var(--mono);
       color: var(--text-3);
@@ -637,14 +644,19 @@ function refresh() {
       const meta = [t.td, t.berth, t.platform ? 'Plt ' + t.platform : ''].filter(Boolean).join(' · ');
       const planned = t.planned ? new Date(t.planned).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null;
       const actual  = t.actual  ? new Date(t.actual).toLocaleTimeString('en-GB',  { hour: '2-digit', minute: '2-digit' }) : null;
-      const timing  = planned && actual ? `${planned} → ${actual}` : planned || '';
+      const timingHtml = planned && actual
+        ? `<div class="delay-timing"><span class="planned">${planned}</span><span class="arrow">→</span><span class="actual">${actual}</span></div>`
+        : planned
+          ? `<div class="delay-timing"><span class="planned">${planned}</span></div>`
+          : '';
       return `<div class="delay-row">
         <span class="delay-rank">${i + 1}</span>
         <span class="delay-hc" style="background:${cfg.color};color:#fff">${esc(hc)}</span>
         <span class="delay-mins">+${mins}m</span>
         <div class="delay-info">
           <div class="delay-loc">${esc(t.name || t.td || 'Unknown location')}</div>
-          <div class="delay-meta">${esc(meta)}${timing ? ' · ' + timing : ''}</div>
+          ${timingHtml}
+          <div class="delay-meta">${esc(meta)}</div>
         </div>
         ${t.eventType ? `<span class="delay-tag">${esc(t.eventType)}</span>` : ''}
       </div>`;
