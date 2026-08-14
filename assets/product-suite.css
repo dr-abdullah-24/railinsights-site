@@ -462,6 +462,17 @@ body.product-app {
   stroke-dasharray: none;
   filter: drop-shadow(0 0 3px rgba(0,0,0,.75));
 }
+.track-tooltip {
+  background: rgba(16,19,15,.88);
+  border: 1px solid rgba(255,255,255,.18);
+  color: white;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 7px 10px;
+  border-radius: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+.track-tooltip b { display: block; margin-bottom: 3px; }
 .live-operations .uk-national-boundary {
   vector-effect: non-scaling-stroke;
   filter: drop-shadow(0 0 3px rgba(217,255,67,.5));
@@ -490,6 +501,77 @@ body.product-app {
   color: var(--ri-ink);
   border-color: var(--ri-signal);
   background: var(--ri-signal);
+}
+
+.map-tracks-btn {
+  position: absolute;
+  z-index: 470;
+  top: 56px;
+  left: 16px;
+  min-height: 34px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255,255,255,.28);
+  background: rgba(16,19,15,.72);
+  color: white;
+  font: 600 10px/1 var(--ri-mono, monospace);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  transition: background .2s, border-color .2s, color .2s;
+}
+.map-tracks-btn:hover,
+.map-tracks-btn.active {
+  color: var(--ri-ink);
+  border-color: var(--ri-signal);
+  background: var(--ri-signal);
+}
+.map-tracks-btn .tracks-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.tracks-legend {
+  position: absolute;
+  z-index: 460;
+  bottom: 76px;
+  left: 16px;
+  background: rgba(16,19,15,.82);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.16);
+  padding: 12px 14px;
+  color: white;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 180px;
+}
+.tracks-legend.visible { display: flex; }
+.tracks-legend-title {
+  font: 600 9px/1 var(--ri-mono, monospace);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.5);
+  margin-bottom: 4px;
+}
+.tracks-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font: 400 10px/1.3 var(--ri-mono, monospace);
+}
+.tracks-legend-swatch {
+  width: 24px;
+  height: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 

@@ -724,6 +724,20 @@
     <div id="map"></div>
 
     <button class="map-wallboard" type="button" id="wallboardBtn" onclick="toggleWallboard()">Wallboard</button>
+    <button class="map-tracks-btn" type="button" id="tracksBtn" onclick="toggleTrackLayer()"><span class="tracks-dot"></span>Tracks</button>
+
+    <div class="tracks-legend" id="tracksLegend">
+      <div class="tracks-legend-title">Track type</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#bf0000"></span>Main / high speed</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#4444ff"></span>Secondary</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#ff8000"></span>Light rail / tram</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#006600"></span>Preserved / heritage</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#9900cc"></span>Narrow gauge</div>
+      <div class="tracks-legend-title" style="margin-top:6px">Freight gauge</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#00796b"></span>W12 (highest)</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#1565c0"></span>W10 (standard)</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#c62828"></span>W9 (Channel Tunnel)</div>
+    </div>
 
     <aside class="train-inspector" id="trainInspector" aria-label="Selected train trajectory" aria-live="polite">
       <button class="train-inspector-close" type="button" onclick="closeTrainInspector()" aria-label="Close selected train">&#x2715;</button>
@@ -804,6 +818,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/berth-locations.js"></script>
 <script src="data/uk-boundary.js"></script>
+<script src="data/freight-routes.js"></script>
 <script>
 'use strict';
 
@@ -867,6 +882,50 @@ if (window.UK_BOUNDARY) {
       className: 'uk-national-boundary'
     }
   }).addTo(map);
+}
+
+// ── Rail track layers ─────────────────────────────────────────────────────────
+const ormLayer = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a>',
+  maxZoom: 19,
+  subdomains: ['a', 'b', 'c'],
+  opacity: 0.8
+});
+
+const corridorLines = [];
+if (window.FREIGHT_DATA && window.FREIGHT_DATA.corridors) {
+  window.FREIGHT_DATA.corridors.forEach(corridor => {
+    const line = L.polyline(corridor.coords, {
+      color: corridor.colour,
+      weight: 3,
+      opacity: 0.85,
+      smoothFactor: 1
+    });
+    line.bindTooltip(`<b>${corridor.name}</b><br>${corridor.gauge} · ${corridor.info}`, {
+      sticky: true, className: 'track-tooltip'
+    });
+    corridorLines.push(line);
+  });
+}
+const corridorGroup = L.layerGroup(corridorLines);
+
+let tracksVisible = false;
+
+function toggleTrackLayer() {
+  tracksVisible = !tracksVisible;
+  const btn = document.getElementById('tracksBtn');
+  const legend = document.getElementById('tracksLegend');
+  if (tracksVisible) {
+    ormLayer.addTo(map);
+    corridorGroup.addTo(map);
+    btn.classList.add('active');
+    legend.classList.add('visible');
+  } else {
+    map.removeLayer(ormLayer);
+    map.removeLayer(corridorGroup);
+    btn.classList.remove('active');
+    legend.classList.remove('visible');
+  }
 }
 
 function pointInRing(lon, lat, ring) {
@@ -1475,7 +1534,7 @@ function selectTrain(hc, t) {
   highlightTrajectory(hc);
   const time = t.ts ? new Date(t.ts).toLocaleTimeString('en-GB') : '—';
   const speed = lastObservedSpeed(hc);
-  const speedDetail = speed ? `${speed.elapsed} � ${speed.confidence}` : 'Awaiting two distinct mapped berths';
+  const speedDetail = speed ? `${speed.elapsed} � ${speed.confidence}` : 'Awaiting two distinct mapped berths';
   const speedMeta = speed ? speed.elapsed + ' / ' + speed.confidence : 'Awaiting two distinct mapped berths';
 
   document.body.classList.add('train-selected');
