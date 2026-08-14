@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Operational Analytics | Rail Insights</title>
+  <meta name="description" content="Real-time operational performance analytics for UK rail, built from live TD and TRUST data streams." />
+  <link rel="icon" href="assets/brand-icon-32.png" type="image/png" sizes="32x32" />
+  <meta name="theme-color" content="#080d0c" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg:       #080d0c;
+      --panel:    #0f1614;
+      --panel-2:  #161e1b;
+      --border:   rgba(217,255,67,0.10);
+      --border-2: rgba(255,255,255,0.06);
+      --signal:   #d9ff43;
+      --text:     #dde8df;
+      --text-2:   #8fa695;
+      --text-3:   #4e5d52;
+      --red:      #f43f3f;
+      --amber:    #f59e0b;
+      --green:    #00e676;
+      --blue:     #0ea5e9;
+      --font:     'Outfit', sans-serif;
+      --mono:     'IBM Plex Mono', monospace;
+      --r:        6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ────────────────────────────────────────────────── */
+    .hdr {
+      flex-shrink: 0;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+    .hdr-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+    .hdr-brand img { height: 36px; }
+    .hdr-title {
+      font: 700 11px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--signal);
+      padding-left: 16px;
+      border-left: 1px solid var(--border);
+      margin-left: 4px;
+      flex-shrink: 0;
+    }
+    .hdr-spacer { flex: 1; }
+    .hdr-nav { display: flex; gap: 6px; flex-shrink: 0; }
+    .hdr-link {
+      font: 600 11px var(--font);
+      color: var(--text-2);
+      text-decoration: none;
+      padding: 5px 11px;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      transition: color .15s, border-color .15s, background .15s;
+      white-space: nowrap;
+    }
+    .hdr-link:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+    .hdr-link.active { color: var(--signal); border-color: var(--signal); background: rgba(217,255,67,.06); }
+    .feed-pill {
+      display: flex; align-items: center; gap: 7px;
+      font: 600 10px var(--mono);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 13px 5px 9px;
+      flex-shrink: 0;
+    }
+    .feed-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-3);
+      transition: background .3s;
+      flex-shrink: 0;
+    }
+    .feed-dot.live         { background: var(--green); box-shadow: 0 0 6px rgba(0,230,118,.5); animation: fdpulse 2s infinite; }
+    .feed-dot.connecting   { background: var(--amber); animation: fdpulse 1s infinite; }
+    .feed-dot.disconnected { background: var(--red); }
+    @keyframes fdpulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    #feedTime { font: 500 10px var(--mono); color: var(--text-3); margin-left: 4px; }
+
+    /* ── KPI STRIP ─────────────────────────────────────────────── */
+    .kpi-strip {
+      flex-shrink: 0;
+      display: flex;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .kpi {
+      flex: 1 1 0;
+      padding: 10px 20px 12px;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 3px;
+      min-width: 0;
+    }
+    .kpi:last-child { border-right: none; }
+    .kpi-label {
+      font: 600 8.5px var(--mono);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      white-space: nowrap;
+    }
+    .kpi-val {
+      font: 800 28px/1 var(--font);
+      letter-spacing: -.02em;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-val.good   { color: var(--green); }
+    .kpi-val.warn   { color: var(--amber); }
+    .kpi-val.bad    { color: var(--red); }
+    .kpi-val.signal { color: var(--signal); }
+    .kpi-sub { font: 500 9px var(--mono); color: var(--text-3); white-space: nowrap; }
+
+    /* ── MAIN GRID ─────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 288px 1fr 300px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── PANEL ─────────────────────────────────────────────────── */
+    .panel {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .panel:last-child { border-right: none; }
+    .panel-head {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .panel-title {
+      font: 700 9px var(--mono);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      color: var(--signal);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-title::before {
+      content: '';
+      width: 3px; height: 10px;
+      border-radius: 2px;
+      background: var(--signal);
+      flex-shrink: 0;
+    }
+    .panel-badge {
+      font: 600 9px var(--mono);
+      color: var(--text-3);
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 10px;
+    }
+    .panel-badge.alert { color: var(--red); border-color: rgba(244,63,63,.35); background: rgba(244,63,63,.08); }
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 14px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .panel-body::-webkit-scrollbar { width: 5px; }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── OTP GAUGE ─────────────────────────────────────────────── */
+    .otp-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 4px 0 18px;
+    }
+    .otp-ring {
+      position: relative;
+      width: 96px; height: 96px;
+      flex-shrink: 0;
+    }
+    .otp-ring svg { display: block; transform: rotate(-90deg); }
+    .otp-track { fill: none; stroke: var(--panel-2); stroke-width: 9; }
+    .otp-arc   { fill: none; stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset .9s ease, stroke .4s; }
+    .otp-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .otp-pct  { font: 800 22px/1 var(--font); }
+    .otp-sub  { font: 600 8px var(--mono); color: var(--text-3); letter-spacing: .1em; margin-top: 3px; }
+
+    .status-grid { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .status-row  { display: flex; align-items: center; gap: 9px; }
+    .status-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .status-label { font: 500 11px var(--font); color: var(--text-2); flex: 1; }
+    .status-val   { font: 700 13px/1 var(--mono); min-width: 28px; text-align: right; }
+
+    /* ── DELAY DISTRIBUTION ────────────────────────────────────── */
+    .section-head {
+      font: 700 8.5px var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 8px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-2);
+    }
+    .section-head:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+
+    .dist-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .dist-label { font: 500 9.5px var(--mono); color: var(--text-2); width: 44px; flex-shrink: 0; }
+    .dist-track { flex: 1; height: 13px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
+    .dist-fill  { height: 100%; border-radius: 3px; transition: width .6s ease; min-width: 2px; }
+    .dist-count { font: 600 10px var(--mono); color: var(--text-2); width: 24px; text-align: right; flex-shrink: 0; }
+
+    /* ── TREND CHART ───────────────────────────────────────────── */
+    .trend-wrap { position: relative; height: 52px; margin-top: 4px; }
+    .trend-wrap svg { display: block; width: 100%; height: 52px; }
+    .trend-range { position: absolute; top: 2px; right: 0; font: 500 8.5px var(--mono); color: var(--text-3); }
+
+    /* ── DELAY LIST ────────────────────────────────────────────── */
+    .delay-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 8px;
+      margin: 0 -8px;
+      border-radius: var(--r);
+      border-bottom: 1px solid var(--border-2);
+      cursor: default;
+      transition: background .12s;
+    }
+    .delay-row:last-child { border-bottom: none; }
+    .delay-row:hover { background: var(--panel-2); }
+    .delay-rank { font: 600 10px var(--mono); color: var(--text-3); width: 16px; flex-shrink: 0; text-align: right; }
+    .delay-hc {
+      font: 700 10.5px var(--mono);
+      letter-spacing: .05em;
+      padding: 3px 7px;
+      border-radius: 4px;
+      min-width: 44px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .delay-mins { font: 800 14px/1 var(--mono); color: var(--red); min-width: 36px; flex-shrink: 0; }
+    .delay-info { flex: 1; min-width: 0; }
+    .delay-loc  { font: 500 11.5px var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .delay-meta { font: 500 9px var(--mono); color: var(--text-3); margin-top: 1px; }
+    .delay-tag  {
+      font: 600 8px var(--mono);
+      color: var(--text-3);
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      padding: 2px 5px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .empty-msg { font: 12px var(--font); color: var(--text-3); text-align: center; padding: 20px 0; }
+
+    /* ── DATA ROWS (corridors / types) ─────────────────────────── */
+    .data-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 6px 6px;
+      margin: 0 -6px;
+      border-radius: var(--r);
+      border-bottom: 1px solid var(--border-2);
+    }
+    .data-row:last-child { border-bottom: none; }
+    .data-code {
+      font: 700 9.5px var(--mono);
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--signal);
+      min-width: 38px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .data-label { flex: 1; font: 500 11px var(--font); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .data-bar-wrap { width: 52px; height: 4px; background: var(--panel-2); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+    .data-bar { height: 100%; border-radius: 2px; transition: width .5s; }
+    .data-count { font: 600 10.5px var(--mono); color: var(--text-2); min-width: 22px; text-align: right; flex-shrink: 0; }
+    .data-late  { font: 600 9px var(--mono); min-width: 42px; text-align: right; flex-shrink: 0; }
+
+    /* ── PPM NOTE ──────────────────────────────────────────────── */
+    .footnote { font: 400 9px var(--mono); color: var(--text-3); margin-top: 10px; line-height: 1.5; }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────── */
+    * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────── -->
+<header class="hdr">
+  <a class="hdr-brand" href="index.html">
+    <img src="assets/rail-insights-logo-reversed.png" alt="Rail Insights" />
+  </a>
+  <span class="hdr-title">Operational Analytics</span>
+  <div class="hdr-spacer"></div>
+  <nav class="hdr-nav">
+    <a class="hdr-link" href="live-trains.html">Network Twin</a>
+    <a class="hdr-link active" href="analytics.html">Analytics</a>
+  </nav>
+  <div class="feed-pill">
+    <span class="feed-dot connecting" id="feedDot"></span>
+    <span id="feedLabel">Connecting</span>
+    <span id="feedTime"></span>
+  </div>
+</header>
+
+<!-- ── KPI STRIP ──────────────────────────────────────────────────── -->
+<div class="kpi-strip">
+  <div class="kpi">
+    <div class="kpi-label">On-Time Performance</div>
+    <div class="kpi-val signal" id="kpiOTP">—</div>
+    <div class="kpi-sub">PPM — within 5 min</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Currently Late</div>
+    <div class="kpi-val bad" id="kpiLate">—</div>
+    <div class="kpi-sub">trains behind schedule</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">On Time / Early</div>
+    <div class="kpi-val good" id="kpiGood">—</div>
+    <div class="kpi-sub">punctual services</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Avg Delay (late)</div>
+    <div class="kpi-val warn" id="kpiAvg">—</div>
+    <div class="kpi-sub">minutes behind schedule</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Mapped Trains</div>
+    <div class="kpi-val" id="kpiTotal">—</div>
+    <div class="kpi-sub">live TD berth states</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">TRUST Coverage</div>
+    <div class="kpi-val" id="kpiCoverage">—</div>
+    <div class="kpi-sub">trains with timing data</div>
+  </div>
+</div>
+
+<!-- ── MAIN ───────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- LEFT: OTP gauge + distribution + trend -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Performance</span>
+      <span class="panel-badge" id="perfTimestamp">--:--:--</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- OTP ring -->
+      <div class="otp-row">
+        <div class="otp-ring">
+          <svg width="96" height="96" viewBox="0 0 96 96">
+            <circle class="otp-track" cx="48" cy="48" r="38"/>
+            <circle class="otp-arc" id="otpArc" cx="48" cy="48" r="38"
+              stroke-dasharray="238.8" stroke-dashoffset="238.8" stroke="var(--signal)"/>
+          </svg>
+          <div class="otp-center">
+            <span class="otp-pct" id="otpPct">—</span>
+            <span class="otp-sub">OTP</span>
+          </div>
+        </div>
+        <div class="status-grid">
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--green)"></span>
+            <span class="status-label">On time</span>
+            <span class="status-val" id="cntOnTime" style="color:var(--green)">0</span>
+          </div>
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--blue)"></span>
+            <span class="status-label">Early</span>
+            <span class="status-val" id="cntEarly" style="color:var(--blue)">0</span>
+          </div>
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--red)"></span>
+            <span class="status-label">Late</span>
+            <span class="status-val" id="cntLate" style="color:var(--red)">0</span>
+          </div>
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--text-3)"></span>
+            <span class="status-label">No TRUST data</span>
+            <span class="status-val" id="cntNoData" style="color:var(--text-3)">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delay distribution -->
+      <div class="section-head">Delay distribution (late trains)</div>
+      <div id="distChart"></div>
+
+      <!-- Session trend -->
+      <div class="section-head">Session OTP trend</div>
+      <div class="trend-wrap">
+        <svg viewBox="0 0 260 52" preserveAspectRatio="none">
+          <polygon id="trendFill" fill="rgba(217,255,67,0.07)" stroke="none" points=""/>
+          <polyline id="trendLine" fill="none" stroke="var(--signal)" stroke-width="1.5"
+            stroke-linejoin="round" stroke-linecap="round" points=""/>
+        </svg>
+        <span class="trend-range" id="trendRange"></span>
+      </div>
+      <p class="footnote">OTP = (on time + early) / trains with TRUST data. PPM threshold: within 5 min of schedule. Based on last TRUST reporting point — not necessarily final destination.</p>
+
+    </div>
+  </div>
+
+  <!-- CENTRE: Critical delays -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Critical Delays</span>
+      <span class="panel-badge alert" id="critBadge">0 trains &ge;5 min late</span>
+    </div>
+    <div class="panel-body" id="delayList">
+      <div class="empty-msg">Waiting for TRUST movement data…</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Corridors + service types -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Network Activity</span>
+    </div>
+    <div class="panel-body">
+      <div class="section-head" style="margin-top:0;border-top:none;padding-top:0">Active control areas</div>
+      <div id="corridorList"><div class="empty-msg">Waiting…</div></div>
+
+      <div class="section-head">Service type performance</div>
+      <div id="typeList"><div class="empty-msg">Waiting…</div></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+'use strict';
+
+const WS_URL = (() => {
+  const h = location.hostname;
+  const q = new URLSearchParams(location.search).get('feed');
+  if (q === 'mock') return 'ws://localhost:3001';
+  if (q === 'live') return 'wss://railinsights-site-5jfi.onrender.com';
+  if (h === 'localhost' || h === '127.0.0.1' || h === '') return 'ws://localhost:3000';
+  return 'wss://railinsights-site-5jfi.onrender.com';
+})();
+
+const TYPE_CFG = {
+  express:   { label: 'Express Passenger',    color: '#0f52ba' },
+  passenger: { label: 'Stopping Passenger',   color: '#0891b2' },
+  ecs:       { label: 'Empty Coaching Stock', color: '#7c3aed' },
+  loco:      { label: 'Light Loco',           color: '#d97706' },
+  freight:   { label: 'Freight',              color: '#059669' },
+  special:   { label: 'Special / Other',      color: '#6b7280' },
+};
+
+const DIST_BANDS = [
+  { label: '1-2m',   min: 1,  max: 2,   color: '#f59e0b' },
+  { label: '3-5m',   min: 3,  max: 5,   color: '#f97316' },
+  { label: '6-10m',  min: 6,  max: 10,  color: '#ef4444' },
+  { label: '11-20m', min: 11, max: 20,  color: '#dc2626' },
+  { label: '>20m',   min: 21, max: Infinity, color: '#991b1b' },
+];
+
+let trainData = {};
+let reconnDelay = 2000;
+const otpHistory = [];
+
+// ── Feed state ─────────────────────────────────────────────────────
+function setFeed(state, label) {
+  const dot = document.getElementById('feedDot');
+  dot.className = 'feed-dot ' + state;
+  document.getElementById('feedLabel').textContent = label;
+}
+
+// ── Compute ────────────────────────────────────────────────────────
+function compute() {
+  const trains = Object.values(trainData);
+  const total  = trains.length;
+
+  let late = 0, onTime = 0, early = 0, noData = 0;
+  let totalDelayMins = 0;
+  const bands = DIST_BANDS.map(() => 0);
+  const areas = new Map();
+  const typeCounts = {}, typeLate = {};
+
+  for (const t of trains) {
+    typeCounts[t.type] = (typeCounts[t.type] || 0) + 1;
+    if (t.td) areas.set(t.td, (areas.get(t.td) || 0) + 1);
+
+    if (t.delayStatus === 'LATE') {
+      late++;
+      const m = typeof t.delay === 'number' ? Math.abs(t.delay) : 0;
+      totalDelayMins += m;
+      for (let i = 0; i < DIST_BANDS.length; i++) {
+        if (m >= DIST_BANDS[i].min && m <= DIST_BANDS[i].max) { bands[i]++; break; }
+      }
+      typeLate[t.type] = (typeLate[t.type] || 0) + 1;
+    } else if (t.delayStatus === 'EARLY')   { early++; }
+    else if (t.delayStatus === 'ON TIME')   { onTime++; }
+    else                                     { noData++; }
+  }
+
+  const withTrust = late + onTime + early;
+  // PPM: on time within 5 minutes — trains marked ON TIME or EARLY, plus LATE trains with ≤5 min delay
+  const lateTrainsList = Object.entries(trainData).filter(([,t]) => t.delayStatus === 'LATE');
+  const ppmOnTime = onTime + early + lateTrainsList.filter(([,t]) => Math.abs(t.delay || 0) <= 5).length;
+  const otp = withTrust > 0 ? Math.round(ppmOnTime / withTrust * 100) : null;
+  const avgDelay = late > 0 ? (totalDelayMins / late).toFixed(1) : null;
+  const coverage = total > 0 ? Math.round(withTrust / total * 100) : 0;
+
+  return { total, late, onTime, early, noData, withTrust, otp, avgDelay, coverage, bands, areas, typeCounts, typeLate };
+}
+
+// ── Render ─────────────────────────────────────────────────────────
+function refresh() {
+  const c   = compute();
+  const now = new Date();
+
+  // KPIs
+  set('kpiOTP',      c.otp !== null ? c.otp + '%' : '—');
+  set('kpiLate',     c.late || '—');
+  set('kpiGood',     c.late + c.onTime + c.early > 0 ? c.onTime + c.early : '—');
+  set('kpiAvg',      c.avgDelay !== null ? c.avgDelay + 'm' : '—');
+  set('kpiTotal',    c.total || '—');
+  set('kpiCoverage', c.total > 0 ? c.coverage + '%' : '—');
+  set('perfTimestamp', now.toLocaleTimeString('en-GB'));
+  document.getElementById('feedTime').textContent = c.total ? ' · ' + now.toLocaleTimeString('en-GB') : '';
+
+  // Colour kpiOTP by health
+  const otpEl = document.getElementById('kpiOTP');
+  if (otpEl && c.otp !== null) {
+    otpEl.className = 'kpi-val ' + (c.otp >= 85 ? 'good' : c.otp >= 70 ? 'warn' : 'bad');
+  }
+
+  // OTP ring
+  const CIRC = 2 * Math.PI * 38; // 238.8
+  const pct  = c.otp ?? 0;
+  const arc  = document.getElementById('otpArc');
+  arc.style.strokeDashoffset = (CIRC - (pct / 100) * CIRC).toFixed(1);
+  arc.style.stroke = pct >= 85 ? 'var(--green)' : pct >= 70 ? 'var(--amber)' : 'var(--red)';
+  set('otpPct', c.otp !== null ? c.otp + '%' : '—');
+
+  // Status counts
+  set('cntOnTime', c.onTime);
+  set('cntEarly',  c.early);
+  set('cntLate',   c.late);
+  set('cntNoData', c.noData);
+
+  // Delay distribution
+  const maxBand = Math.max(...c.bands, 1);
+  document.getElementById('distChart').innerHTML = DIST_BANDS.map((b, i) =>
+    `<div class="dist-row">
+      <span class="dist-label">${b.label}</span>
+      <div class="dist-track"><div class="dist-fill" style="width:${Math.round(c.bands[i]/maxBand*100)}%;background:${b.color}"></div></div>
+      <span class="dist-count">${c.bands[i]}</span>
+    </div>`
+  ).join('');
+
+  // OTP trend
+  if (c.otp !== null) {
+    otpHistory.push(c.otp);
+    if (otpHistory.length > 80) otpHistory.shift();
+  }
+  renderTrend();
+
+  // Critical delays — all late trains sorted by delay desc
+  const lateList = Object.entries(trainData)
+    .filter(([, t]) => t.delayStatus === 'LATE' && typeof t.delay === 'number')
+    .sort((a, b) => Math.abs(b[1].delay) - Math.abs(a[1].delay));
+
+  const crit = lateList.filter(([, t]) => Math.abs(t.delay) >= 5).length;
+  const badge = document.getElementById('critBadge');
+  badge.textContent = `${crit} train${crit !== 1 ? 's' : ''} ≥5 min late`;
+  badge.className = 'panel-badge' + (crit > 0 ? ' alert' : '');
+
+  const listEl = document.getElementById('delayList');
+  if (!lateList.length) {
+    listEl.innerHTML = '<div class="empty-msg">No late trains with TRUST data</div>';
+  } else {
+    listEl.innerHTML = lateList.map(([hc, t], i) => {
+      const cfg  = TYPE_CFG[t.type] || TYPE_CFG.special;
+      const mins = Math.abs(t.delay);
+      const meta = [t.td, t.berth, t.platform ? 'Plt ' + t.platform : ''].filter(Boolean).join(' · ');
+      const planned = t.planned ? new Date(t.planned).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null;
+      const actual  = t.actual  ? new Date(t.actual).toLocaleTimeString('en-GB',  { hour: '2-digit', minute: '2-digit' }) : null;
+      const timing  = planned && actual ? `${planned} → ${actual}` : planned || '';
+      return `<div class="delay-row">
+        <span class="delay-rank">${i + 1}</span>
+        <span class="delay-hc" style="background:${cfg.color};color:#fff">${esc(hc)}</span>
+        <span class="delay-mins">+${mins}m</span>
+        <div class="delay-info">
+          <div class="delay-loc">${esc(t.name || t.td || 'Unknown location')}</div>
+          <div class="delay-meta">${esc(meta)}${timing ? ' · ' + timing : ''}</div>
+        </div>
+        ${t.eventType ? `<span class="delay-tag">${esc(t.eventType)}</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // Active corridors
+  const topAreas = [...c.areas.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const maxArea  = topAreas[0]?.[1] || 1;
+  document.getElementById('corridorList').innerHTML = topAreas.length
+    ? topAreas.map(([td, n]) => `
+        <div class="data-row">
+          <span class="data-code">${esc(td)}</span>
+          <div class="data-bar-wrap"><div class="data-bar" style="width:${Math.round(n/maxArea*100)}%;background:var(--signal)"></div></div>
+          <span class="data-count">${n}</span>
+        </div>`).join('')
+    : '<div class="empty-msg">Waiting…</div>';
+
+  // Service type performance
+  const typeRows = Object.entries(TYPE_CFG).filter(([k]) => c.typeCounts[k]);
+  document.getElementById('typeList').innerHTML = typeRows.length
+    ? typeRows.map(([k, cfg]) => {
+        const count    = c.typeCounts[k] || 0;
+        const lateN    = c.typeLate[k] || 0;
+        const latePct  = count > 0 ? Math.round(lateN / count * 100) : 0;
+        return `<div class="data-row">
+          <span class="data-code" style="color:${cfg.color};border-color:${cfg.color}22">${esc(cfg.label.split(' ')[0])}</span>
+          <span class="data-label">${esc(cfg.label)}</span>
+          <span class="data-count">${count}</span>
+          <span class="data-late" style="color:${lateN ? 'var(--red)' : 'var(--text-3)'}">${lateN ? lateN + ' late' : 'OK'}</span>
+        </div>`;
+      }).join('')
+    : '<div class="empty-msg">Waiting…</div>';
+}
+
+function renderTrend() {
+  if (otpHistory.length < 2) return;
+  const W = 260, H = 52, P = 2;
+  const min  = Math.max(0,   Math.min(...otpHistory) - 4);
+  const max  = Math.min(100, Math.max(...otpHistory) + 4);
+  const span = Math.max(max - min, 1);
+  const pts  = otpHistory.map((v, i) => {
+    const x = P + (i / (otpHistory.length - 1)) * (W - P * 2);
+    const y = H - P - ((v - min) / span) * (H - P * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  document.getElementById('trendLine').setAttribute('points', pts.join(' '));
+  document.getElementById('trendFill').setAttribute('points',
+    `${P},${H - P} ${pts.join(' ')} ${(W - P).toFixed(1)},${H - P}`);
+  const first = otpHistory[0], last = otpHistory[otpHistory.length - 1];
+  set('trendRange', `${first}% → ${last}%`);
+}
+
+function set(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = v;
+}
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ── WebSocket ──────────────────────────────────────────────────────
+let ws;
+function connect() {
+  setFeed('connecting', 'Connecting');
+  try { ws = new WebSocket(WS_URL); } catch { onFail(); return; }
+  let confirmed = false;
+  ws.onopen  = () => setFeed('connecting', 'Waiting for data');
+  ws.onmessage = ({ data }) => {
+    try {
+      const msg = JSON.parse(data);
+      if (msg.type === 'state') {
+        if (!confirmed) { confirmed = true; reconnDelay = 2000; setFeed('live', 'Live'); }
+        trainData = msg.trains || {};
+        refresh();
+      }
+    } catch {}
+  };
+  ws.onclose = onFail;
+  ws.onerror = () => { try { ws.close(); } catch {} };
+}
+function onFail() {
+  setFeed('disconnected', 'Disconnected');
+  setTimeout(connect, reconnDelay);
+  reconnDelay = Math.min(reconnDelay * 1.5, 30000);
+}
+
+setInterval(refresh, 10000);
+connect();
+</script>
+</body>
+</html>
