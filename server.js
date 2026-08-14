@@ -206,41 +206,46 @@ async function startConsumer() {
     console.warn('[Kafka] Consumer stopped unexpectedly');
   });
 
-  await consumer.subscribe({ topic: 'TD_ALL_SIG_AREA', fromBeginning: false });
-  await consumer.subscribe({ topic: 'TRAIN_MVT_ALL_TOC', fromBeginning: false });
-  console.log('[Kafka] Subscribed — waiting for TD + TRUST messages...');
+  const eachMessage = async ({ topic, message }) => {
+    msgCount++;
+    try {
+      const arr = JSON.parse(message.value.toString());
+      let changed = false;
+      for (const item of arr) {
+        if (topic === 'TRAIN_MVT_ALL_TOC') {
+          handleTRUST(item);
+        } else if (item.CA_MSG) { handleCA(item.CA_MSG); changed = true; }
+        else if (item.CB_MSG) { handleCB(item.CB_MSG); changed = true; }
+        else if (item.CC_MSG) { handleCC(item.CC_MSG); changed = true; }
+        // CT_MSG = heartbeat, ignore
+      }
+      if (changed) scheduleBroadcast();
+    } catch { /* malformed JSON — skip silently */ }
+  };
 
-  // INCONSISTENT_GROUP_PROTOCOL is non-retryable in KafkaJS — the consumer
-  // stops dead on a rolling-deploy conflict. Loop here so we wait out the
-  // old member's session timeout (30s) and then rejoin cleanly.
+  // After a crash KafkaJS leaves internal `running = true`, so calling run()
+  // again just warns and returns immediately — looping forever. Fix: fully
+  // disconnect → connect → subscribe before every run attempt, which resets
+  // the internal state. Subscribe is inside the loop for the same reason.
   while (true) {
     try {
-      await consumer.run({
-        eachMessage: async ({ topic, message }) => {
-          msgCount++;
-          try {
-            const arr = JSON.parse(message.value.toString());
-            let changed = false;
-            for (const item of arr) {
-              if (topic === 'TRAIN_MVT_ALL_TOC') {
-                handleTRUST(item);
-              } else if (item.CA_MSG) { handleCA(item.CA_MSG); changed = true; }
-              else if (item.CB_MSG) { handleCB(item.CB_MSG); changed = true; }
-              else if (item.CC_MSG) { handleCC(item.CC_MSG); changed = true; }
-              // CT_MSG = heartbeat, ignore
-            }
-            if (changed) scheduleBroadcast();
-          } catch { /* malformed JSON — skip silently */ }
-        }
-      });
+      await consumer.subscribe({ topic: 'TD_ALL_SIG_AREA', fromBeginning: false });
+      await consumer.subscribe({ topic: 'TRAIN_MVT_ALL_TOC', fromBeginning: false });
+      console.log('[Kafka] Subscribed — waiting for TD + TRUST messages...');
+      await consumer.run({ eachMessage });
     } catch (err) {
       console.error('[Kafka] run() error:', err.message);
     }
-    // Consumer stopped — wait 35s (> sessionTimeout of 30s) so any conflicting
-    // member from the previous deployment expires before we try to rejoin.
+    // Wait out the old member's session timeout (30s) before rejoining.
     console.warn('[Kafka] Consumer stopped — rejoining in 35s...');
     await new Promise(r => setTimeout(r, 35_000));
-    console.log('[Kafka] Rejoining consumer group...');
+    console.log('[Kafka] Reconnecting consumer...');
+    try { await consumer.disconnect(); } catch {}
+    try {
+      await consumer.connect();
+    } catch (err) {
+      console.error('[Kafka] Reconnect failed:', err.message);
+    }
   }
 }
 
