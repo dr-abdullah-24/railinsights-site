@@ -735,6 +735,11 @@
           <line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/>
         </svg>
       </button>
+      <button class="map-ctrl-btn" type="button" id="stationsBtn" data-tip="Stations &amp; platforms" onclick="toggleStationLayer()" aria-label="Toggle stations and platforms">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="9" r="3"/><path d="M12 21.5C16.5 17 20 13.5 20 9a8 8 0 1 0-16 0c0 4.5 3.5 8 8 12.5z"/>
+        </svg>
+      </button>
     </div>
 
     <div class="tracks-legend" id="tracksLegend">
@@ -964,6 +969,75 @@ function toggleTrackLayer() {
     btn.classList.remove('active');
     legend.classList.remove('visible');
     if (freightLayer) map.removeLayer(freightLayer);
+  }
+}
+
+// ── Stations & platforms layer ────────────────────────────────────────────────
+let stationsVisible = false;
+let stationLayer = null;
+let stationDataLoaded = false;
+
+function buildStationLayer() {
+  const layers = [];
+
+  if (window.PLATFORM_DATA) {
+    window.PLATFORM_DATA.features.forEach(f => {
+      const [lon, lat] = f.geometry.coordinates;
+      const label = f.properties.ref ? `Platform ${f.properties.ref}` : (f.properties.name || 'Platform');
+      const m = L.circleMarker([lat, lon], {
+        radius: 3, color: '#8B7355', weight: 1,
+        fillColor: '#D4C5A9', fillOpacity: 0.85, opacity: 0.7
+      });
+      m.bindTooltip(label, { sticky: true, className: 'track-tooltip', offset: [0, -4] });
+      layers.push(m);
+    });
+  }
+
+  if (window.STATION_DATA) {
+    window.STATION_DATA.forEach(s => {
+      const isHalt = s.type === 'halt';
+      const m = L.circleMarker([s.lat, s.lon], {
+        radius: isHalt ? 4 : 7,
+        color: '#0d2c6e', weight: isHalt ? 1 : 2,
+        fillColor: isHalt ? '#6b93d6' : '#1857c9',
+        fillOpacity: 0.92, opacity: 1
+      });
+      const tip = s.name || (isHalt ? 'Halt' : 'Station');
+      m.bindTooltip(tip, { sticky: true, className: 'track-tooltip', offset: [0, -6] });
+      layers.push(m);
+    });
+  }
+
+  return L.layerGroup(layers);
+}
+
+function loadStationScripts(cb) {
+  let loaded = 0;
+  const done = () => { if (++loaded === 2) cb(); };
+  const load = src => { const s = document.createElement('script'); s.src = src; s.onload = done; document.head.appendChild(s); };
+  load('data/stations.js');
+  load('data/platforms.js');
+}
+
+function toggleStationLayer() {
+  stationsVisible = !stationsVisible;
+  const btn = document.getElementById('stationsBtn');
+  if (stationsVisible) {
+    btn.classList.add('active');
+    if (stationDataLoaded) {
+      if (stationLayer) stationLayer.addTo(map);
+    } else {
+      btn.style.opacity = '0.5';
+      loadStationScripts(() => {
+        stationDataLoaded = true;
+        stationLayer = buildStationLayer();
+        if (stationsVisible) stationLayer.addTo(map);
+        btn.style.opacity = '';
+      });
+    }
+  } else {
+    btn.classList.remove('active');
+    if (stationLayer) map.removeLayer(stationLayer);
   }
 }
 
