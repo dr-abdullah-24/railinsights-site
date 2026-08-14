@@ -574,7 +574,7 @@ function refresh() {
   set('kpiOTP',      c.otp !== null ? c.otp + '%' : '—');
   set('kpiLate',     c.late || '—');
   set('kpiGood',     c.late + c.onTime + c.early > 0 ? c.onTime + c.early : '—');
-  set('kpiAvg',      c.avgDelay !== null ? c.avgDelay + 'm' : '—');
+  set('kpiAvg',      c.avgDelay !== null ? c.avgDelay + ' min' : '—');
   set('kpiTotal',    c.total || '—');
   set('kpiCoverage', c.total > 0 ? c.coverage + '%' : '—');
   set('perfTimestamp', now.toLocaleTimeString('en-GB'));
