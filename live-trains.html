@@ -981,16 +981,20 @@ function buildStationLayer() {
   const layers = [];
 
   if (window.PLATFORM_DATA) {
-    window.PLATFORM_DATA.features.forEach(f => {
-      const [lon, lat] = f.geometry.coordinates;
-      const label = f.properties.ref ? `Platform ${f.properties.ref}` : (f.properties.name || 'Platform');
-      const m = L.circleMarker([lat, lon], {
-        radius: 3, color: '#8B7355', weight: 1,
-        fillColor: '#D4C5A9', fillOpacity: 0.85, opacity: 0.7
-      });
-      m.bindTooltip(label, { sticky: true, className: 'track-tooltip', offset: [0, -4] });
-      layers.push(m);
+    const platformStyle = {
+      color: '#6b5a3e', weight: 2, opacity: 0.9,
+      fillColor: '#c9b99a', fillOpacity: 0.7
+    };
+    const platformLayer = L.geoJSON(window.PLATFORM_DATA, {
+      style: platformStyle,
+      pointToLayer: (f, latlng) => L.circleMarker(latlng, { radius: 3, ...platformStyle }),
+      onEachFeature: (f, layer) => {
+        const p = f.properties;
+        const label = p.ref ? `Platform ${p.ref}` : (p.name || 'Platform');
+        layer.bindTooltip(label, { sticky: true, className: 'track-tooltip' });
+      }
     });
+    layers.push(platformLayer);
   }
 
   if (window.STATION_DATA) {
