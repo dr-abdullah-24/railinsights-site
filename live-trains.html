@@ -270,7 +270,7 @@
       border-radius: 3px; color: #fff; pointer-events: none; white-space: nowrap;
     }
     .delay-badge.late  { background: #dc2626; }
-    .delay-badge.early { background: #16a34a; }
+    .delay-badge.early { background: #0284c7; }
     .train-pill:hover {
       transform: scale(1.25) translateY(-2px);
       box-shadow: 0 4px 10px rgba(0,0,0,0.35);
@@ -1688,7 +1688,7 @@ function selectTrain(hc, t) {
     </div>
 
     ${typeof t.delay === 'number'
-      ? `<div class="detail-row"><span>Timetable variation</span><span style="color:${t.delay > 0 ? 'var(--red)' : t.delay < 0 ? 'var(--green)' : 'var(--text-2)'};font-weight:700">${t.delay > 0 ? '+' : ''}${t.delay} min${t.delayStatus ? ' — ' + esc(t.delayStatus) : ''}</span></div>`
+      ? `<div class="detail-row"><span>Timetable variation</span><span style="color:${t.delay > 0 ? 'var(--red)' : t.delay < 0 ? '#0284c7' : 'var(--text-2)'};font-weight:700">${t.delay > 0 ? '+' : ''}${t.delay} min${t.delayStatus ? ' — ' + esc(t.delayStatus) : ''}</span></div>`
       : ''}
     <div class="detail-row"><span>Location</span><span>${esc(t.name || 'Unknown')}</span></div>
     <div class="detail-row"><span>TD Area</span><span>${esc(t.td || '—')}</span></div>
