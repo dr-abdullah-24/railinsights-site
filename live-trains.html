@@ -727,16 +727,16 @@
     <button class="map-tracks-btn" type="button" id="tracksBtn" onclick="toggleTrackLayer()"><span class="tracks-dot"></span>Tracks</button>
 
     <div class="tracks-legend" id="tracksLegend">
-      <div class="tracks-legend-title">Track type</div>
-      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#bf0000"></span>Main / high speed</div>
-      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#4444ff"></span>Secondary</div>
-      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#ff8000"></span>Light rail / tram</div>
-      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#006600"></span>Preserved / heritage</div>
-      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#9900cc"></span>Narrow gauge</div>
-      <div class="tracks-legend-title" style="margin-top:6px">Freight gauge</div>
-      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#00796b"></span>W12 (highest)</div>
-      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#1565c0"></span>W10 (standard)</div>
-      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#c62828"></span>W9 (Channel Tunnel)</div>
+      <div class="tracks-legend-title">Loading gauge</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#C0392B;height:5px"></span>W12 — highest gauge</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#E67E22;height:4px"></span>W10 — standard freight</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#8E44AD;height:4px"></span>W9 — Channel Tunnel</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#2980B9;height:4px"></span>GB1 — HS1 continental</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#27AE60;height:3px"></span>W8</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#16A085;height:3px"></span>W7</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#4527A0;height:3px"></span>W6A</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#555555;height:2px"></span>Other freight</div>
+      <div class="tracks-legend-row"><span class="tracks-legend-swatch" style="background:#888888;height:2px;border-top:2px dashed #888;background:none"></span>Proposed</div>
     </div>
 
     <aside class="train-inspector" id="trainInspector" aria-label="Selected train trajectory" aria-live="polite">
@@ -818,7 +818,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/berth-locations.js"></script>
 <script src="data/uk-boundary.js"></script>
-<script src="data/freight-routes.js"></script>
 <script>
 'use strict';
 
@@ -885,46 +884,75 @@ if (window.UK_BOUNDARY) {
 }
 
 // ── Rail track layers ─────────────────────────────────────────────────────────
-const ormLayer = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
-  attribution: '&copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a>',
-  maxZoom: 19,
-  subdomains: ['a', 'b', 'c'],
-  opacity: 0.8
-});
-
-const corridorLines = [];
-if (window.FREIGHT_DATA && window.FREIGHT_DATA.corridors) {
-  window.FREIGHT_DATA.corridors.forEach(corridor => {
-    const line = L.polyline(corridor.coords, {
-      color: corridor.colour,
-      weight: 3,
-      opacity: 0.85,
-      smoothFactor: 1
-    });
-    line.bindTooltip(`<b>${corridor.name}</b><br>${corridor.gauge} · ${corridor.info}`, {
-      sticky: true, className: 'track-tooltip'
-    });
-    corridorLines.push(line);
-  });
-}
-const corridorGroup = L.layerGroup(corridorLines);
+const GAUGE_STYLES = {
+  W12:          { color: '#C0392B', weight: 5, dash: null },
+  W10:          { color: '#E67E22', weight: 4, dash: null },
+  W9:           { color: '#8E44AD', weight: 4, dash: null },
+  GB1:          { color: '#2980B9', weight: 4, dash: null },
+  W8:           { color: '#27AE60', weight: 3, dash: null },
+  W7:           { color: '#16A085', weight: 3, dash: null },
+  W6A:          { color: '#4527A0', weight: 3, dash: null },
+  other_freight:{ color: '#555555', weight: 2, dash: '5,5' },
+  proposed:     { color: '#888888', weight: 2, dash: '4,6' },
+};
+const DRAW_ORDER = ['proposed','other_freight','W6A','W7','W8','W9','GB1','W10','W12'];
 
 let tracksVisible = false;
+let freightLayer = null;
+let freightLoaded = false;
+
+function buildFreightLayer() {
+  if (!window.FREIGHT_GEOJSON) return null;
+  const groups = {};
+  DRAW_ORDER.forEach(k => { groups[k] = []; });
+  window.FREIGHT_GEOJSON.features.forEach(f => {
+    const k = f.properties.k;
+    if (groups[k]) groups[k].push(f);
+  });
+  const layers = [];
+  DRAW_ORDER.forEach(k => {
+    if (!groups[k].length) return;
+    const s = GAUGE_STYLES[k];
+    layers.push(L.geoJSON({ type:'FeatureCollection', features: groups[k] }, {
+      style: { color: s.color, weight: s.weight, opacity: 0.88, dashArray: s.dash },
+      onEachFeature: (feature, layer) => {
+        const p = feature.properties;
+        if (p.n) layer.bindTooltip(`<b>${p.n}</b><br>${k}`, { sticky: true, className: 'track-tooltip' });
+      }
+    }));
+  });
+  return L.layerGroup(layers);
+}
+
+function loadFreightScript(cb) {
+  const s = document.createElement('script');
+  s.src = 'data/freight-network.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
 
 function toggleTrackLayer() {
   tracksVisible = !tracksVisible;
   const btn = document.getElementById('tracksBtn');
   const legend = document.getElementById('tracksLegend');
   if (tracksVisible) {
-    ormLayer.addTo(map);
-    corridorGroup.addTo(map);
     btn.classList.add('active');
     legend.classList.add('visible');
+    if (freightLoaded) {
+      if (freightLayer) freightLayer.addTo(map);
+    } else {
+      btn.textContent = 'Loading…';
+      loadFreightScript(() => {
+        freightLoaded = true;
+        freightLayer = buildFreightLayer();
+        if (freightLayer && tracksVisible) freightLayer.addTo(map);
+        btn.innerHTML = '<span class="tracks-dot"></span>Tracks';
+      });
+    }
   } else {
-    map.removeLayer(ormLayer);
-    map.removeLayer(corridorGroup);
     btn.classList.remove('active');
     legend.classList.remove('visible');
+    if (freightLayer) map.removeLayer(freightLayer);
   }
 }
 
