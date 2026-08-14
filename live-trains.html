@@ -1691,6 +1691,11 @@ function selectTrain(hc, t) {
     ${typeof t.delay === 'number'
       ? `<div class="detail-row"><span>Timetable variation</span><span style="color:${t.delayStatus === 'LATE' ? 'var(--red)' : t.delayStatus === 'EARLY' ? '#00a550' : 'var(--text-2)'};font-weight:700">${t.delay > 0 ? '+' : ''}${t.delay} min${t.delayStatus ? ' — ' + esc(t.delayStatus) : ''}</span></div>`
       : ''}
+    ${t.eventType  ? `<div class="detail-row"><span>Last event</span><span>${esc(t.eventType)}</span></div>` : ''}
+    ${t.platform   ? `<div class="detail-row"><span>Platform</span><span>${esc(t.platform)}</span></div>` : ''}
+    ${t.planned    ? `<div class="detail-row"><span>Planned time</span><span>${new Date(t.planned).toLocaleTimeString('en-GB')}</span></div>` : ''}
+    ${t.actual     ? `<div class="detail-row"><span>Actual time</span><span>${new Date(t.actual).toLocaleTimeString('en-GB')}</span></div>` : ''}
+    ${t.nextRunMin != null ? `<div class="detail-row"><span>Next checkpoint</span><span>${t.nextRunMin} min</span></div>` : ''}
     <div class="detail-row"><span>Location</span><span>${esc(t.name || 'Unknown')}</span></div>
     <div class="detail-row"><span>TD Area</span><span>${esc(t.td || '—')}</span></div>
     <div class="detail-row"><span>Berth</span><span>${esc(t.berth || '—')}</span></div>

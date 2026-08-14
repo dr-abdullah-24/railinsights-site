@@ -102,7 +102,16 @@ function handleTRUST(msg) {
   const hc    = trainId.substring(2, 6);
   const delay = parseInt(body.timetable_variation, 10);
   const status = body.variation_status || '';
-  if (!isNaN(delay)) trustState.set(hc, { delay, status, ts: Date.now() });
+  if (!isNaN(delay)) trustState.set(hc, {
+    delay,
+    status,
+    planned:    body.planned_timestamp    ? Number(body.planned_timestamp)    : null,
+    actual:     body.actual_timestamp     ? Number(body.actual_timestamp)     : null,
+    nextRunMin: body.next_report_run_time ? Number(body.next_report_run_time) : null,
+    eventType:  body.event_type  || '',
+    platform:   body.platform    || '',
+    ts: Date.now(),
+  });
 }
 
 // ── HTTP + WebSocket server ───────────────────────────────────────────────────
@@ -124,7 +133,16 @@ function buildPayload() {
   const trains = {};
   for (const [hc, t] of trainState) {
     const trust = trustState.get(hc);
-    trains[hc] = trust ? { ...t, delay: trust.delay, delayStatus: trust.status } : t;
+    trains[hc] = trust ? {
+      ...t,
+      delay:       trust.delay,
+      delayStatus: trust.status,
+      planned:     trust.planned,
+      actual:      trust.actual,
+      nextRunMin:  trust.nextRunMin,
+      eventType:   trust.eventType,
+      platform:    trust.platform,
+    } : t;
   }
   return JSON.stringify({ type: 'state', trains, count: trainState.size, ts: Date.now() });
 }
