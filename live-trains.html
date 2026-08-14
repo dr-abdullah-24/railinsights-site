@@ -1538,7 +1538,9 @@ function fitActiveNetwork() {
 async function toggleWallboard() {
   document.body.classList.toggle('wallboard');
   const active = document.body.classList.contains('wallboard');
-  setText('wallboardBtn', active ? 'Exit wallboard' : 'Wallboard');
+  const btn = document.getElementById('wallboardBtn');
+  btn.classList.toggle('active', active);
+  btn.dataset.tip = active ? 'Exit wallboard' : 'Wallboard';
   setTimeout(() => map.invalidateSize(), 120);
   try {
     if (active && !document.fullscreenElement) await document.documentElement.requestFullscreen();
@@ -1549,7 +1551,9 @@ async function toggleWallboard() {
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement && document.body.classList.contains('wallboard')) {
     document.body.classList.remove('wallboard');
-    setText('wallboardBtn', 'Wallboard');
+    const wBtn = document.getElementById('wallboardBtn');
+    wBtn.classList.remove('active');
+    wBtn.dataset.tip = 'Wallboard';
     setTimeout(() => map.invalidateSize(), 120);
   }
 });
