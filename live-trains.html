@@ -1120,12 +1120,13 @@ const trainTrajectories = new Map(); // headcode -> every distinct berth state o
 const trajectoryLines = new Map();   // headcode -> L.Polyline
 
 // ── Marker factory ───────────────────────────────────────────────────────────
-function makeIcon(hc, type, delay) {
+function makeIcon(hc, type, delay, delayStatus) {
   const cfg = TYPES[type] || TYPES.special;
   let badge = '';
-  if (typeof delay === 'number' && delay !== 0) {
-    const cls  = delay > 0 ? 'late' : 'early';
-    const text = delay > 0 ? `+${delay}m` : `${delay}m`;
+  if (typeof delay === 'number' && delay !== 0 && (delayStatus === 'LATE' || delayStatus === 'EARLY')) {
+    const isLate = delayStatus === 'LATE';
+    const cls  = isLate ? 'late' : 'early';
+    const text = `${Math.abs(delay)}m`;
     badge = `<span class="delay-badge ${cls}">${text}</span>`;
   }
   return L.divIcon({
@@ -1171,11 +1172,11 @@ function applyState(incomingTrains) {
     if (trainMk.has(hc)) {
       const mk = trainMk.get(hc);
       mk.setLatLng([t.lat, t.lon]);
-      mk.setIcon(makeIcon(hc, t.type, t.delay));
+      mk.setIcon(makeIcon(hc, t.type, t.delay, t.delayStatus));
       setMarkerVisibility(hc, shouldShow(hc, t));
     } else {
       const mk = L.marker([t.lat, t.lon], {
-        icon: makeIcon(hc, t.type, t.delay),
+        icon: makeIcon(hc, t.type, t.delay, t.delayStatus),
         zIndexOffset: zOrder(t.type),
       });
 
@@ -1688,7 +1689,7 @@ function selectTrain(hc, t) {
     </div>
 
     ${typeof t.delay === 'number'
-      ? `<div class="detail-row"><span>Timetable variation</span><span style="color:${t.delay > 0 ? 'var(--red)' : t.delay < 0 ? '#0284c7' : 'var(--text-2)'};font-weight:700">${t.delay > 0 ? '+' : ''}${t.delay} min${t.delayStatus ? ' — ' + esc(t.delayStatus) : ''}</span></div>`
+      ? `<div class="detail-row"><span>Timetable variation</span><span style="color:${t.delayStatus === 'LATE' ? 'var(--red)' : t.delayStatus === 'EARLY' ? '#0284c7' : 'var(--text-2)'};font-weight:700">${t.delay > 0 ? '+' : ''}${t.delay} min${t.delayStatus ? ' — ' + esc(t.delayStatus) : ''}</span></div>`
       : ''}
     <div class="detail-row"><span>Location</span><span>${esc(t.name || 'Unknown')}</span></div>
     <div class="detail-row"><span>TD Area</span><span>${esc(t.td || '—')}</span></div>
