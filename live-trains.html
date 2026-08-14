@@ -254,6 +254,7 @@
     /* ── TRAIN PILL MARKERS ─────────────────────────────────────── */
     .train-pill {
       display: inline-block;
+      position: relative;
       font: 700 10px/1.4 var(--mono);
       padding: 2px 6px; border-radius: 4px;
       white-space: nowrap; cursor: pointer;
@@ -263,6 +264,13 @@
       transition: transform 0.1s, box-shadow 0.1s;
       user-select: none;
     }
+    .delay-badge {
+      position: absolute; top: -7px; right: -5px;
+      font: 700 8px/1 var(--mono); padding: 2px 3px;
+      border-radius: 3px; color: #fff; pointer-events: none; white-space: nowrap;
+    }
+    .delay-badge.late  { background: #dc2626; }
+    .delay-badge.early { background: #16a34a; }
     .train-pill:hover {
       transform: scale(1.25) translateY(-2px);
       box-shadow: 0 4px 10px rgba(0,0,0,0.35);
@@ -1112,10 +1120,16 @@ const trainTrajectories = new Map(); // headcode -> every distinct berth state o
 const trajectoryLines = new Map();   // headcode -> L.Polyline
 
 // ── Marker factory ───────────────────────────────────────────────────────────
-function makeIcon(hc, type) {
+function makeIcon(hc, type, delay) {
   const cfg = TYPES[type] || TYPES.special;
+  let badge = '';
+  if (typeof delay === 'number' && delay !== 0) {
+    const cls  = delay > 0 ? 'late' : 'early';
+    const text = delay > 0 ? `+${delay}m` : `${delay}m`;
+    badge = `<span class="delay-badge ${cls}">${text}</span>`;
+  }
   return L.divIcon({
-    html: `<div class="train-pill" style="background:${cfg.color};color:#fff">${hc}</div>`,
+    html: `<div class="train-pill" style="background:${cfg.color};color:#fff">${hc}${badge}</div>`,
     className: '',
     iconSize:   null,
     iconAnchor: [20, 9],
@@ -1157,10 +1171,11 @@ function applyState(incomingTrains) {
     if (trainMk.has(hc)) {
       const mk = trainMk.get(hc);
       mk.setLatLng([t.lat, t.lon]);
+      mk.setIcon(makeIcon(hc, t.type, t.delay));
       setMarkerVisibility(hc, shouldShow(hc, t));
     } else {
       const mk = L.marker([t.lat, t.lon], {
-        icon: makeIcon(hc, t.type),
+        icon: makeIcon(hc, t.type, t.delay),
         zIndexOffset: zOrder(t.type),
       });
 
@@ -1672,6 +1687,9 @@ function selectTrain(hc, t) {
       ${speed ? `<div class="speed-route">${esc(speed.from)} to ${esc(speed.to)}</div>` : ''}
     </div>
 
+    ${typeof t.delay === 'number'
+      ? `<div class="detail-row"><span>Timetable variation</span><span style="color:${t.delay > 0 ? 'var(--red)' : t.delay < 0 ? 'var(--green)' : 'var(--text-2)'};font-weight:700">${t.delay > 0 ? '+' : ''}${t.delay} min${t.delayStatus ? ' — ' + esc(t.delayStatus) : ''}</span></div>`
+      : ''}
     <div class="detail-row"><span>Location</span><span>${esc(t.name || 'Unknown')}</span></div>
     <div class="detail-row"><span>TD Area</span><span>${esc(t.td || '—')}</span></div>
     <div class="detail-row"><span>Berth</span><span>${esc(t.berth || '—')}</span></div>

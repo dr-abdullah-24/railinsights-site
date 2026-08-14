@@ -45,6 +45,8 @@ console.log(`[Berths] ${berthLookup.size} entries from ${ctx.window.BERTH_DATA.l
 // ── Train state ───────────────────────────────────────────────────────────────
 // headcode → { lat, lon, name, td, berth, type, ts }
 const trainState = new Map();
+// headcode → { delay: number (mins, + = late), status: string, ts: number }
+const trustState = new Map();
 
 function classifyTrain(hc) {
   if (!hc) return 'special';
@@ -91,6 +93,18 @@ function handleCC({ area_id, to, descr, ts }) {
   }
 }
 
+function handleTRUST(msg) {
+  const header = msg.header;
+  const body   = msg.body;
+  if (!header || header.msg_type !== '0003' || !body) return;
+  const trainId = body.train_id;
+  if (!trainId || trainId.length < 6) return;
+  const hc    = trainId.substring(2, 6);
+  const delay = parseInt(body.timetable_variation, 10);
+  const status = body.variation_status || '';
+  if (!isNaN(delay)) trustState.set(hc, { delay, status, ts: Date.now() });
+}
+
 // ── HTTP + WebSocket server ───────────────────────────────────────────────────
 const httpServer = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -107,7 +121,12 @@ const httpServer = http.createServer((req, res) => {
 const wss = new WebSocket.Server({ server: httpServer });
 
 function buildPayload() {
-  return JSON.stringify({ type: 'state', trains: Object.fromEntries(trainState), count: trainState.size, ts: Date.now() });
+  const trains = {};
+  for (const [hc, t] of trainState) {
+    const trust = trustState.get(hc);
+    trains[hc] = trust ? { ...t, delay: trust.delay, delayStatus: trust.status } : t;
+  }
+  return JSON.stringify({ type: 'state', trains, count: trainState.size, ts: Date.now() });
 }
 
 let broadcastPending = false;
@@ -159,9 +178,17 @@ let msgCount = 0;
 
 // Periodic stats regardless of message flow — diagnoses a silent Kafka idle
 setInterval(() => {
-  console.log(`[Kafka] ${msgCount} msgs/15s | trains tracked: ${trainState.size} | WS clients: ${wss.clients.size}`);
+  console.log(`[Kafka] ${msgCount} msgs/15s | trains tracked: ${trainState.size} | trust entries: ${trustState.size} | WS clients: ${wss.clients.size}`);
   msgCount = 0;
 }, 15_000);
+
+// Purge stale trust entries (older than 1 hour) so yesterday's delays don't persist
+setInterval(() => {
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  for (const [hc, t] of trustState) {
+    if (t.ts < cutoff) trustState.delete(hc);
+  }
+}, 10 * 60 * 1000);
 
 async function startConsumer() {
   console.log('[Kafka] Connecting to Confluent Cloud...');
@@ -180,7 +207,8 @@ async function startConsumer() {
   });
 
   await consumer.subscribe({ topic: 'TD_ALL_SIG_AREA', fromBeginning: false });
-  console.log('[Kafka] Subscribed — waiting for TD messages...');
+  await consumer.subscribe({ topic: 'TRAIN_MVT_ALL_TOC', fromBeginning: false });
+  console.log('[Kafka] Subscribed — waiting for TD + TRUST messages...');
 
   // INCONSISTENT_GROUP_PROTOCOL is non-retryable in KafkaJS — the consumer
   // stops dead on a rolling-deploy conflict. Loop here so we wait out the
@@ -188,13 +216,15 @@ async function startConsumer() {
   while (true) {
     try {
       await consumer.run({
-        eachMessage: async ({ message }) => {
+        eachMessage: async ({ topic, message }) => {
           msgCount++;
           try {
             const arr = JSON.parse(message.value.toString());
             let changed = false;
             for (const item of arr) {
-              if      (item.CA_MSG) { handleCA(item.CA_MSG); changed = true; }
+              if (topic === 'TRAIN_MVT_ALL_TOC') {
+                handleTRUST(item);
+              } else if (item.CA_MSG) { handleCA(item.CA_MSG); changed = true; }
               else if (item.CB_MSG) { handleCB(item.CB_MSG); changed = true; }
               else if (item.CC_MSG) { handleCC(item.CC_MSG); changed = true; }
               // CT_MSG = heartbeat, ignore
