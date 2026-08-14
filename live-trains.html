@@ -723,8 +723,19 @@
   <section class="twin-map-stage" aria-label="UK rail network digital twin map">
     <div id="map"></div>
 
-    <button class="map-wallboard" type="button" id="wallboardBtn" onclick="toggleWallboard()">Wallboard</button>
-    <button class="map-tracks-btn" type="button" id="tracksBtn" onclick="toggleTrackLayer()"><span class="tracks-dot"></span>Tracks</button>
+    <div class="map-ctrl-group">
+      <button class="map-ctrl-btn" type="button" id="wallboardBtn" data-tip="Wallboard" onclick="toggleWallboard()" aria-label="Toggle wallboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+      </button>
+      <button class="map-ctrl-btn" type="button" id="tracksBtn" data-tip="Track network" onclick="toggleTrackLayer()" aria-label="Toggle track network">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="5" y1="3" x2="5" y2="21"/><line x1="19" y1="3" x2="19" y2="21"/>
+          <line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/>
+        </svg>
+      </button>
+    </div>
 
     <div class="tracks-legend" id="tracksLegend">
       <div class="tracks-legend-title">Loading gauge</div>
@@ -941,12 +952,12 @@ function toggleTrackLayer() {
     if (freightLoaded) {
       if (freightLayer) freightLayer.addTo(map);
     } else {
-      btn.textContent = 'Loading…';
+      btn.style.opacity = '0.5';
       loadFreightScript(() => {
         freightLoaded = true;
         freightLayer = buildFreightLayer();
         if (freightLayer && tracksVisible) freightLayer.addTo(map);
-        btn.innerHTML = '<span class="tracks-dot"></span>Tracks';
+        btn.style.opacity = '';
       });
     }
   } else {

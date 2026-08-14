@@ -479,57 +479,58 @@ body.product-app {
   stroke-linejoin: round;
   stroke-linecap: round;
 }
-.map-wallboard {
+.map-ctrl-group {
   position: absolute;
   z-index: 470;
   top: 16px;
   left: 16px;
-  min-height: 34px;
-  padding: 0 13px;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+.map-ctrl-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(217,255,67,.48);
   background: rgba(8,12,9,.9);
   color: var(--ri-signal);
-  font: 600 8px/1 'IBM Plex Mono', monospace;
-  letter-spacing: .1em;
-  text-transform: uppercase;
   cursor: pointer;
   backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.3);
-}
-.map-wallboard:hover,
-.map-wallboard.active {
-  color: var(--ri-ink);
-  border-color: var(--ri-signal);
-  background: var(--ri-signal);
-}
-
-.map-tracks-btn {
-  position: absolute;
-  z-index: 470;
-  top: 56px;
-  left: 16px;
-  min-height: 34px;
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid rgba(255,255,255,.28);
-  background: rgba(16,19,15,.72);
-  color: white;
-  font: 600 10px/1 var(--ri-mono, monospace);
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  cursor: pointer;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
   transition: background .2s, border-color .2s, color .2s;
+  flex-shrink: 0;
 }
-.map-tracks-btn:hover,
-.map-tracks-btn.active {
+.map-ctrl-btn:hover,
+.map-ctrl-btn.active {
   color: var(--ri-ink);
   border-color: var(--ri-signal);
   background: var(--ri-signal);
 }
+.map-ctrl-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(8,12,9,.92);
+  color: white;
+  font: 500 9px/1 'IBM Plex Mono', monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  border: 1px solid rgba(255,255,255,.18);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.map-ctrl-btn:hover::after { opacity: 1; }
+
+/* keep .tracks-dot hidden — no longer used */
 .map-tracks-btn .tracks-dot {
   width: 7px;
   height: 7px;
@@ -887,6 +888,7 @@ body.product-app {
   #twinTicker { padding-inline: 9px; font-size: 8px; }
 }
 @media (max-width: 680px) {
-  .map-wallboard { top: 10px; left: 10px; min-height: 31px; padding-inline: 10px; }
+  .map-ctrl-group { top: 10px; left: 10px; }
+  .map-ctrl-btn { width: 32px; height: 32px; }
   .live-operations .leaflet-control-zoom { margin-top: 10px !important; }
 }
