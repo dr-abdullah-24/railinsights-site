@@ -153,6 +153,8 @@ function buildPayload() {
       nextRunMin:  trust.nextRunMin,
       eventType:   trust.eventType,
       platform:    trust.platform,
+      cancelled:   trust.cancelled  || false,
+      cancelCode:  trust.cancelCode || '',
     } : t;
   }
   return JSON.stringify({ type: 'state', trains, count: trainState.size, cancelCount: sessionCancelCount, ts: Date.now() });

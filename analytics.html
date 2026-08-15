@@ -652,6 +652,66 @@
       </div>
       <p class="footnote">CP7 regulatory metrics (Network Rail, April 2024–March 2029): T-3 (Time to 3) = primary punctuality measure, trains within 3 min of schedule — GB forecast ~84.3% (NW&amp;C ~82.2%). On Time = supplementary, within 1 min. Cancellations = % of planned services. NR Delay/1000mi = infrastructure-attributed delay (not computable from TRUST alone). All timing derived from last TRUST reporting point, not final destination. Cancellations from TRUST type 0006 messages this session.</p>
 
+      <!-- Freight performance -->
+      <div class="section-head" style="margin-top:14px">Freight Performance</div>
+
+      <!-- FDM ring -->
+      <div style="display:flex;align-items:center;gap:16px;padding:10px 0 6px">
+        <svg width="80" height="80" viewBox="0 0 80 80" style="flex-shrink:0">
+          <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+          <circle id="fdmArc" cx="40" cy="40" r="34" fill="none" stroke="var(--green)"
+            stroke-width="8" stroke-linecap="round"
+            stroke-dasharray="213.6" stroke-dashoffset="213.6"
+            transform="rotate(-90 40 40)" style="transition:stroke-dashoffset .6s,stroke .4s"/>
+          <text x="40" y="37" text-anchor="middle" fill="var(--text)"
+            font-family="var(--mono)" font-size="14" font-weight="600" id="fdmPct">—</text>
+          <text x="40" y="50" text-anchor="middle" fill="var(--text-3)"
+            font-family="var(--mono)" font-size="8">FDM</text>
+        </svg>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--green)"></span>
+            <span class="status-label">Within 15 min (FDM)</span>
+            <span class="status-val" id="fdmCount" style="color:var(--green)">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--red)"></span>
+            <span class="status-label">Over 15 min late</span>
+            <span class="status-val" id="frtOver15" style="color:var(--red)">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--amber)"></span>
+            <span class="status-label">Cancelled (session)</span>
+            <span class="status-val" id="frtCancelled" style="color:var(--amber)">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-grid" style="margin-top:2px">
+        <div style="font:500 8px var(--mono);color:var(--text-3);letter-spacing:.04em;margin-bottom:4px">freight delay minute review (late trains only)</div>
+        <div class="status-row">
+          <span class="status-label">Total delay minutes</span>
+          <span class="status-val" id="frtTotalDelay">—</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Avg delay per late train</span>
+          <span class="status-val" id="frtAvgDelay">—</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Trains with TRUST data</span>
+          <span class="status-val" id="frtWithTrust">—</span>
+        </div>
+      </div>
+
+      <div class="status-grid" style="margin-top:8px;padding:8px;background:rgba(255,255,255,0.03);border-radius:var(--r);border:1px solid var(--border-2)">
+        <div style="font:500 8px var(--mono);color:var(--text-3);letter-spacing:.04em;margin-bottom:4px">metrics unavailable from TRUST data</div>
+        <div class="status-row"><span class="status-label" style="color:var(--text-3)">Net Tonne Kilometres (NTK)</span><span class="status-val" style="color:var(--text-3)">N/A</span></div>
+        <div class="status-row"><span class="status-label" style="color:var(--text-3)">Freight Lifted (tonnes)</span><span class="status-val" style="color:var(--text-3)">N/A</span></div>
+        <div class="status-row"><span class="status-label" style="color:var(--text-3)">Lorry km Equivalent</span><span class="status-val" style="color:var(--text-3)">N/A</span></div>
+        <div class="status-row"><span class="status-label" style="color:var(--text-3)">CO₂ Saving vs Road</span><span class="status-val" style="color:var(--text-3)">N/A</span></div>
+      </div>
+      <p class="footnote" style="margin-top:6px">FDM (Freight Delivery Metric): % freight trains arriving within 15 min of schedule — official ORR metric, NR-caused only; shown here as all-cause from TRUST. Volume and sustainability metrics (NTK, freight lifted, CO₂) require consignment weight data not carried in TRUST messages.</p>
+
     </div>
   </div>
 
@@ -955,6 +1015,9 @@ function compute() {
   let totalDelayMins = 0;
   // CP7 T-3: passenger services only
   let paxWithTrust = 0, paxLateT3 = 0, paxLate = 0, paxOnTime = 0, paxEarly = 0;
+  // Freight performance metrics
+  let frtWithTrust = 0, frtOnTime = 0, frtLateT15 = 0, frtLateOver15 = 0;
+  let frtCancelled = 0, frtTotalDelay = 0, frtLate = 0;
   const bands = DIST_BANDS.map(() => 0);
   const areas     = new Map();
   const lateAreas = new Map();
@@ -986,9 +1049,11 @@ function compute() {
         hotspots.set(locKey, h);
       }
       if (isPax) { paxWithTrust++; paxLate++; if (m <= 3) paxLateT3++; }
-    } else if (t.delayStatus === 'EARLY')  { early++;  if (isPax) { paxWithTrust++; paxEarly++; } }
-    else if (t.delayStatus === 'ON TIME')  { onTime++; if (isPax) { paxWithTrust++; paxOnTime++; } }
+      if (t.type === 'freight') { frtWithTrust++; frtLate++; frtTotalDelay += m; if (m <= 15) frtLateT15++; else frtLateOver15++; }
+    } else if (t.delayStatus === 'EARLY')  { early++;  if (isPax) { paxWithTrust++; paxEarly++; } if (t.type === 'freight') { frtWithTrust++; frtOnTime++; } }
+    else if (t.delayStatus === 'ON TIME')  { onTime++; if (isPax) { paxWithTrust++; paxOnTime++; } if (t.type === 'freight') { frtWithTrust++; frtOnTime++; } }
     else                                    { noData++; }
+    if (t.type === 'freight' && t.cancelled) frtCancelled++;
   }
 
   const withTrust = late + onTime + early;
@@ -999,11 +1064,17 @@ function compute() {
   const avgDelay = late > 0 ? (totalDelayMins / late).toFixed(1) : null;
   const coverage = total > 0 ? Math.round(withTrust / total * 100) : 0;
 
+  // FDM: freight within 15 min (on time + early + late ≤15 min)
+  const fdmCount = frtOnTime + frtLateT15;
+  const fdmPct   = frtWithTrust > 0 ? Math.round(fdmCount / frtWithTrust * 100) : null;
+  const frtAvgDelay = frtLate > 0 ? (frtTotalDelay / frtLate).toFixed(1) : null;
+
   return {
     total, late, onTime, early, noData, lateT3Zone, lateOver3, severeCount,
     t3Count, t3Pct, rtPct, withTrust, paxWithTrust,
     totalDelayMins: Math.round(totalDelayMins), avgDelay, coverage,
     bands, areas, lateAreas, hotspots, zoneStats, typeCounts, typeLate,
+    fdmPct, fdmCount, frtWithTrust, frtCancelled, frtTotalDelay: Math.round(frtTotalDelay), frtAvgDelay, frtLate, frtLateOver15,
   };
 }
 
@@ -1032,6 +1103,20 @@ function refresh() {
   arc.style.strokeDashoffset = (CIRC - (pct / 100) * CIRC).toFixed(1);
   arc.style.stroke = pct >= 84 ? 'var(--green)' : pct >= 80 ? 'var(--amber)' : 'var(--red)';
   set('otpPct', c.t3Pct !== null ? c.t3Pct + '%' : '—');
+
+  // FDM ring
+  const FDM_CIRC = 2 * Math.PI * 34;
+  const fdmPct   = c.fdmPct ?? 0;
+  const fdmArc   = document.getElementById('fdmArc');
+  fdmArc.style.strokeDashoffset = (FDM_CIRC - (fdmPct / 100) * FDM_CIRC).toFixed(1);
+  fdmArc.style.stroke = fdmPct >= 90 ? 'var(--green)' : fdmPct >= 80 ? 'var(--amber)' : c.fdmPct !== null ? 'var(--red)' : 'rgba(255,255,255,0.06)';
+  set('fdmPct',       c.fdmPct !== null ? c.fdmPct + '%' : '—');
+  set('fdmCount',     c.fdmPct !== null ? c.fdmCount : '—');
+  set('frtOver15',    c.fdmPct !== null ? c.frtLateOver15 : '—');
+  set('frtCancelled', c.frtCancelled > 0 ? c.frtCancelled : '0');
+  set('frtTotalDelay', c.frtTotalDelay > 0 ? c.frtTotalDelay + ' min' : '—');
+  set('frtAvgDelay',   c.frtAvgDelay !== null ? c.frtAvgDelay + ' min' : '—');
+  set('frtWithTrust',  c.frtWithTrust > 0 ? c.frtWithTrust : '—');
 
   // Status counts
   set('cntOnTime',  c.onTime);
