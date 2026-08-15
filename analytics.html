@@ -1347,7 +1347,7 @@ function renderWeather() {
     wxValEl.textContent = `${wxConditionIcon(worstCode)} ${minT}–${maxT}°`;
     wxValEl.className = 'kpi-val';
     wxValEl.style.fontSize = '15px';
-    wxSubEl.textContent = `peak ${maxG}mph gusts · ${maxP}mm rain`;
+    wxSubEl.innerHTML = `peak ${maxG}mph gusts<br>${maxP}mm rain`;
   }
 
   // ── Right panel — only when filter active ─────────────────────
