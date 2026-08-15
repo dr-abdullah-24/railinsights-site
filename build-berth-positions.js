@@ -31,7 +31,9 @@ const I = {
 
 // ── 1. Load berths-geo.json ──────────────────────────────────────────────────
 console.log('[1/5] Loading berths-geo.json...');
-const berthsGeo = JSON.parse(fs.readFileSync(path.join(DATA, 'berths-geo.json'), 'utf8'));
+const _berthsGeoRaw = JSON.parse(fs.readFileSync(path.join(DATA, 'berths-geo.json'), 'utf8'));
+// berths-geo.json is either a plain array or an object with a .records array
+const berthsGeo = Array.isArray(_berthsGeoRaw) ? _berthsGeoRaw : _berthsGeoRaw.records;
 
 const berthCoords = new Map(); // `${td}:${berth}` → {lat,lon,name,platform,stanox,line}
 for (const r of berthsGeo) {
