@@ -594,7 +594,7 @@
           </div>
         </div>
         <div class="status-grid">
-          <div style="font:500 8px var(--mono);color:var(--text-3);letter-spacing:.04em;margin-bottom:2px">within 3 min of schedule</div>
+          <div style="font:500 8px var(--mono);color:var(--text-3);letter-spacing:.04em;margin-bottom:2px">passenger services ≤3 min late</div>
           <div class="status-row">
             <span class="status-dot" style="background:var(--green)"></span>
             <span class="status-label">On Time (&lt;1 min)</span>
@@ -846,6 +846,8 @@ const TYPE_CFG = {
   freight:   { label: 'Freight',              color: '#059669' },
   special:   { label: 'Special / Other',      color: '#6b7280' },
 };
+// CP7 T-3 is a passenger-only regulatory metric
+const PAX_TYPES = new Set(['express', 'passenger']);
 
 const DIST_BANDS = [
   { label: '1-2m',   min: 1,  max: 2,   color: '#f59e0b' },
@@ -922,10 +924,12 @@ function compute() {
 
   // Zone stats always from full data so zone bar is unaffected by filter
   const zoneStats = {};
-  for (const z of ZONES) zoneStats[z.id] = { total: 0, withTrust: 0, late: 0, lateT3: 0, totalDelay: 0 };
+  for (const z of ZONES) zoneStats[z.id] = { total: 0, withTrust: 0, late: 0, lateT3: 0, totalDelay: 0,
+    paxWithTrust: 0, paxLate: 0, paxLateT3: 0 };
   for (const t of allTrains) {
     const zid = t.td ? TD_TO_ZONE[t.td] : null;
     if (!zid) continue;
+    const isPax = PAX_TYPES.has(t.type);
     zoneStats[zid].total++;
     if (t.delayStatus === 'LATE') {
       const m = typeof t.delay === 'number' ? Math.abs(t.delay) : 0;
@@ -933,8 +937,10 @@ function compute() {
       zoneStats[zid].late++;
       if (m <= 3) zoneStats[zid].lateT3++;
       zoneStats[zid].totalDelay += m;
+      if (isPax) { zoneStats[zid].paxWithTrust++; zoneStats[zid].paxLate++; if (m <= 3) zoneStats[zid].paxLateT3++; }
     } else if (t.delayStatus === 'EARLY' || t.delayStatus === 'ON TIME') {
       zoneStats[zid].withTrust++;
+      if (isPax) zoneStats[zid].paxWithTrust++;
     }
   }
 
@@ -947,6 +953,8 @@ function compute() {
   let late = 0, onTime = 0, early = 0, noData = 0;
   let lateT3Zone = 0, lateOver3 = 0, severeCount = 0;
   let totalDelayMins = 0;
+  // CP7 T-3: passenger services only
+  let paxWithTrust = 0, paxLateT3 = 0, paxLate = 0, paxOnTime = 0, paxEarly = 0;
   const bands = DIST_BANDS.map(() => 0);
   const areas     = new Map();
   const lateAreas = new Map();
@@ -954,6 +962,7 @@ function compute() {
   const typeCounts = {}, typeLate = {};
 
   for (const t of trains) {
+    const isPax = PAX_TYPES.has(t.type);
     typeCounts[t.type] = (typeCounts[t.type] || 0) + 1;
     if (t.td) areas.set(t.td, (areas.get(t.td) || 0) + 1);
 
@@ -976,21 +985,23 @@ function compute() {
         h.totalDelay += m;
         hotspots.set(locKey, h);
       }
-    } else if (t.delayStatus === 'EARLY')  { early++;  }
-    else if (t.delayStatus === 'ON TIME')  { onTime++; }
+      if (isPax) { paxWithTrust++; paxLate++; if (m <= 3) paxLateT3++; }
+    } else if (t.delayStatus === 'EARLY')  { early++;  if (isPax) { paxWithTrust++; paxEarly++; } }
+    else if (t.delayStatus === 'ON TIME')  { onTime++; if (isPax) { paxWithTrust++; paxOnTime++; } }
     else                                    { noData++; }
   }
 
   const withTrust = late + onTime + early;
-  const t3Count = onTime + early + lateT3Zone;
-  const t3Pct   = withTrust > 0 ? Math.round(t3Count / withTrust * 100) : null;
+  // T-3 uses passenger-only denominator (CP7 regulatory scope)
+  const t3Count = paxOnTime + paxEarly + paxLateT3;
+  const t3Pct   = paxWithTrust > 0 ? Math.round(t3Count / paxWithTrust * 100) : null;
   const rtPct   = withTrust > 0 ? Math.round(onTime / withTrust * 100) : null;
   const avgDelay = late > 0 ? (totalDelayMins / late).toFixed(1) : null;
   const coverage = total > 0 ? Math.round(withTrust / total * 100) : 0;
 
   return {
     total, late, onTime, early, noData, lateT3Zone, lateOver3, severeCount,
-    t3Count, t3Pct, rtPct, withTrust,
+    t3Count, t3Pct, rtPct, withTrust, paxWithTrust,
     totalDelayMins: Math.round(totalDelayMins), avgDelay, coverage,
     bands, areas, lateAreas, hotspots, zoneStats, typeCounts, typeLate,
   };
@@ -1113,8 +1124,9 @@ set('snapTrains',   c.total || '—');
   zoneBar.innerHTML = activeZones.length
     ? activeZones.map(z => {
         const s  = c.zoneStats[z.id];
-        const t3 = s.withTrust > 0
-          ? Math.round((s.withTrust - s.late + s.lateT3) / s.withTrust * 100)
+        // CP7 T-3: passenger services only
+        const t3 = s.paxWithTrust > 0
+          ? Math.round((s.paxWithTrust - s.paxLate + s.paxLateT3) / s.paxWithTrust * 100)
           : null;
         const t3Color = t3 === null ? 'var(--text-3)' : t3 >= 84 ? 'var(--green)' : t3 >= 80 ? 'var(--amber)' : 'var(--red)';
         const lateHtml = s.late ? `<span class="zb-sep"></span><span class="zb-late">${s.late}L</span>` : '';
