@@ -650,7 +650,12 @@
         </span>
         <span class="trend-stat-label">Now</span>
       </div>
-      <p class="footnote">CP7 regulatory metrics (Network Rail, April 2024–March 2029): T-3 (Time to 3) = primary punctuality measure, trains within 3 min of schedule — GB forecast ~84.3% (NW&amp;C ~82.2%). On Time = supplementary, within 1 min. Cancellations = % of planned services. NR Delay/1000mi = infrastructure-attributed delay (not computable from TRUST alone). All timing derived from last TRUST reporting point, not final destination. Cancellations from TRUST type 0006 messages this session.</p>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:3px">
+        <div style="font:500 8px var(--mono);color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">Data notes · CP7</div>
+        <div style="font:400 9px var(--mono);color:var(--text-3);display:flex;gap:6px"><span style="color:var(--text-2)">T-3</span> 3 min threshold · last TRUST report point</div>
+        <div style="font:400 9px var(--mono);color:var(--text-3);display:flex;gap:6px"><span style="color:var(--text-2)">On Time</span> &lt;1 min · supplementary measure</div>
+        <div style="font:400 9px var(--mono);color:var(--text-3);display:flex;gap:6px"><span style="color:var(--text-2)">Cancels</span> TRUST 0006 · this session only</div>
+      </div>
 
       <!-- Freight performance -->
       <div class="section-head" style="margin-top:14px">Freight Performance</div>
@@ -708,7 +713,11 @@
         </div>
       </div>
 
-      <p class="footnote" style="margin-top:6px">FDM (Freight Delivery Metric): % freight trains arriving within 15 min of schedule — official ORR metric, NR-caused only; shown here as all-cause from TRUST.</p>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:3px">
+        <div style="font:500 8px var(--mono);color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">Data notes · Freight</div>
+        <div style="font:400 9px var(--mono);color:var(--text-3);display:flex;gap:6px"><span style="color:var(--text-2)">FDM</span> 15 min threshold · all-cause (ORR: NR-caused only)</div>
+        <div style="font:400 9px var(--mono);color:var(--text-3);display:flex;gap:6px"><span style="color:var(--text-2)">Cancels</span> TRUST 0006 · this session only</div>
+      </div>
 
     </div>
   </div>
