@@ -189,6 +189,9 @@
     .wx-val.alert-red   { color: var(--red); }
     .wx-val.alert-amber { color: var(--amber); }
     .wx-val.alert-blue  { color: #60a5fa; }
+    .kpi-val.wx-level-red   { color: var(--red); }
+    .kpi-val.wx-level-amber { color: var(--amber); }
+    .kpi-val.wx-level-blue  { color: #60a5fa; }
     .wx-summary .wx-zone { font-weight: 600; }
     .wx-alert-row { background: rgba(239,68,68,0.04); border-radius: 3px; padding-left: 2px; }
     .wx-divider {
@@ -551,6 +554,11 @@
     <div class="kpi-val" id="kpiCoverage">—</div>
     <div class="kpi-sub">trains with timing data</div>
   </div>
+  <div class="kpi" id="wxKpi">
+    <div class="kpi-label">UK Weather</div>
+    <div class="kpi-val" id="wxKpiVal" style="font-size:18px">—</div>
+    <div class="kpi-sub" id="wxKpiSub">fetching…</div>
+  </div>
 </div>
 
 <!-- ── ZONE BAR ────────────────────────────────────────────────────── -->
@@ -669,12 +677,10 @@
     </div>
     <div class="panel-body">
 
-      <!-- Weather conditions — always visible after first fetch -->
-      <div id="wxSection" style="margin-top:0">
-        <div class="section-head" style="margin-top:0;border-top:none;padding-top:0;display:flex;align-items:center">
-          <span>Weather conditions</span>
-        </div>
-        <div id="wxAlerts"><div class="empty-msg">Fetching…</div></div>
+      <!-- Zone weather — only shown when a zone filter is active -->
+      <div id="wxSection" hidden style="margin-top:0">
+        <div class="section-head" style="margin-top:0;border-top:none;padding-top:0">Zone Weather</div>
+        <div id="wxAlerts"></div>
       </div>
 
       <div class="section-head" id="snapHead">Network snapshot</div>
@@ -1302,57 +1308,54 @@ function wxRow(z, isAlert) {
 }
 
 function renderWeather() {
-  const zonesWithData  = ZONES.filter(z => zoneWeather[z.id]);
+  const zonesWithData = ZONES.filter(z => zoneWeather[z.id]);
   if (!zonesWithData.length) return;
 
-  const hazardZones    = zonesWithData.filter(z => zoneWeather[z.id].alerts.length > 0);
-  const hasFilter      = selectedZones.size > 0;
-  let html = '';
+  const hazardZones = zonesWithData.filter(z => zoneWeather[z.id].alerts.length > 0);
+  const hasFilter   = selectedZones.size > 0;
 
-  if (!hasFilter) {
-    // ── UK Overview summary row ──────────────────────────────────
-    const temps  = zonesWithData.map(z => zoneWeather[z.id].temp);
-    const gusts  = zonesWithData.map(z => zoneWeather[z.id].gusts);
-    const precips = zonesWithData.map(z => zoneWeather[z.id].precip);
-    const minT = Math.min(...temps), maxT = Math.max(...temps);
-    const maxG = Math.max(...gusts);
-    const maxP = +(Math.max(...precips)).toFixed(1);
-    const worstCode = Math.max(...zonesWithData.map(z => zoneWeather[z.id].code));
-    const tempCls = maxT > 35 ? 'alert-red' : maxT > 30 ? 'alert-amber'
-                  : minT < -5 ? 'alert-red' : minT < -2 ? 'alert-blue' : '';
-    const gustCls = maxG > 65 ? 'alert-red' : maxG > 50 ? 'alert-amber' : '';
-    const rainCls = maxP > 10 ? 'alert-red' : maxP >  5 ? 'alert-amber' : '';
-    html += `<div class="wx-row wx-summary">
-      <span class="wx-icon">${wxConditionIcon(worstCode)}</span>
-      <span class="wx-zone" style="color:var(--text)">UK Overview</span>
-      <span class="wx-readings">
-        <span class="wx-val ${tempCls}">${minT}–${maxT}°</span>
-        <span class="wx-val ${gustCls}">${maxG}mph</span>
-        <span class="wx-val ${rainCls}" style="${!rainCls && maxP === 0 ? 'opacity:0.35' : ''}">${maxP}mm</span>
-      </span>
-    </div>`;
+  // ── KPI strip tile — always updated ───────────────────────────
+  const temps   = zonesWithData.map(z => zoneWeather[z.id].temp);
+  const gusts   = zonesWithData.map(z => zoneWeather[z.id].gusts);
+  const precips = zonesWithData.map(z => zoneWeather[z.id].precip);
+  const minT = Math.min(...temps), maxT = Math.max(...temps);
+  const maxG = Math.max(...gusts);
+  const maxP = +(Math.max(...precips)).toFixed(1);
+  const worstCode = Math.max(...zonesWithData.map(z => zoneWeather[z.id].code));
 
-    // Hazardous zones always surfaced below summary
-    if (hazardZones.length) {
-      html += `<div class="wx-divider">Active alerts</div>`;
-      html += hazardZones.map(z => wxRow(z, true)).join('');
-    }
+  const wxValEl = document.getElementById('wxKpiVal');
+  const wxSubEl = document.getElementById('wxKpiSub');
+  if (hazardZones.length) {
+    // Show most severe alert in the tile
+    const top = hazardZones[0].alerts[0]; // highest-priority zone first
+    wxValEl.textContent = `${top.icon} ${top.label}`;
+    wxValEl.className = `kpi-val wx-level-${top.level}`;
+    wxSubEl.textContent = hazardZones[0].name;
   } else {
-    // ── Per-zone rows for selected zones ─────────────────────────
-    const selZones = zonesWithData.filter(z => selectedZones.has(z.id));
-    html += selZones.map(z => wxRow(z, zoneWeather[z.id].alerts.length > 0)).join('');
-
-    // Hazardous zones outside the current selection always shown
-    const hazardOutside = hazardZones.filter(z => !selectedZones.has(z.id));
-    if (hazardOutside.length) {
-      if (selZones.length) html += `<div class="wx-divider">Alerts elsewhere</div>`;
-      html += hazardOutside.map(z => wxRow(z, true)).join('');
-    }
-
-    if (!html) html = '<div class="empty-msg">No data for selected zones</div>';
+    wxValEl.textContent = `${wxConditionIcon(worstCode)} ${minT}–${maxT}°`;
+    wxValEl.className = 'kpi-val';
+    wxSubEl.textContent = `peak ${maxG}mph gusts${maxP > 0 ? ` · ${maxP}mm rain` : ''}`;
   }
 
-  document.getElementById('wxAlerts').innerHTML = html;
+  // ── Right panel — only when filter active ─────────────────────
+  const sec = document.getElementById('wxSection');
+  if (!hasFilter) {
+    sec.hidden = true;
+    return;
+  }
+
+  sec.hidden = false;
+  const selZones = zonesWithData.filter(z => selectedZones.has(z.id));
+  let html = selZones.map(z => wxRow(z, zoneWeather[z.id].alerts.length > 0)).join('');
+
+  // Surface any hazard zones outside the selection
+  const hazardOutside = hazardZones.filter(z => !selectedZones.has(z.id));
+  if (hazardOutside.length) {
+    if (selZones.length) html += `<div class="wx-divider">Alerts elsewhere</div>`;
+    html += hazardOutside.map(z => wxRow(z, true)).join('');
+  }
+
+  document.getElementById('wxAlerts').innerHTML = html || '<div class="empty-msg">No data</div>';
 }
 
 fetchWeather();
