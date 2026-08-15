@@ -678,7 +678,6 @@
       <div id="wxSection" style="margin-top:0">
         <div class="section-head" style="margin-top:0;border-top:none;padding-top:0;display:flex;align-items:center">
           <span>Weather conditions</span>
-          <span id="wxUpdated" style="font:400 8px var(--mono);color:var(--text-3);margin-left:auto"></span>
         </div>
         <div id="wxAlerts"><div class="empty-msg">Fetching…</div></div>
       </div>
@@ -1365,8 +1364,6 @@ function renderWeather() {
   }
 
   document.getElementById('wxAlerts').innerHTML = html;
-  document.getElementById('wxUpdated').textContent =
-    new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
 fetchWeather();
