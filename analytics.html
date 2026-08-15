@@ -671,12 +671,17 @@
         <div style="flex:1;display:flex;flex-direction:column;gap:5px">
           <div class="status-row">
             <span class="status-dot" style="background:var(--green)"></span>
-            <span class="status-label">Within 15 min (FDM)</span>
-            <span class="status-val" id="fdmCount" style="color:var(--green)">—</span>
+            <span class="status-label">On time / early</span>
+            <span class="status-val" id="frtOnTime" style="color:var(--green)">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--signal)"></span>
+            <span class="status-label">Late ≤15 min (FDM pass)</span>
+            <span class="status-val" id="frtLateT15" style="color:var(--signal)">—</span>
           </div>
           <div class="status-row">
             <span class="status-dot" style="background:var(--red)"></span>
-            <span class="status-label">Over 15 min late</span>
+            <span class="status-label">Late &gt;15 min (FDM fail)</span>
             <span class="status-val" id="frtOver15" style="color:var(--red)">—</span>
           </div>
           <div class="status-row">
@@ -1067,7 +1072,7 @@ function compute() {
     t3Count, t3Pct, rtPct, withTrust, paxWithTrust,
     totalDelayMins: Math.round(totalDelayMins), avgDelay, coverage,
     bands, areas, lateAreas, hotspots, zoneStats, typeCounts, typeLate,
-    fdmPct, fdmCount, frtWithTrust, frtCancelled, frtTotalDelay: Math.round(frtTotalDelay), frtAvgDelay, frtLate, frtLateOver15,
+    fdmPct, fdmCount, frtWithTrust, frtOnTime, frtLateT15, frtCancelled, frtTotalDelay: Math.round(frtTotalDelay), frtAvgDelay, frtLate, frtLateOver15,
   };
 }
 
@@ -1103,9 +1108,10 @@ function refresh() {
   const fdmArc   = document.getElementById('fdmArc');
   fdmArc.style.strokeDashoffset = (FDM_CIRC - (fdmPct / 100) * FDM_CIRC).toFixed(1);
   fdmArc.style.stroke = fdmPct >= 90 ? 'var(--green)' : fdmPct >= 80 ? 'var(--amber)' : c.fdmPct !== null ? 'var(--red)' : 'rgba(255,255,255,0.06)';
-  set('fdmPct',       c.fdmPct !== null ? c.fdmPct + '%' : '—');
-  set('fdmCount',     c.fdmPct !== null ? c.fdmCount : '—');
-  set('frtOver15',    c.fdmPct !== null ? c.frtLateOver15 : '—');
+  set('fdmPct',    c.fdmPct !== null ? c.fdmPct + '%' : '—');
+  set('frtOnTime', c.frtWithTrust > 0 ? c.frtOnTime : '—');
+  set('frtLateT15', c.frtWithTrust > 0 ? c.frtLateT15 : '—');
+  set('frtOver15', c.frtWithTrust > 0 ? c.frtLateOver15 : '—');
   set('frtCancelled', c.frtCancelled > 0 ? c.frtCancelled : '0');
   set('frtTotalDelay', c.frtTotalDelay > 0 ? c.frtTotalDelay + ' min' : '—');
   set('frtAvgDelay',   c.frtAvgDelay !== null ? c.frtAvgDelay + ' min' : '—');
