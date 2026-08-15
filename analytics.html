@@ -591,6 +591,7 @@
           <div class="otp-center">
             <span class="otp-pct" id="otpPct">—</span>
             <span class="otp-sub">T-3</span>
+            <span style="font:500 7px var(--mono);color:var(--text-3);margin-top:2px;letter-spacing:.04em">within 3 min</span>
           </div>
         </div>
         <div class="status-grid">
@@ -1346,7 +1347,7 @@ function renderWeather() {
     wxValEl.textContent = `${wxConditionIcon(worstCode)} ${minT}–${maxT}°`;
     wxValEl.className = 'kpi-val';
     wxValEl.style.fontSize = '15px';
-    wxSubEl.textContent = `peak ${maxG}mph gusts${maxP > 0 ? ` · ${maxP}mm rain` : ''}`;
+    wxSubEl.textContent = `peak ${maxG}mph gusts · ${maxP}mm rain`;
   }
 
   // ── Right panel — only when filter active ─────────────────────
