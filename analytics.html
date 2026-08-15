@@ -255,49 +255,68 @@
     .trend-stat-val   { font: 700 18px/1 var(--font); color: var(--signal); letter-spacing: -.01em; }
     .trend-stat-arrow { font: 600 13px var(--mono); color: var(--text-3); margin: 0 6px; }
 
-    /* ── DELAY LIST ────────────────────────────────────────────── */
-    .delay-row {
+    /* ── DELAY CARDS (single-row) ───────────────────────────────── */
+    .delay-card {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 8px 8px;
-      margin: 0 -8px;
-      border-radius: var(--r);
-      border-bottom: 1px solid var(--border-2);
-      cursor: default;
-      transition: background .12s;
-    }
-    .delay-row:last-child { border-bottom: none; }
-    .delay-row:hover { background: var(--panel-2); }
-    .delay-rank { font: 600 10px var(--mono); color: var(--text-3); width: 16px; flex-shrink: 0; text-align: right; }
-    .delay-hc {
-      font: 700 10.5px var(--mono);
-      letter-spacing: .05em;
-      padding: 3px 7px;
-      border-radius: 4px;
-      min-width: 44px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .delay-mins { font: 800 14px/1 var(--mono); color: var(--red); min-width: 36px; flex-shrink: 0; }
-    .delay-info { flex: 1; min-width: 0; }
-    .delay-loc  { font: 500 11.5px var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .delay-timing {
-      font: 700 12px/1 var(--mono); color: var(--text-2);
-      margin-top: 3px; letter-spacing: .03em;
-    }
-    .delay-timing .planned { color: var(--text-3); }
-    .delay-timing .actual  { color: var(--red); }
-    .delay-timing .arrow   { color: var(--text-3); margin: 0 4px; }
-    .delay-meta { font: 500 9px var(--mono); color: var(--text-3); margin-top: 2px; }
-    .delay-tag  {
-      font: 600 8px var(--mono);
-      color: var(--text-3);
+      height: 38px;
+      border-radius: 5px;
+      margin-bottom: 4px;
+      overflow: hidden;
       background: var(--panel-2);
-      border: 1px solid var(--border);
-      padding: 2px 5px;
+      border: 1px solid rgba(255,255,255,0.04);
+      transition: border-color .12s, filter .12s;
+      cursor: default;
+    }
+    .delay-card:last-child { margin-bottom: 0; }
+    .delay-card:hover { border-color: rgba(255,255,255,0.12); filter: brightness(1.08); }
+    .dc-stripe { width: 3px; align-self: stretch; flex-shrink: 0; }
+    .dc-rank { font: 600 9px var(--mono); color: var(--text-3); width: 22px; text-align: center; flex-shrink: 0; }
+    .dc-hc {
+      font: 700 10.5px var(--mono);
+      letter-spacing: .06em;
+      padding: 4px 8px;
       border-radius: 3px;
       flex-shrink: 0;
+    }
+    .dc-delay {
+      font: 800 17px/1 var(--font);
+      min-width: 46px;
+      padding: 0 8px;
+      flex-shrink: 0;
+      letter-spacing: -.02em;
+    }
+    .dc-sep { width: 1px; height: 18px; background: var(--border-2); flex-shrink: 0; margin: 0 2px; }
+    .dc-loc {
+      flex: 1;
+      font: 500 11.5px var(--font);
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 10px;
+    }
+    .dc-time {
+      font: 600 10px var(--mono);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 0 8px;
+      flex-shrink: 0;
+    }
+    .dc-time .t-sched { color: var(--text-3); }
+    .dc-time .t-arrow { color: var(--text-3); font-size: 9px; }
+    .dc-time .t-actual { color: var(--red); }
+    .dc-tag {
+      font: 600 8px var(--mono);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      border-left: 1px solid var(--border-2);
+      padding: 0 9px;
+      height: 100%;
+      display: flex;
+      align-items: center;
       white-space: nowrap;
     }
     .empty-msg { font: 12px var(--font); color: var(--text-3); text-align: center; padding: 20px 0; }
@@ -680,24 +699,25 @@ function refresh() {
     listEl.innerHTML = lateList.map(([hc, t], i) => {
       const cfg  = TYPE_CFG[t.type] || TYPE_CFG.special;
       const mins = Math.abs(t.delay);
-      const meta = [t.td, t.berth, t.platform ? 'Plt ' + t.platform : ''].filter(Boolean).join(' · ');
       const planned = t.planned ? new Date(t.planned).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null;
       const actual  = t.actual  ? new Date(t.actual).toLocaleTimeString('en-GB',  { hour: '2-digit', minute: '2-digit' }) : null;
-      const timingHtml = planned && actual
-        ? `<div class="delay-timing"><span class="planned">${planned}</span><span class="arrow">→</span><span class="actual">${actual}</span></div>`
-        : planned
-          ? `<div class="delay-timing"><span class="planned">${planned}</span></div>`
-          : '';
-      return `<div class="delay-row">
-        <span class="delay-rank">${i + 1}</span>
-        <span class="delay-hc" style="background:${cfg.color};color:#fff">${esc(hc)}</span>
-        <span class="delay-mins">+${mins}m</span>
-        <div class="delay-info">
-          <div class="delay-loc">${esc(t.name || t.td || 'Unknown location')}</div>
-          ${timingHtml}
-          <div class="delay-meta">${esc(meta)}</div>
-        </div>
-        ${t.eventType ? `<span class="delay-tag">${esc(t.eventType)}</span>` : ''}
+      const sev = mins > 30 ? '#991b1b' : mins > 15 ? '#dc2626' : mins > 5 ? '#f97316' : '#f59e0b';
+      const bg  = mins > 30 ? 'rgba(153,27,27,0.10)' : mins > 15 ? 'rgba(220,38,38,0.07)' : mins > 5 ? 'rgba(249,115,22,0.05)' : '';
+      const timingHtml = planned
+        ? `<div class="dc-time"><span class="t-sched">${planned}</span>${actual ? `<span class="t-arrow">→</span><span class="t-actual">${actual}</span>` : ''}</div>`
+        : '';
+      const tags = [
+        t.eventType ? `<span class="dc-tag">${esc(t.eventType)}</span>` : '',
+        t.platform  ? `<span class="dc-tag">Plt ${esc(t.platform)}</span>` : '',
+      ].join('');
+      return `<div class="delay-card"${bg ? ` style="background:${bg}"` : ''}>
+        <div class="dc-stripe" style="background:${sev}"></div>
+        <span class="dc-rank">${i + 1}</span>
+        <span class="dc-hc" style="background:${cfg.color}1a;color:${cfg.color};border:1px solid ${cfg.color}33">${esc(hc)}</span>
+        <span class="dc-delay" style="color:${sev}">+${mins}m</span>
+        <div class="dc-sep"></div>
+        <div class="dc-loc">${esc(t.name || t.td || '—')}</div>
+        ${timingHtml}${tags}
       </div>`;
     }).join('');
   }
