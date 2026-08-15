@@ -388,6 +388,21 @@
     .snap-val   { font: 700 20px/1 var(--font); color: var(--text); letter-spacing: -.02em; }
     .snap-label { font: 600 8px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
 
+    /* ── ZONE LIST ─────────────────────────────────────────────── */
+    .zone-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border-2);
+    }
+    .zone-row:last-child { border-bottom: none; }
+    .zone-dot  { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .zone-name { flex: 1; font: 500 11px var(--font); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zone-trains { font: 600 10px var(--mono); color: var(--text-3); min-width: 26px; text-align: right; flex-shrink: 0; }
+    .zone-t3   { font: 700 10px var(--mono); min-width: 40px; text-align: right; flex-shrink: 0; }
+    .zone-late { font: 600 9px var(--mono); color: var(--text-3); min-width: 42px; text-align: right; flex-shrink: 0; }
+
     /* ── HOTSPOT LIST ───────────────────────────────────────────── */
     .hot-row {
       display: flex;
@@ -590,6 +605,9 @@
         </div>
       </div>
 
+      <div class="section-head">Zone performance</div>
+      <div id="zoneList"><div class="empty-msg">Waiting…</div></div>
+
       <div class="section-head">Active control areas</div>
       <div id="corridorList"><div class="empty-msg">Waiting…</div></div>
 
@@ -687,6 +705,37 @@ const TD_NAMES = {
   WW:'Westbury',             XE:'Warrington Central',   XL:'Hunts Cross',
 };
 
+const ZONES = [
+  { id: 'merseyrail', name: 'Merseyrail',           color: '#f59e0b',
+    tds: ['SS','M0','M1','M4','M5','XL'] },
+  { id: 'mrroc',      name: 'NW & Central (MRROC)', color: '#f97316',
+    tds: ['M2','M3','M6','M7','M8','M9','MP','MZ','RW','WA','CE','WD','PX','XE'] },
+  { id: 'wmsc',       name: 'West Midlands',         color: '#8b5cf6',
+    tds: ['NS','AS','BG','CV','CY','KN','LC','PJ','SJ','SV','TD','WL','WN','WO'] },
+  { id: 'emcc',       name: 'East Midlands',         color: '#d97706',
+    tds: ['BU','DY','KG','LR','MD','NE','NM','TN','WG'] },
+  { id: 'ykroc',      name: 'Yorkshire & NE',        color: '#10b981',
+    tds: ['Y0','Y1','Y2','Y3','Y4','Y5','Y6','Y7','Y8','Y9','YA','YB','YC','YD','YE','T1','T2','T3','HG','BA','CD','DR','FE','SC','WK'] },
+  { id: 'wcml',       name: 'West Coast Main Line',  color: '#ef4444',
+    tds: ['R1','R2','R3','R4','R5','SK','WJ','WY','WS','RT'] },
+  { id: 'tvsc',       name: 'Thames Valley (GWR)',   color: '#0ea5e9',
+    tds: ['D0','D1','D2','D3','D4','D5','D6','D7','D9','DA','EX','WW','GL'] },
+  { id: 'tbroc',      name: 'Thameslink / SE',       color: '#fb7185',
+    tds: ['X0','X1','X2','X3','X7','X8','X9','XA','XB','TB','EH','HT','SU','TE','GD','VC','MA','LA'] },
+  { id: 'roroc',      name: 'Elizabeth Line',         color: '#a855f7',
+    tds: ['Q0','Q1','Q2','Q3','Q4','Q5','Q6','Q7'] },
+  { id: 'anglia',     name: 'Anglia & NE London',    color: '#94a3b8',
+    tds: ['CA','CC','EN','NL','NJ','NX','ME','WH','NK','EK','A2','A3','AD','AN','BM','WC','SO'] },
+  { id: 'tfw',        name: 'Transport for Wales',   color: '#22c55e',
+    tds: ['C0','C1','C2','C3','C5','C6','MH','PL','PT','PC'] },
+  { id: 'scotland',   name: 'Scotland',              color: '#06b6d4',
+    tds: ['G1','G2','G3','G4','EA','EB','EC','ED','EE','YO','SM','DU','IH','IN','IR'] },
+];
+
+// Build once: TD code → zone id (first match wins, no duplicates)
+const TD_TO_ZONE = {};
+for (const z of ZONES) for (const td of z.tds) if (!TD_TO_ZONE[td]) TD_TO_ZONE[td] = z.id;
+
 const TYPE_CFG = {
   express:   { label: 'Express Passenger',    color: '#0f52ba' },
   passenger: { label: 'Stopping Passenger',   color: '#0891b2' },
@@ -740,10 +789,16 @@ function compute() {
   const lateAreas = new Map(); // td → late train count
   const hotspots  = new Map(); // location → { count, totalDelay }
   const typeCounts = {}, typeLate = {};
+  const zoneStats = {};
+  for (const z of ZONES) zoneStats[z.id] = { total: 0, withTrust: 0, late: 0, lateT3: 0, totalDelay: 0 };
 
   for (const t of trains) {
     typeCounts[t.type] = (typeCounts[t.type] || 0) + 1;
     if (t.td) areas.set(t.td, (areas.get(t.td) || 0) + 1);
+
+    // Zone tracking
+    const zid = t.td ? TD_TO_ZONE[t.td] : null;
+    if (zid) zoneStats[zid].total++;
 
     if (t.delayStatus === 'LATE') {
       late++;
@@ -764,8 +819,9 @@ function compute() {
         h.totalDelay += m;
         hotspots.set(locKey, h);
       }
-    } else if (t.delayStatus === 'EARLY')   { early++; }
-    else if (t.delayStatus === 'ON TIME')   { onTime++; }
+      if (zid) { zoneStats[zid].withTrust++; zoneStats[zid].late++; if (m <= 3) zoneStats[zid].lateT3++; zoneStats[zid].totalDelay += m; }
+    } else if (t.delayStatus === 'EARLY')   { early++;  if (zid) zoneStats[zid].withTrust++; }
+    else if (t.delayStatus === 'ON TIME')   { onTime++; if (zid) zoneStats[zid].withTrust++; }
     else                                     { noData++; }
   }
 
@@ -785,7 +841,7 @@ function compute() {
     total, late, onTime, early, noData, lateT3Zone, lateOver3, severeCount,
     t3Count, t3Pct, rtPct, withTrust,
     totalDelayMins: Math.round(totalDelayMins), avgDelay, coverage,
-    bands, areas, lateAreas, hotspots, typeCounts, typeLate,
+    bands, areas, lateAreas, hotspots, zoneStats, typeCounts, typeLate,
   };
 }
 
@@ -902,6 +958,26 @@ function refresh() {
   set('snapAreas',    c.areas.size || '—');
   set('snapLate',     c.late > 0 ? `${c.late} (${Math.round(c.late / Math.max(c.total, 1) * 100)}%)` : '0');
   set('snapDensity',  c.areas.size > 0 ? (c.total / c.areas.size).toFixed(1) : '—');
+
+  // Zone performance
+  const activeZones = ZONES.filter(z => c.zoneStats[z.id].total > 0)
+    .sort((a, b) => c.zoneStats[b.id].total - c.zoneStats[a.id].total);
+  document.getElementById('zoneList').innerHTML = activeZones.length
+    ? activeZones.map(z => {
+        const s  = c.zoneStats[z.id];
+        const t3 = s.withTrust > 0
+          ? Math.round((s.withTrust - s.late + s.lateT3) / s.withTrust * 100)
+          : null;
+        const t3Color = t3 === null ? 'var(--text-3)' : t3 >= 84 ? 'var(--green)' : t3 >= 80 ? 'var(--amber)' : 'var(--red)';
+        return `<div class="zone-row">
+          <span class="zone-dot" style="background:${z.color}"></span>
+          <span class="zone-name">${esc(z.name)}</span>
+          <span class="zone-trains">${s.total}</span>
+          <span class="zone-t3" style="color:${t3Color}">${t3 !== null ? t3 + '%' : '—'}</span>
+          <span class="zone-late" style="color:${s.late ? 'var(--red)' : 'var(--text-3)'}">${s.late ? s.late + ' late' : 'OK'}</span>
+        </div>`;
+      }).join('')
+    : '<div class="empty-msg">Waiting…</div>';
 
   // Active corridors with late count
   const topAreas = [...c.areas.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
