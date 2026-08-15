@@ -136,20 +136,42 @@
     .kpi-sub { font: 500 9px var(--mono); color: var(--text-3); white-space: nowrap; }
 
     /* ── ZONE BAR ──────────────────────────────────────────────── */
-    .zone-bar {
+    .zone-bar-wrap {
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .zone-bar {
+      flex: 1;
       display: flex;
       align-items: center;
       gap: 5px;
       padding: 6px 16px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
       overflow-x: auto;
       scrollbar-width: none;
       cursor: grab;
       user-select: none;
+      min-width: 0;
     }
     .zone-bar::-webkit-scrollbar { display: none; }
+    .zb-clear {
+      flex-shrink: 0;
+      font: 600 9px var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      background: none;
+      border: 1px solid var(--border-2);
+      border-radius: 3px;
+      padding: 4px 10px;
+      margin-right: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color .12s, border-color .12s;
+    }
+    .zb-clear:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
     .zb-chip {
       display: flex;
       align-items: center;
@@ -511,8 +533,11 @@
 </div>
 
 <!-- ── ZONE BAR ────────────────────────────────────────────────────── -->
-<div class="zone-bar" id="zoneBar">
-  <div class="empty-msg" style="font:500 10px var(--mono);color:var(--text-3);padding:0">Waiting…</div>
+<div class="zone-bar-wrap">
+  <div class="zone-bar" id="zoneBar">
+    <div class="empty-msg" style="font:500 10px var(--mono);color:var(--text-3);padding:0">Waiting…</div>
+  </div>
+  <button class="zb-clear" id="zbClear" hidden>✕ Clear filter</button>
 </div>
 
 <!-- ── MAIN ───────────────────────────────────────────────────────── -->
@@ -834,6 +859,11 @@ const selectedZones = new Set();
   });
 })();
 
+document.getElementById('zbClear').addEventListener('click', () => {
+  selectedZones.clear();
+  refresh();
+});
+
 document.getElementById('sortBtns').addEventListener('click', e => {
   const btn = e.target.closest('[data-sort]');
   if (!btn) return;
@@ -1073,6 +1103,7 @@ function refresh() {
       }).join('')
     : '<div style="font:500 10px var(--mono);color:var(--text-3)">Waiting…</div>';
   zoneBar.scrollLeft = prevScroll;
+  document.getElementById('zbClear').hidden = !hasFilter;
 
   // Active corridors with late count
   const topAreas = [...c.areas.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
