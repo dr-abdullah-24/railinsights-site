@@ -379,19 +379,19 @@
 <!-- ── KPI STRIP ──────────────────────────────────────────────────── -->
 <div class="kpi-strip">
   <div class="kpi">
-    <div class="kpi-label">Right Time — CP7 primary</div>
+    <div class="kpi-label">Time to 3 (T-3) — CP7 primary</div>
     <div class="kpi-val signal" id="kpiRT">—</div>
-    <div class="kpi-sub">within 1 min of schedule</div>
+    <div class="kpi-sub">within 3 min of schedule</div>
   </div>
   <div class="kpi">
-    <div class="kpi-label">PPM</div>
+    <div class="kpi-label">On Time</div>
     <div class="kpi-val" id="kpiPPM">—</div>
-    <div class="kpi-sub">within 5 min of schedule</div>
+    <div class="kpi-sub">within 1 min (supplementary)</div>
   </div>
   <div class="kpi">
-    <div class="kpi-label">CaSL</div>
+    <div class="kpi-label">Cancellations</div>
     <div class="kpi-val bad" id="kpiCaSL">—</div>
-    <div class="kpi-sub">cancelled or &gt;30 min late</div>
+    <div class="kpi-sub">TRUST type 0006 — session</div>
   </div>
   <div class="kpi">
     <div class="kpi-label">Total Delay Minutes</div>
@@ -399,9 +399,9 @@
     <div class="kpi-sub">cumulative across late trains</div>
   </div>
   <div class="kpi">
-    <div class="kpi-label">Cancellations</div>
-    <div class="kpi-val bad" id="kpiCancelled">—</div>
-    <div class="kpi-sub">TRUST type 0006 — session</div>
+    <div class="kpi-label">Avg Delay (late trains)</div>
+    <div class="kpi-val warn" id="kpiCancelled">—</div>
+    <div class="kpi-sub">minutes per late service</div>
   </div>
   <div class="kpi">
     <div class="kpi-label">TRUST Coverage</div>
@@ -431,13 +431,13 @@
           </svg>
           <div class="otp-center">
             <span class="otp-pct" id="otpPct">—</span>
-            <span class="otp-sub">Right Time</span>
+            <span class="otp-sub">T-3</span>
           </div>
         </div>
         <div class="status-grid">
           <div class="status-row">
             <span class="status-dot" style="background:var(--green)"></span>
-            <span class="status-label">Right Time (&lt;1 min)</span>
+            <span class="status-label">On Time (&lt;1 min)</span>
             <span class="status-val" id="cntOnTime" style="color:var(--green)">0</span>
           </div>
           <div class="status-row">
@@ -446,19 +446,19 @@
             <span class="status-val" id="cntEarly" style="color:var(--blue)">0</span>
           </div>
           <div class="status-row">
+            <span class="status-dot" style="background:var(--signal)"></span>
+            <span class="status-label">T-3 zone (1–3 min late)</span>
+            <span class="status-val" id="cntPPMZone" style="color:var(--signal)">0</span>
+          </div>
+          <div class="status-row">
             <span class="status-dot" style="background:var(--amber)"></span>
-            <span class="status-label">PPM zone (1–5 min)</span>
-            <span class="status-val" id="cntPPMZone" style="color:var(--amber)">0</span>
+            <span class="status-label">Late &gt;3 min (fails T-3)</span>
+            <span class="status-val" id="cntLate" style="color:var(--amber)">0</span>
           </div>
           <div class="status-row">
             <span class="status-dot" style="background:var(--red)"></span>
-            <span class="status-label">Late (&gt;5 min)</span>
-            <span class="status-val" id="cntLate" style="color:var(--red)">0</span>
-          </div>
-          <div class="status-row">
-            <span class="status-dot" style="background:#7f1d1d"></span>
-            <span class="status-label">CaSL (&gt;30 min)</span>
-            <span class="status-val" id="cntCaSL" style="color:#f87171">0</span>
+            <span class="status-label">Severely late (&gt;15 min)</span>
+            <span class="status-val" id="cntCaSL" style="color:var(--red)">0</span>
           </div>
           <div class="status-row">
             <span class="status-dot" style="background:var(--text-3)"></span>
@@ -473,7 +473,7 @@
       <div id="distChart"></div>
 
       <!-- Session trend -->
-      <div class="section-head">Session Right Time trend</div>
+      <div class="section-head">Session T-3 trend</div>
       <div class="trend-wrap">
         <svg viewBox="0 0 260 52" preserveAspectRatio="none">
           <polygon id="trendFill" fill="rgba(217,255,67,0.07)" stroke="none" points=""/>
@@ -490,7 +490,7 @@
         </span>
         <span class="trend-stat-label">Now</span>
       </div>
-      <p class="footnote">CP7 primary measure: Right Time = within 1 min. PPM = within 5 min. CaSL = cancelled or &gt;30 min late. All derived from last TRUST reporting point, not final destination. Cancellations counted from TRUST type 0006 messages this session.</p>
+      <p class="footnote">CP7 regulatory metrics (Network Rail, April 2024–March 2029): T-3 (Time to 3) = primary punctuality measure, trains within 3 min of schedule — GB forecast ~84.3% (NW&amp;C ~82.2%). On Time = supplementary, within 1 min. Cancellations = % of planned services. NR Delay/1000mi = infrastructure-attributed delay (not computable from TRUST alone). All timing derived from last TRUST reporting point, not final destination. Cancellations from TRUST type 0006 messages this session.</p>
 
     </div>
   </div>
@@ -569,8 +569,9 @@ function compute() {
   const total  = trains.length;
 
   let late = 0, onTime = 0, early = 0, noData = 0;
-  let ppmZone = 0;  // LATE but within 5 min (PPM-passing, not right time)
-  let caslCount = 0; // >30 min late (CaSL territory in tracked trains)
+  let lateT3Zone = 0;   // LATE but ≤3 min — still T-3 compliant
+  let lateOver3  = 0;   // LATE >3 min — fails T-3
+  let severeCount = 0;  // LATE >15 min — severely late
   let totalDelayMins = 0;
   const bands = DIST_BANDS.map(() => 0);
   const areas = new Map();
@@ -584,8 +585,9 @@ function compute() {
       late++;
       const m = typeof t.delay === 'number' ? Math.abs(t.delay) : 0;
       totalDelayMins += m;
-      if (m <= 5)  ppmZone++;
-      if (m > 30)  caslCount++;
+      if (m <= 3)  lateT3Zone++;
+      else         lateOver3++;
+      if (m > 15)  severeCount++;
       for (let i = 0; i < DIST_BANDS.length; i++) {
         if (m >= DIST_BANDS[i].min && m <= DIST_BANDS[i].max) { bands[i]++; break; }
       }
@@ -597,24 +599,21 @@ function compute() {
 
   const withTrust = late + onTime + early;
 
-  // CP7 primary: Right Time = ON TIME only (within 1 min)
+  // CP7 primary: T-3 = ON TIME + EARLY + LATE ≤3 min
+  const t3Count = onTime + early + lateT3Zone;
+  const t3Pct   = withTrust > 0 ? Math.round(t3Count / withTrust * 100) : null;
+
+  // On Time: supplementary — strictly within 1 min (TRUST "ON TIME" status)
   const rtPct = withTrust > 0 ? Math.round(onTime / withTrust * 100) : null;
 
-  // PPM: ON TIME + EARLY + LATE ≤5 min
-  const ppmPct = withTrust > 0 ? Math.round((onTime + early + ppmZone) / withTrust * 100) : null;
-
-  // CaSL: >30 min late + session cancellations
-  const caslTotal = caslCount + cancelCount;
-  const caslPct   = withTrust > 0 ? ((caslTotal / withTrust) * 100).toFixed(1) : null;
-
-  const lateOver5 = late - ppmZone; // strictly >5 min late
-  const avgDelay  = late > 0 ? (totalDelayMins / late).toFixed(1) : null;
-  const coverage  = total > 0 ? Math.round(withTrust / total * 100) : 0;
+  const avgDelay = late > 0 ? (totalDelayMins / late).toFixed(1) : null;
+  const coverage = total > 0 ? Math.round(withTrust / total * 100) : 0;
 
   return {
-    total, late, onTime, early, noData, ppmZone, lateOver5, caslCount, caslTotal,
-    withTrust, rtPct, ppmPct, caslPct, totalDelayMins: Math.round(totalDelayMins),
-    avgDelay, coverage, bands, areas, typeCounts, typeLate,
+    total, late, onTime, early, noData, lateT3Zone, lateOver3, severeCount,
+    t3Count, t3Pct, rtPct, withTrust,
+    totalDelayMins: Math.round(totalDelayMins), avgDelay, coverage,
+    bands, areas, typeCounts, typeLate,
   };
 }
 
@@ -624,45 +623,38 @@ function refresh() {
   const now = new Date();
 
   // KPIs
-  set('kpiRT',        c.rtPct  !== null ? c.rtPct  + '%' : '—');
-  set('kpiPPM',       c.ppmPct !== null ? c.ppmPct + '%' : '—');
-  set('kpiCaSL',      c.caslPct !== null ? c.caslPct + '%' : '—');
+  set('kpiRT',        c.t3Pct !== null ? c.t3Pct + '%' : '—');
+  set('kpiPPM',       c.rtPct !== null ? c.rtPct + '%' : '—');
+  set('kpiCaSL',      cancelCount || '—');
   set('kpiDelayMins', c.totalDelayMins > 0 ? c.totalDelayMins : '—');
-  set('kpiCancelled', cancelCount || '—');
+  set('kpiCancelled', c.avgDelay !== null ? c.avgDelay + ' min' : '—');
   set('kpiCoverage',  c.total > 0 ? c.coverage + '%' : '—');
   set('perfTimestamp', now.toLocaleTimeString('en-GB'));
   document.getElementById('feedTime').textContent = c.total ? ' · ' + now.toLocaleTimeString('en-GB') : '';
 
-  // Colour Right Time KPI by CP7 health thresholds
+  // Colour T-3 KPI — CP7 thresholds (NW&C region baseline ~82.2%)
   const rtEl = document.getElementById('kpiRT');
-  if (rtEl && c.rtPct !== null) {
-    rtEl.className = 'kpi-val ' + (c.rtPct >= 65 ? 'good' : c.rtPct >= 50 ? 'warn' : 'bad');
+  if (rtEl && c.t3Pct !== null) {
+    rtEl.className = 'kpi-val ' + (c.t3Pct >= 84 ? 'good' : c.t3Pct >= 80 ? 'warn' : 'bad');
   }
-  // Colour PPM
+  // On Time — informational, no threshold colour
   const ppmEl = document.getElementById('kpiPPM');
-  if (ppmEl && c.ppmPct !== null) {
-    ppmEl.className = 'kpi-val ' + (c.ppmPct >= 85 ? 'good' : c.ppmPct >= 70 ? 'warn' : 'bad');
-  }
-  // Colour CaSL (lower is better — green if <3%)
-  const caslEl = document.getElementById('kpiCaSL');
-  if (caslEl && c.caslPct !== null) {
-    caslEl.className = 'kpi-val ' + (Number(c.caslPct) < 3 ? 'good' : Number(c.caslPct) < 5 ? 'warn' : 'bad');
-  }
+  if (ppmEl) ppmEl.className = 'kpi-val';
 
-  // Right Time ring (CP7 primary)
+  // T-3 ring (CP7 primary)
   const CIRC = 2 * Math.PI * 38;
-  const pct  = c.rtPct ?? 0;
+  const pct  = c.t3Pct ?? 0;
   const arc  = document.getElementById('otpArc');
   arc.style.strokeDashoffset = (CIRC - (pct / 100) * CIRC).toFixed(1);
-  arc.style.stroke = pct >= 65 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
-  set('otpPct', c.rtPct !== null ? c.rtPct + '%' : '—');
+  arc.style.stroke = pct >= 84 ? 'var(--green)' : pct >= 80 ? 'var(--amber)' : 'var(--red)';
+  set('otpPct', c.t3Pct !== null ? c.t3Pct + '%' : '—');
 
   // Status counts
   set('cntOnTime',  c.onTime);
   set('cntEarly',   c.early);
-  set('cntPPMZone', c.ppmZone);
-  set('cntLate',    c.lateOver5);
-  set('cntCaSL',    c.caslCount);
+  set('cntPPMZone', c.lateT3Zone);
+  set('cntLate',    c.lateOver3);
+  set('cntCaSL',    c.severeCount);
   set('cntNoData',  c.noData);
 
   // Delay distribution
@@ -675,9 +667,9 @@ function refresh() {
     </div>`
   ).join('');
 
-  // Right Time trend
-  if (c.rtPct !== null) {
-    otpHistory.push(c.rtPct);
+  // T-3 trend
+  if (c.t3Pct !== null) {
+    otpHistory.push(c.t3Pct);
     if (otpHistory.length > 80) otpHistory.shift();
   }
   renderTrend();
@@ -687,9 +679,9 @@ function refresh() {
     .filter(([, t]) => t.delayStatus === 'LATE' && typeof t.delay === 'number')
     .sort((a, b) => Math.abs(b[1].delay) - Math.abs(a[1].delay));
 
-  const crit = lateList.filter(([, t]) => Math.abs(t.delay) >= 5).length;
+  const crit = lateList.filter(([, t]) => Math.abs(t.delay) > 3).length;
   const badge = document.getElementById('critBadge');
-  badge.textContent = `${crit} train${crit !== 1 ? 's' : ''} ≥5 min late`;
+  badge.textContent = `${crit} train${crit !== 1 ? 's' : ''} failing T-3`;
   badge.className = 'panel-badge' + (crit > 0 ? ' alert' : '');
 
   const listEl = document.getElementById('delayList');
