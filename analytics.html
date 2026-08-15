@@ -159,7 +159,8 @@
       background: var(--panel-2);
       border: 1px solid var(--border-2);
       border-radius: 4px;
-      cursor: default;
+      cursor: pointer;
+      transition: opacity .15s, border-color .15s, background .15s;
     }
     .zb-dot  { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
     .zb-name { font: 500 10px var(--font); color: var(--text-2); white-space: nowrap; }
@@ -799,25 +800,37 @@ let cancelCount = 0;
 let reconnDelay = 2000;
 let sortMode = 'delay';
 const otpHistory = [];
+const selectedZones = new Set();
 
-// ── Zone bar drag-to-scroll ─────────────────────────────────────────
+// ── Zone bar drag-to-scroll + click-to-filter ───────────────────────
 (function () {
   const bar = document.getElementById('zoneBar');
-  let dragging = false, startX = 0, scrollStart = 0;
+  let dragging = false, dragMoved = false, startX = 0, scrollStart = 0;
   bar.addEventListener('mousedown', e => {
-    dragging  = true;
-    startX    = e.pageX;
+    dragging    = true;
+    dragMoved   = false;
+    startX      = e.pageX;
     scrollStart = bar.scrollLeft;
     bar.style.cursor = 'grabbing';
     e.preventDefault();
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
+    if (Math.abs(e.pageX - startX) > 4) dragMoved = true;
     bar.scrollLeft = scrollStart - (e.pageX - startX);
   });
   window.addEventListener('mouseup', () => {
     dragging = false;
     bar.style.cursor = '';
+  });
+  bar.addEventListener('click', e => {
+    if (dragMoved) return;
+    const chip = e.target.closest('[data-zone-id]');
+    if (!chip) return;
+    const zid = chip.dataset.zoneId;
+    if (selectedZones.has(zid)) selectedZones.delete(zid);
+    else selectedZones.add(zid);
+    refresh();
   });
 })();
 
@@ -838,29 +851,44 @@ function setFeed(state, label) {
 
 // ── Compute ────────────────────────────────────────────────────────
 function compute() {
-  const trains = Object.values(trainData);
-  const total  = trains.length;
+  const allTrains = Object.values(trainData);
 
-  let late = 0, onTime = 0, early = 0, noData = 0;
-  let lateT3Zone = 0;   // LATE but ≤3 min — still T-3 compliant
-  let lateOver3  = 0;   // LATE >3 min — fails T-3
-  let severeCount = 0;  // LATE >15 min — severely late
-  let totalDelayMins = 0;
-  const bands = DIST_BANDS.map(() => 0);
-  const areas     = new Map(); // td → total train count
-  const lateAreas = new Map(); // td → late train count
-  const hotspots  = new Map(); // location → { count, totalDelay }
-  const typeCounts = {}, typeLate = {};
+  // Zone stats always from full data so zone bar is unaffected by filter
   const zoneStats = {};
   for (const z of ZONES) zoneStats[z.id] = { total: 0, withTrust: 0, late: 0, lateT3: 0, totalDelay: 0 };
+  for (const t of allTrains) {
+    const zid = t.td ? TD_TO_ZONE[t.td] : null;
+    if (!zid) continue;
+    zoneStats[zid].total++;
+    if (t.delayStatus === 'LATE') {
+      const m = typeof t.delay === 'number' ? Math.abs(t.delay) : 0;
+      zoneStats[zid].withTrust++;
+      zoneStats[zid].late++;
+      if (m <= 3) zoneStats[zid].lateT3++;
+      zoneStats[zid].totalDelay += m;
+    } else if (t.delayStatus === 'EARLY' || t.delayStatus === 'ON TIME') {
+      zoneStats[zid].withTrust++;
+    }
+  }
+
+  // Apply zone filter for all other metrics
+  const trains = selectedZones.size > 0
+    ? allTrains.filter(t => t.td && selectedZones.has(TD_TO_ZONE[t.td]))
+    : allTrains;
+
+  const total  = trains.length;
+  let late = 0, onTime = 0, early = 0, noData = 0;
+  let lateT3Zone = 0, lateOver3 = 0, severeCount = 0;
+  let totalDelayMins = 0;
+  const bands = DIST_BANDS.map(() => 0);
+  const areas     = new Map();
+  const lateAreas = new Map();
+  const hotspots  = new Map();
+  const typeCounts = {}, typeLate = {};
 
   for (const t of trains) {
     typeCounts[t.type] = (typeCounts[t.type] || 0) + 1;
     if (t.td) areas.set(t.td, (areas.get(t.td) || 0) + 1);
-
-    // Zone tracking
-    const zid = t.td ? TD_TO_ZONE[t.td] : null;
-    if (zid) zoneStats[zid].total++;
 
     if (t.delayStatus === 'LATE') {
       late++;
@@ -881,21 +909,15 @@ function compute() {
         h.totalDelay += m;
         hotspots.set(locKey, h);
       }
-      if (zid) { zoneStats[zid].withTrust++; zoneStats[zid].late++; if (m <= 3) zoneStats[zid].lateT3++; zoneStats[zid].totalDelay += m; }
-    } else if (t.delayStatus === 'EARLY')   { early++;  if (zid) zoneStats[zid].withTrust++; }
-    else if (t.delayStatus === 'ON TIME')   { onTime++; if (zid) zoneStats[zid].withTrust++; }
-    else                                     { noData++; }
+    } else if (t.delayStatus === 'EARLY')  { early++;  }
+    else if (t.delayStatus === 'ON TIME')  { onTime++; }
+    else                                    { noData++; }
   }
 
   const withTrust = late + onTime + early;
-
-  // CP7 primary: T-3 = ON TIME + EARLY + LATE ≤3 min
   const t3Count = onTime + early + lateT3Zone;
   const t3Pct   = withTrust > 0 ? Math.round(t3Count / withTrust * 100) : null;
-
-  // On Time: supplementary — strictly within 1 min (TRUST "ON TIME" status)
-  const rtPct = withTrust > 0 ? Math.round(onTime / withTrust * 100) : null;
-
+  const rtPct   = withTrust > 0 ? Math.round(onTime / withTrust * 100) : null;
   const avgDelay = late > 0 ? (totalDelayMins / late).toFixed(1) : null;
   const coverage = total > 0 ? Math.round(withTrust / total * 100) : 0;
 
@@ -964,9 +986,10 @@ function refresh() {
   }
   renderTrend();
 
-  // Critical delays
+  // Critical delays (filtered by zone selection)
   const lateList = Object.entries(trainData)
-    .filter(([, t]) => t.delayStatus === 'LATE' && typeof t.delay === 'number')
+    .filter(([, t]) => t.delayStatus === 'LATE' && typeof t.delay === 'number' &&
+      (selectedZones.size === 0 || (t.td && selectedZones.has(TD_TO_ZONE[t.td]))))
     .sort((a, b) => {
       if (sortMode === 'time') {
         const ta = a[1].planned || 0, tb = b[1].planned || 0;
@@ -1021,10 +1044,13 @@ function refresh() {
   set('snapLate',     c.late > 0 ? `${c.late} (${Math.round(c.late / Math.max(c.total, 1) * 100)}%)` : '0');
   set('snapDensity',  c.areas.size > 0 ? (c.total / c.areas.size).toFixed(1) : '—');
 
-  // Zone bar (full-width strip above main grid)
+  // Zone bar (full-width strip above main grid) — always from full data
+  const zoneBar = document.getElementById('zoneBar');
+  const prevScroll = zoneBar.scrollLeft;
   const activeZones = ZONES.filter(z => c.zoneStats[z.id].total > 0)
     .sort((a, b) => c.zoneStats[b.id].total - c.zoneStats[a.id].total);
-  document.getElementById('zoneBar').innerHTML = activeZones.length
+  const hasFilter = selectedZones.size > 0;
+  zoneBar.innerHTML = activeZones.length
     ? activeZones.map(z => {
         const s  = c.zoneStats[z.id];
         const t3 = s.withTrust > 0
@@ -1032,7 +1058,11 @@ function refresh() {
           : null;
         const t3Color = t3 === null ? 'var(--text-3)' : t3 >= 84 ? 'var(--green)' : t3 >= 80 ? 'var(--amber)' : 'var(--red)';
         const lateHtml = s.late ? `<span class="zb-sep"></span><span class="zb-late">${s.late}L</span>` : '';
-        return `<div class="zb-chip">
+        const isSel = selectedZones.has(z.id);
+        const chipStyle = isSel
+          ? `border-color:${z.color};background:${z.color}26;`
+          : hasFilter ? 'opacity:0.38;' : '';
+        return `<div class="zb-chip" data-zone-id="${z.id}" style="${chipStyle}">
           <span class="zb-dot" style="background:${z.color}"></span>
           <span class="zb-name">${esc(z.name)}</span>
           <span class="zb-trains">${s.total}</span>
@@ -1042,6 +1072,7 @@ function refresh() {
         </div>`;
       }).join('')
     : '<div style="font:500 10px var(--mono);color:var(--text-3)">Waiting…</div>';
+  zoneBar.scrollLeft = prevScroll;
 
   // Active corridors with late count
   const topAreas = [...c.areas.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
