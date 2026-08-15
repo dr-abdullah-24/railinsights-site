@@ -369,6 +369,40 @@
     /* ── PPM NOTE ──────────────────────────────────────────────── */
     .footnote { font: 400 9px var(--mono); color: var(--text-3); margin-top: 10px; line-height: 1.5; }
 
+    /* ── NETWORK SNAPSHOT ──────────────────────────────────────── */
+    .net-snap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-bottom: 4px;
+    }
+    .snap-tile {
+      background: var(--panel-2);
+      border: 1px solid var(--border-2);
+      border-radius: 5px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .snap-val   { font: 700 20px/1 var(--font); color: var(--text); letter-spacing: -.02em; }
+    .snap-label { font: 600 8px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
+
+    /* ── HOTSPOT LIST ───────────────────────────────────────────── */
+    .hot-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border-2);
+    }
+    .hot-row:last-child { border-bottom: none; }
+    .hot-loc   { flex: 1; font: 500 11px var(--font); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hot-cnt   { font: 600 9px var(--mono); color: var(--text-3); min-width: 20px; text-align: right; flex-shrink: 0; }
+    .hot-mins  { font: 700 11px var(--mono); color: var(--red); min-width: 38px; text-align: right; flex-shrink: 0; }
+    .hot-bar-wrap { width: 36px; height: 3px; background: var(--panel-2); border-radius: 2px; flex-shrink: 0; }
+    .hot-bar   { height: 100%; border-radius: 2px; background: var(--red); }
+
     /* ── SCROLLBAR ─────────────────────────────────────────────── */
     * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
   </style>
@@ -528,14 +562,39 @@
     </div>
   </div>
 
-  <!-- RIGHT: Corridors + service types -->
+  <!-- RIGHT: Network statistics -->
   <div class="panel">
     <div class="panel-head">
-      <span class="panel-title">Network Activity</span>
+      <span class="panel-title">Network Statistics</span>
+      <span class="panel-badge" id="netTimestamp">--:--:--</span>
     </div>
     <div class="panel-body">
-      <div class="section-head" style="margin-top:0;border-top:none;padding-top:0">Active control areas</div>
+
+      <div class="section-head" style="margin-top:0;border-top:none;padding-top:0">Network snapshot</div>
+      <div class="net-snap">
+        <div class="snap-tile">
+          <span class="snap-val" id="snapTrains">—</span>
+          <span class="snap-label">Active trains</span>
+        </div>
+        <div class="snap-tile">
+          <span class="snap-val" id="snapAreas">—</span>
+          <span class="snap-label">TD areas</span>
+        </div>
+        <div class="snap-tile">
+          <span class="snap-val" id="snapLate">—</span>
+          <span class="snap-label">Late trains</span>
+        </div>
+        <div class="snap-tile">
+          <span class="snap-val" id="snapDensity">—</span>
+          <span class="snap-label">Trains / area</span>
+        </div>
+      </div>
+
+      <div class="section-head">Active control areas</div>
       <div id="corridorList"><div class="empty-msg">Waiting…</div></div>
+
+      <div class="section-head">Delay hotspots</div>
+      <div id="hotspotList"><div class="empty-msg">Waiting…</div></div>
 
       <div class="section-head">Service type performance</div>
       <div id="typeList"><div class="empty-msg">Waiting…</div></div>
@@ -605,7 +664,9 @@ function compute() {
   let severeCount = 0;  // LATE >15 min — severely late
   let totalDelayMins = 0;
   const bands = DIST_BANDS.map(() => 0);
-  const areas = new Map();
+  const areas     = new Map(); // td → total train count
+  const lateAreas = new Map(); // td → late train count
+  const hotspots  = new Map(); // location → { count, totalDelay }
   const typeCounts = {}, typeLate = {};
 
   for (const t of trains) {
@@ -623,6 +684,14 @@ function compute() {
         if (m >= DIST_BANDS[i].min && m <= DIST_BANDS[i].max) { bands[i]++; break; }
       }
       typeLate[t.type] = (typeLate[t.type] || 0) + 1;
+      if (t.td) lateAreas.set(t.td, (lateAreas.get(t.td) || 0) + 1);
+      const locKey = t.name || (t.td ? `${t.td}` : null);
+      if (locKey) {
+        const h = hotspots.get(locKey) || { count: 0, totalDelay: 0 };
+        h.count++;
+        h.totalDelay += m;
+        hotspots.set(locKey, h);
+      }
     } else if (t.delayStatus === 'EARLY')   { early++; }
     else if (t.delayStatus === 'ON TIME')   { onTime++; }
     else                                     { noData++; }
@@ -644,7 +713,7 @@ function compute() {
     total, late, onTime, early, noData, lateT3Zone, lateOver3, severeCount,
     t3Count, t3Pct, rtPct, withTrust,
     totalDelayMins: Math.round(totalDelayMins), avgDelay, coverage,
-    bands, areas, typeCounts, typeLate,
+    bands, areas, lateAreas, hotspots, typeCounts, typeLate,
   };
 }
 
@@ -755,17 +824,42 @@ function refresh() {
     }).join('');
   }
 
-  // Active corridors
+  // Network snapshot
+  set('netTimestamp', now.toLocaleTimeString('en-GB'));
+  set('snapTrains',   c.total || '—');
+  set('snapAreas',    c.areas.size || '—');
+  set('snapLate',     c.late > 0 ? `${c.late} (${Math.round(c.late / Math.max(c.total, 1) * 100)}%)` : '0');
+  set('snapDensity',  c.areas.size > 0 ? (c.total / c.areas.size).toFixed(1) : '—');
+
+  // Active corridors with late count
   const topAreas = [...c.areas.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
   const maxArea  = topAreas[0]?.[1] || 1;
   document.getElementById('corridorList').innerHTML = topAreas.length
-    ? topAreas.map(([td, n]) => `
-        <div class="data-row">
+    ? topAreas.map(([td, n]) => {
+        const lateN = c.lateAreas.get(td) || 0;
+        return `<div class="data-row">
           <span class="data-code">${esc(td)}</span>
           <div class="data-bar-wrap"><div class="data-bar" style="width:${Math.round(n/maxArea*100)}%;background:var(--signal)"></div></div>
           <span class="data-count">${n}</span>
-        </div>`).join('')
+          <span class="data-late" style="color:${lateN ? 'var(--red)' : 'var(--text-3)'}">${lateN ? lateN + ' late' : '—'}</span>
+        </div>`;
+      }).join('')
     : '<div class="empty-msg">Waiting…</div>';
+
+  // Delay hotspots — top locations by total delay minutes
+  const topHot = [...c.hotspots.entries()]
+    .sort((a, b) => b[1].totalDelay - a[1].totalDelay)
+    .slice(0, 8);
+  const maxHot = topHot[0]?.[1].totalDelay || 1;
+  document.getElementById('hotspotList').innerHTML = topHot.length
+    ? topHot.map(([loc, h]) => `
+        <div class="hot-row">
+          <div class="hot-loc">${esc(loc)}</div>
+          <div class="hot-bar-wrap"><div class="hot-bar" style="width:${Math.round(h.totalDelay/maxHot*100)}%"></div></div>
+          <span class="hot-cnt">${h.count}</span>
+          <span class="hot-mins">${h.totalDelay}m</span>
+        </div>`).join('')
+    : '<div class="empty-msg">No delays recorded</div>';
 
   // Service type performance
   const typeRows = Object.entries(TYPE_CFG).filter(([k]) => c.typeCounts[k]);
