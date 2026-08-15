@@ -1308,7 +1308,7 @@ function renderWeather() {
       <span class="wx-readings">
         <span class="wx-val ${tempCls}">${w.temp}°</span>
         <span class="wx-val ${gustCls}">${w.gusts}mph</span>
-        ${w.precip > 0 ? `<span class="wx-val ${rainCls}">${w.precip}mm</span>` : ''}
+        <span class="wx-val ${rainCls}" style="${!rainCls && w.precip === 0 ? 'opacity:0.35' : ''}">${w.precip}mm</span>
       </span>
     </div>`;
   }).join('');
