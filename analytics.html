@@ -349,6 +349,23 @@
     .data-count { font: 600 10.5px var(--mono); color: var(--text-2); min-width: 22px; text-align: right; flex-shrink: 0; }
     .data-late  { font: 600 9px var(--mono); min-width: 42px; text-align: right; flex-shrink: 0; }
 
+    /* ── SORT BUTTONS ──────────────────────────────────────────── */
+    .sort-btns { display: flex; gap: 4px; }
+    .sort-btn {
+      font: 600 8px var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      background: none;
+      border: 1px solid var(--border-2);
+      border-radius: 3px;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: color .12s, border-color .12s, background .12s;
+    }
+    .sort-btn:hover { color: var(--text); border-color: rgba(255,255,255,.18); }
+    .sort-btn.active { color: var(--signal); border-color: var(--signal); background: rgba(217,255,67,.06); }
+
     /* ── PPM NOTE ──────────────────────────────────────────────── */
     .footnote { font: 400 9px var(--mono); color: var(--text-3); margin-top: 10px; line-height: 1.5; }
 
@@ -499,7 +516,12 @@
   <div class="panel">
     <div class="panel-head">
       <span class="panel-title">Critical Delays</span>
-      <span class="panel-badge alert" id="critBadge">0 trains &ge;5 min late</span>
+      <div class="sort-btns" id="sortBtns">
+        <button class="sort-btn active" data-sort="delay">Delay ↓</button>
+        <button class="sort-btn" data-sort="time">Time</button>
+        <button class="sort-btn" data-sort="type">Type</button>
+      </div>
+      <span class="panel-badge" id="critBadge">—</span>
     </div>
     <div class="panel-body" id="delayList">
       <div class="empty-msg">Waiting for TRUST movement data…</div>
@@ -554,7 +576,16 @@ const DIST_BANDS = [
 let trainData = {};
 let cancelCount = 0;
 let reconnDelay = 2000;
+let sortMode = 'delay';
 const otpHistory = [];
+
+document.getElementById('sortBtns').addEventListener('click', e => {
+  const btn = e.target.closest('[data-sort]');
+  if (!btn) return;
+  sortMode = btn.dataset.sort;
+  document.querySelectorAll('#sortBtns .sort-btn').forEach(b => b.classList.toggle('active', b === btn));
+  refresh();
+});
 
 // ── Feed state ─────────────────────────────────────────────────────
 function setFeed(state, label) {
@@ -674,10 +705,20 @@ function refresh() {
   }
   renderTrend();
 
-  // Critical delays — all late trains sorted by delay desc
+  // Critical delays
   const lateList = Object.entries(trainData)
     .filter(([, t]) => t.delayStatus === 'LATE' && typeof t.delay === 'number')
-    .sort((a, b) => Math.abs(b[1].delay) - Math.abs(a[1].delay));
+    .sort((a, b) => {
+      if (sortMode === 'time') {
+        const ta = a[1].planned || 0, tb = b[1].planned || 0;
+        return ta !== tb ? ta - tb : Math.abs(b[1].delay) - Math.abs(a[1].delay);
+      }
+      if (sortMode === 'type') {
+        const ta = a[1].type || 'z', tb = b[1].type || 'z';
+        return ta !== tb ? ta.localeCompare(tb) : Math.abs(b[1].delay) - Math.abs(a[1].delay);
+      }
+      return Math.abs(b[1].delay) - Math.abs(a[1].delay); // delay desc
+    });
 
   const crit = lateList.filter(([, t]) => Math.abs(t.delay) > 3).length;
   const badge = document.getElementById('critBadge');
