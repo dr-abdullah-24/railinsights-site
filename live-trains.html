@@ -843,6 +843,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/berth-locations.js"></script>
 <script src="data/uk-boundary.js"></script>
+<script src="data/berth-snap.js"></script>
 <script>
 'use strict';
 
@@ -887,6 +888,15 @@ L.control.zoom({ position: 'topright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 19
+}).addTo(map);
+
+// Railway network overlay — OpenRailwayMap standard style
+// Shows every track, junction, and signal box as coloured lines
+let ormVisible = true;
+const ormTiles = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
+  attribution: 'Railway: <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a> (CC BY-SA)',
+  maxZoom: 19,
+  opacity: 0.72
 }).addTo(map);
 
 map.createPane('ukBoundaryPane');
@@ -957,12 +967,20 @@ function loadFreightScript(cb) {
 }
 
 function toggleTrackLayer() {
-  tracksVisible = !tracksVisible;
+  ormVisible = !ormVisible;
   const btn = document.getElementById('tracksBtn');
   const legend = document.getElementById('tracksLegend');
-  if (tracksVisible) {
+  if (ormVisible) {
     btn.classList.add('active');
-    legend.classList.add('visible');
+    ormTiles.addTo(map);
+  } else {
+    btn.classList.remove('active');
+    map.removeLayer(ormTiles);
+  }
+  // Freight gauge layer toggled alongside ORM
+  tracksVisible = ormVisible;
+  legend.classList.toggle('visible', ormVisible);
+  if (ormVisible) {
     if (freightLoaded) {
       if (freightLayer) freightLayer.addTo(map);
     } else {
@@ -970,13 +988,11 @@ function toggleTrackLayer() {
       loadFreightScript(() => {
         freightLoaded = true;
         freightLayer = buildFreightLayer();
-        if (freightLayer && tracksVisible) freightLayer.addTo(map);
+        if (freightLayer && ormVisible) freightLayer.addTo(map);
         btn.style.opacity = '';
       });
     }
   } else {
-    btn.classList.remove('active');
-    legend.classList.remove('visible');
     if (freightLayer) map.removeLayer(freightLayer);
   }
 }
@@ -1101,6 +1117,11 @@ function trainsInsideUk(trains) {
 const trainLayer = L.layerGroup().addTo(map);
 const trajectoryLayer = L.layerGroup().addTo(map);
 
+// Mark ORM button active on load (layer starts on)
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('tracksBtn')?.classList.add('active');
+});
+
 // ── State ────────────────────────────────────────────────────────────────────
 let trainData    = {};           // headcode → server train info
 const trainMk    = new Map();    // headcode → L.Marker
@@ -1168,15 +1189,22 @@ function applyState(incomingTrains) {
   // Add / update
   for (const [hc, t] of Object.entries(newTrains)) {
     if (!t.lat || !t.lon) continue;
-    recordTrajectoryPoint(hc, t);
+
+    // Prefer OS-grid-derived coordinates from berth-snap lookup (metre-level precision)
+    // over server-sent positions which are interpolated from station name matching
+    const _s = window.BERTH_SNAP?.[`${t.td}:${t.berth}`];
+    const lat = _s ? _s[0] : t.lat;
+    const lon = _s ? _s[1] : t.lon;
+
+    recordTrajectoryPoint(hc, { ...t, lat, lon });
 
     if (trainMk.has(hc)) {
       const mk = trainMk.get(hc);
-      mk.setLatLng([t.lat, t.lon]);
+      mk.setLatLng([lat, lon]);
       mk.setIcon(makeIcon(hc, t.type, t.delay, t.delayStatus));
       setMarkerVisibility(hc, shouldShow(hc, t));
     } else {
-      const mk = L.marker([t.lat, t.lon], {
+      const mk = L.marker([lat, lon], {
         icon: makeIcon(hc, t.type, t.delay, t.delayStatus),
         zIndexOffset: zOrder(t.type),
       });
