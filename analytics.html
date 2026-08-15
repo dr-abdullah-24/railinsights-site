@@ -135,6 +135,37 @@
     .kpi-val.signal { color: var(--signal); }
     .kpi-sub { font: 500 9px var(--mono); color: var(--text-3); white-space: nowrap; }
 
+    /* ── ZONE BAR ──────────────────────────────────────────────── */
+    .zone-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .zone-bar::-webkit-scrollbar { display: none; }
+    .zb-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      padding: 4px 10px 4px 7px;
+      background: var(--panel-2);
+      border: 1px solid var(--border-2);
+      border-radius: 4px;
+      cursor: default;
+    }
+    .zb-dot  { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+    .zb-name { font: 500 10px var(--font); color: var(--text-2); white-space: nowrap; }
+    .zb-trains { font: 600 9px var(--mono); color: var(--text-3); margin-left: 2px; }
+    .zb-sep  { width: 1px; height: 12px; background: var(--border-2); }
+    .zb-t3   { font: 700 10px var(--mono); white-space: nowrap; }
+    .zb-late { font: 600 9px var(--mono); color: var(--red); margin-left: 1px; }
+
     /* ── MAIN GRID ─────────────────────────────────────────────── */
     .main {
       flex: 1;
@@ -476,6 +507,11 @@
   </div>
 </div>
 
+<!-- ── ZONE BAR ────────────────────────────────────────────────────── -->
+<div class="zone-bar" id="zoneBar">
+  <div class="empty-msg" style="font:500 10px var(--mono);color:var(--text-3);padding:0">Waiting…</div>
+</div>
+
 <!-- ── MAIN ───────────────────────────────────────────────────────── -->
 <div class="main">
 
@@ -604,9 +640,6 @@
           <span class="snap-label">Trains / area</span>
         </div>
       </div>
-
-      <div class="section-head">Zone performance</div>
-      <div id="zoneList"><div class="empty-msg">Waiting…</div></div>
 
       <div class="section-head">Active control areas</div>
       <div id="corridorList"><div class="empty-msg">Waiting…</div></div>
@@ -965,25 +998,27 @@ function refresh() {
   set('snapLate',     c.late > 0 ? `${c.late} (${Math.round(c.late / Math.max(c.total, 1) * 100)}%)` : '0');
   set('snapDensity',  c.areas.size > 0 ? (c.total / c.areas.size).toFixed(1) : '—');
 
-  // Zone performance
+  // Zone bar (full-width strip above main grid)
   const activeZones = ZONES.filter(z => c.zoneStats[z.id].total > 0)
     .sort((a, b) => c.zoneStats[b.id].total - c.zoneStats[a.id].total);
-  document.getElementById('zoneList').innerHTML = activeZones.length
+  document.getElementById('zoneBar').innerHTML = activeZones.length
     ? activeZones.map(z => {
         const s  = c.zoneStats[z.id];
         const t3 = s.withTrust > 0
           ? Math.round((s.withTrust - s.late + s.lateT3) / s.withTrust * 100)
           : null;
         const t3Color = t3 === null ? 'var(--text-3)' : t3 >= 84 ? 'var(--green)' : t3 >= 80 ? 'var(--amber)' : 'var(--red)';
-        return `<div class="zone-row">
-          <span class="zone-dot" style="background:${z.color}"></span>
-          <span class="zone-name">${esc(z.name)}</span>
-          <span class="zone-trains">${s.total}</span>
-          <span class="zone-t3" style="color:${t3Color}">${t3 !== null ? t3 + '%' : '—'}</span>
-          <span class="zone-late" style="color:${s.late ? 'var(--red)' : 'var(--text-3)'}">${s.late ? s.late + ' late' : 'OK'}</span>
+        const lateHtml = s.late ? `<span class="zb-sep"></span><span class="zb-late">${s.late}L</span>` : '';
+        return `<div class="zb-chip">
+          <span class="zb-dot" style="background:${z.color}"></span>
+          <span class="zb-name">${esc(z.name)}</span>
+          <span class="zb-trains">${s.total}</span>
+          <span class="zb-sep"></span>
+          <span class="zb-t3" style="color:${t3Color}">${t3 !== null ? t3 + '%' : '—'}</span>
+          ${lateHtml}
         </div>`;
       }).join('')
-    : '<div class="empty-msg">Waiting…</div>';
+    : '<div style="font:500 10px var(--mono);color:var(--text-3)">Waiting…</div>';
 
   // Active corridors with late count
   const topAreas = [...c.areas.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
