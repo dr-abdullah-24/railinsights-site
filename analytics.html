@@ -701,6 +701,11 @@
             <span class="status-label">Cancelled (session)</span>
             <span class="status-val" id="frtCancelled" style="color:var(--amber)">—</span>
           </div>
+          <div class="status-row">
+            <span class="status-dot" style="background:var(--text-3)"></span>
+            <span class="status-label">No TRUST data</span>
+            <span class="status-val" id="frtNoData" style="color:var(--text-3)">—</span>
+          </div>
         </div>
       </div>
 
@@ -1031,7 +1036,7 @@ function compute() {
   let paxWithTrust = 0, paxLateT3 = 0, paxLate = 0, paxOnTime = 0, paxEarly = 0;
   // Freight performance metrics
   let frtWithTrust = 0, frtOnTime = 0, frtLateT15 = 0, frtLateOver15 = 0;
-  let frtCancelled = 0, frtTotalDelay = 0, frtLate = 0;
+  let frtCancelled = 0, frtTotalDelay = 0, frtLate = 0, frtNoData = 0;
   const bands = DIST_BANDS.map(() => 0);
   const areas     = new Map();
   const lateAreas = new Map();
@@ -1066,7 +1071,7 @@ function compute() {
       if (t.type === 'freight') { frtWithTrust++; frtLate++; frtTotalDelay += m; if (m <= 15) frtLateT15++; else frtLateOver15++; }
     } else if (t.delayStatus === 'EARLY')  { early++;  if (isPax) { paxWithTrust++; paxEarly++; } if (t.type === 'freight') { frtWithTrust++; frtOnTime++; } }
     else if (t.delayStatus === 'ON TIME')  { onTime++; if (isPax) { paxWithTrust++; paxOnTime++; } if (t.type === 'freight') { frtWithTrust++; frtOnTime++; } }
-    else                                    { noData++; }
+    else                                    { noData++; if (t.type === 'freight') frtNoData++; }
     if (t.type === 'freight' && t.cancelled) frtCancelled++;
   }
 
@@ -1088,7 +1093,7 @@ function compute() {
     t3Count, t3Pct, rtPct, withTrust, paxWithTrust,
     totalDelayMins: Math.round(totalDelayMins), avgDelay, coverage,
     bands, areas, lateAreas, hotspots, zoneStats, typeCounts, typeLate,
-    fdmPct, fdmCount, frtWithTrust, frtOnTime, frtLateT15, frtCancelled, frtTotalDelay: Math.round(frtTotalDelay), frtAvgDelay, frtLate, frtLateOver15,
+    fdmPct, fdmCount, frtWithTrust, frtOnTime, frtLateT15, frtCancelled, frtTotalDelay: Math.round(frtTotalDelay), frtAvgDelay, frtLate, frtLateOver15, frtNoData,
   };
 }
 
@@ -1132,6 +1137,7 @@ function refresh() {
   set('frtTotalDelay', c.frtTotalDelay > 0 ? c.frtTotalDelay + ' min' : '—');
   set('frtAvgDelay',   c.frtAvgDelay !== null ? c.frtAvgDelay + ' min' : '—');
   set('frtWithTrust',  c.frtWithTrust > 0 ? c.frtWithTrust : '—');
+  set('frtNoData',     c.frtNoData > 0 ? c.frtNoData : '0');
 
   // Status counts
   set('cntOnTime',  c.onTime);
