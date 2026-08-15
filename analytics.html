@@ -734,7 +734,7 @@ function refresh() {
         const lateN    = c.typeLate[k] || 0;
         const latePct  = count > 0 ? Math.round(lateN / count * 100) : 0;
         return `<div class="data-row">
-          <span class="data-code" style="color:${cfg.color};border-color:${cfg.color}22">${esc(cfg.label.split(' ')[0])}</span>
+          <span class="data-code" style="background:${cfg.color};color:#fff;border-color:${cfg.color}">${esc(cfg.label.split(' ')[0])}</span>
           <span class="data-label">${esc(cfg.label)}</span>
           <span class="data-count">${count}</span>
           <span class="data-late" style="color:${lateN ? 'var(--red)' : 'var(--text-3)'}">${lateN ? lateN + ' late' : 'OK'}</span>
