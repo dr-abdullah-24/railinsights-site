@@ -671,7 +671,6 @@
   <div class="panel">
     <div class="panel-head">
       <span class="panel-title">Network Statistics</span>
-      <span class="panel-badge" id="netTimestamp">--:--:--</span>
     </div>
     <div class="panel-body">
 
@@ -1105,8 +1104,7 @@ function refresh() {
   }
 
   // Network snapshot
-  set('netTimestamp', now.toLocaleTimeString('en-GB'));
-  set('snapTrains',   c.total || '—');
+set('snapTrains',   c.total || '—');
   set('snapAreas',    c.areas.size || '—');
   set('snapLate',     c.late > 0 ? `${c.late} (${Math.round(c.late / Math.max(c.total, 1) * 100)}%)` : '0');
   set('snapDensity',  c.areas.size > 0 ? (c.total / c.areas.size).toFixed(1) : '—');
