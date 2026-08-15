@@ -556,8 +556,8 @@
   </div>
   <div class="kpi" id="wxKpi">
     <div class="kpi-label">UK Weather</div>
-    <div class="kpi-val" id="wxKpiVal" style="font-size:18px">—</div>
-    <div class="kpi-sub" id="wxKpiSub">fetching…</div>
+    <div class="kpi-val" id="wxKpiVal" style="font-size:15px;letter-spacing:-.01em">—</div>
+    <div class="kpi-sub" id="wxKpiSub" style="white-space:normal;line-height:1.4">fetching…</div>
   </div>
 </div>
 
@@ -1326,14 +1326,26 @@ function renderWeather() {
   const wxValEl = document.getElementById('wxKpiVal');
   const wxSubEl = document.getElementById('wxKpiSub');
   if (hazardZones.length) {
-    // Show most severe alert in the tile
-    const top = hazardZones[0].alerts[0]; // highest-priority zone first
-    wxValEl.textContent = `${top.icon} ${top.label}`;
-    wxValEl.className = `kpi-val wx-level-${top.level}`;
-    wxSubEl.textContent = hazardZones[0].name;
+    // Collect worst alert per zone, sort red first then amber
+    const levelOrder = { red: 0, amber: 1, blue: 2 };
+    const sorted = [...hazardZones].sort((a, b) =>
+      levelOrder[a.alerts[0].level] - levelOrder[b.alerts[0].level]);
+    const topAlert = sorted[0].alerts[0];
+    const worstLevel = topAlert.level;
+
+    if (sorted.length === 1) {
+      wxValEl.textContent = `${topAlert.icon} ${topAlert.label}`;
+      wxSubEl.textContent = sorted[0].name;
+    } else {
+      wxValEl.textContent = `${topAlert.icon} ${sorted.length} zone alert${sorted.length > 1 ? 's' : ''}`;
+      wxSubEl.textContent = sorted.map(z => z.name.split(' ')[0]).join(' · ');
+    }
+    wxValEl.className = `kpi-val wx-level-${worstLevel}`;
+    wxValEl.style.fontSize = '15px';
   } else {
     wxValEl.textContent = `${wxConditionIcon(worstCode)} ${minT}–${maxT}°`;
     wxValEl.className = 'kpi-val';
+    wxValEl.style.fontSize = '15px';
     wxSubEl.textContent = `peak ${maxG}mph gusts${maxP > 0 ? ` · ${maxP}mm rain` : ''}`;
   }
 
