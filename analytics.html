@@ -615,6 +615,70 @@ const WS_URL = (() => {
   return 'wss://railinsights-site-5jfi.onrender.com';
 })();
 
+const TD_NAMES = {
+  A2:'Ashford IECC B',       A3:'Ashford Front-End',    AD:'Ashford IECC A',
+  AL:'Alnmouth',             AN:'Allington Jn',         AS:'Aston',
+  AW:'Acton Wells',
+  B1:'Strawberry Hill',      B2:'Ascot',                B3:'Farncombe',
+  BA:'Barnsley',             BE:'Basingstoke',          BG:'Bromsgrove',
+  BM:'Barnham',              BP:'Basingstoke (Poole)',  BS:'Barnes',
+  BU:'Burton Area',          BX:'Basingstoke (WoE)',
+  C0:'CVLICC TAM Area',      C1:'Newport Corridor',     C2:'Cardiff Area',
+  C3:'Shrewsbury North',     C5:'North Wales Coast',    C6:'Swansea Area',
+  CA:'Cambridge',            CC:'Colchester',           CD:'Castleford',
+  CE:'Crewe PSB',            CH:'Chichester',           CV:'Cherwell Valley',
+  CY:'Coventry',
+  D0:'Bristol Temple Meads', D1:'Reading IECC A',       D2:'Reading IECC B',
+  D3:'Paddington Area',      D4:'Hayes Area',           D5:'Didcot',
+  D6:'Maidenhead Area',      D7:'Swindon Area',         D9:'Stoke Gifford',
+  DA:'Acton Area',           DU:'Dundee',               DY:'Derby Area',
+  EA:'Edinburgh IECC A',     EB:'Edinburgh IECC B',     EC:'Edinburgh IECC C',
+  ED:'Edinburgh IECC D',     EE:'Edinburgh IECC E',     EH:'Eastleigh',
+  EK:'East Kent MCS',        EN:'Ely – Norwich',
+  G1:'Glasgow Area',         G2:'Paisley',              G3:'Newton/Whifflet',
+  G4:'Motherwell/Carstairs', HG:'Harrogate',            HT:'Havant',
+  IH:'Inverness Highlands',  IN:'Inverness',
+  KG:'Kettering Area',       KM:'Mid-Cornwall',         KN:'Kings Norton',
+  L2:'Lincoln East',         LC:'Leamington Corridor',  LN:'Lincoln',
+  LR:'Leicester Area',
+  M0:'Lime Street',          M1:'Liverpool Area',       M2:'Manchester North',
+  M3:'Manchester Central',   M4:'Wavertree East',       M5:'Wavertree West',
+  M6:'Macclesfield Area',    M7:'Crewe South',          M8:'Crewe Ind. Lines',
+  M9:'Blackpool Area',       MD:'Mansfield',            ME:'Marylebone Chilterns',
+  MH:'Machynlleth',          MO:'Morpeth',              MP:'Manchester Piccadilly',
+  MZ:'Manchester East',
+  NE:'North Erewash',        NJ:'Neasden Jn',           NK:'North Kent MCS',
+  NL:'Colchester NYL',       NM:'Nottingham',           NS:'New Street Station',
+  NX:'East London Line',
+  PH:'Plymouth',             PJ:'Proof House Jn',       PL:'Port Talbot Llanelli',
+  Q0:'Crossrail RCC',        Q1:'Stratford IECC',       Q2:'Shenfield IECC',
+  Q3:'West Anglia Area',     Q4:'Liverpool Street',     Q5:'LT&S Main',
+  Q6:'LT&S Loop',            Q7:'North London',
+  R1:'Rugby (Watford–Bletchley)', R2:'Rugby (Northampton)', R3:'Stafford Area',
+  R4:'Colwich Area',         R5:'Claydon MCS',          RT:'Marston Vale',
+  RW:'Rochdale West',
+  SJ:'Stourbridge',          SK:'Stoke-on-Trent',       SM:'Stirling Middle',
+  SS:'Sandhills Area',       SU:'Surbiton',             SV:'Stour Valley',
+  SX:'East Suffolk MCS',
+  T0:'Ashington',            T1:'Newcastle/Gateshead',  T2:'Darlington Area',
+  T3:'Sunderland Area',      TB:'Three Bridges',        TD:'Telford',
+  TE:'Tonbridge',            TH:'Thrumpton',            TN:'Chesterfield Area',
+  TW:'Tweedmouth',
+  WA:'Warrington PSB',       WE:'Worksop',              WG:'Wigston Area',
+  WH:'West Hampstead',       WI:'Wimbledon',            WJ:'Wembley (Watford)',
+  WL:'Walsall',              WN:'Water Orton',          WO:'Wolverhampton',
+  WS:'Willesden Suburban',   WY:'Wembley Mainline',
+  X0:'Thameslink Core',      X1:'London Bridge Central',X2:'Charing Cross',
+  X3:'Cannon Street',        X7:'East Sussex MCS',      X8:'Victoria Kent',
+  X9:'Tulse Hill MCS',       XA:'Victoria Sussex L1',   XB:'Victoria Sussex L2',
+  Y0:'North Lincs',          Y1:'York Area',            Y2:'Leeds City Area',
+  Y3:'Leeds North West',     Y4:'Sheffield',            Y5:'Brough',
+  Y6:'Huddersfield',         Y7:'Halifax',              Y8:'Kings Cross North',
+  Y9:'Kings Cross South',    YA:'Hartlepool Area',      YB:'Middlesbrough',
+  YC:'Peterborough Area',    YD:'Huntingdon Area',      YE:'Leeds East',
+  YO:'Yoker',                ZG:'Guildford TDC',        ZY:'Yeovil TDC',
+};
+
 const TYPE_CFG = {
   express:   { label: 'Express Passenger',    color: '#0f52ba' },
   passenger: { label: 'Stopping Passenger',   color: '#0891b2' },
@@ -837,8 +901,10 @@ function refresh() {
   document.getElementById('corridorList').innerHTML = topAreas.length
     ? topAreas.map(([td, n]) => {
         const lateN = c.lateAreas.get(td) || 0;
+        const name  = TD_NAMES[td] || '';
         return `<div class="data-row">
           <span class="data-code">${esc(td)}</span>
+          ${name ? `<span class="data-label" title="${esc(name)}">${esc(name)}</span>` : '<span class="data-label"></span>'}
           <div class="data-bar-wrap"><div class="data-bar" style="width:${Math.round(n/maxArea*100)}%;background:var(--signal)"></div></div>
           <span class="data-count">${n}</span>
           <span class="data-late" style="color:${lateN ? 'var(--red)' : 'var(--text-3)'}">${lateN ? lateN + ' late' : '—'}</span>
