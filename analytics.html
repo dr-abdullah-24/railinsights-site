@@ -172,6 +172,23 @@
       transition: color .12s, border-color .12s;
     }
     .zb-clear:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+    .zb-wx { font-size: 10px; line-height: 1; flex-shrink: 0; }
+    /* ── WEATHER ALERTS ────────────────────────────────────────────── */
+    .wx-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border-2);
+      font: 500 10.5px var(--font);
+    }
+    .wx-row:last-child { border-bottom: none; }
+    .wx-icon { font-size: 12px; flex-shrink: 0; width: 18px; text-align: center; }
+    .wx-zone { color: var(--text-2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+    .wx-detail { font: 600 10px var(--mono); color: var(--text-3); flex-shrink: 0; white-space: nowrap; }
+    .wx-level-red    { color: var(--red); }
+    .wx-level-amber  { color: var(--amber); }
+    .wx-level-blue   { color: #60a5fa; }
     .zb-chip {
       display: flex;
       align-items: center;
@@ -649,7 +666,16 @@
     </div>
     <div class="panel-body">
 
-      <div class="section-head" style="margin-top:0;border-top:none;padding-top:0">Network snapshot</div>
+      <!-- Weather alerts — hidden when no active conditions -->
+      <div id="wxSection" hidden>
+        <div class="section-head" style="margin-top:0;border-top:none;padding-top:0;display:flex;align-items:center;gap:6px">
+          <span>Weather alerts</span>
+          <span id="wxUpdated" style="font:400 8px var(--mono);color:var(--text-3);margin-left:auto"></span>
+        </div>
+        <div id="wxAlerts"></div>
+      </div>
+
+      <div class="section-head" id="snapHead">Network snapshot</div>
       <div class="net-snap">
         <div class="snap-tile">
           <span class="snap-val" id="snapTrains">—</span>
@@ -1092,13 +1118,15 @@ function refresh() {
         const chipStyle = isSel
           ? `border-color:${z.color};background:${z.color}26;`
           : hasFilter ? 'opacity:0.38;' : '';
+        const wxAlerts = zoneWeather[z.id]?.alerts || [];
+        const wxBadge  = wxAlerts.length ? `<span class="zb-wx">${wxAlerts[0].icon}</span>` : '';
         return `<div class="zb-chip" data-zone-id="${z.id}" style="${chipStyle}">
           <span class="zb-dot" style="background:${z.color}"></span>
           <span class="zb-name">${esc(z.name)}</span>
           <span class="zb-trains">${s.total}</span>
           <span class="zb-sep"></span>
           <span class="zb-t3" style="color:${t3Color}">${t3 !== null ? t3 + '%' : '—'}</span>
-          ${lateHtml}
+          ${lateHtml}${wxBadge}
         </div>`;
       }).join('')
     : '<div style="font:500 10px var(--mono);color:var(--text-3)">Waiting…</div>';
@@ -1181,6 +1209,96 @@ function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+// ── Weather ────────────────────────────────────────────────────────
+const ZONE_COORDS = {
+  merseyrail:   { lat: 53.41, lon: -2.98 },
+  mrroc:        { lat: 53.48, lon: -2.24 },
+  wmsc:         { lat: 52.48, lon: -1.90 },
+  emcc:         { lat: 52.95, lon: -1.15 },
+  ykroc:        { lat: 53.80, lon: -1.55 },
+  tyroc:        { lat: 54.97, lon: -1.62 },
+  wcml:         { lat: 53.09, lon: -2.44 },
+  tvsc:         { lat: 51.45, lon: -0.97 },
+  tbroc:        { lat: 51.50, lon: -0.09 },
+  swr:          { lat: 50.90, lon: -1.40 },
+  southeastern: { lat: 51.20, lon:  0.27 },
+  roroc:        { lat: 51.54, lon:  0.00 },
+  anglia:       { lat: 52.63, lon:  1.30 },
+  tfw:          { lat: 51.48, lon: -3.18 },
+  scotland:     { lat: 55.86, lon: -4.25 },
+};
+
+let zoneWeather = {}; // zoneId → { temp, gusts, precip, code, alerts }
+
+function evalWeatherAlerts(temp, gusts, precip, code) {
+  const a = [];
+  if      (temp  >  35) a.push({ icon: '🌡', label: `Extreme heat ${temp}°C`,    level: 'red' });
+  else if (temp  >  30) a.push({ icon: '🌡', label: `High temp ${temp}°C`,       level: 'amber' });
+  if      (temp  <  -5) a.push({ icon: '❄',  label: `Severe cold ${temp}°C`,     level: 'red' });
+  else if (temp  <  -2) a.push({ icon: '❄',  label: `Freezing ${temp}°C`,        level: 'blue' });
+  if      (gusts >  65) a.push({ icon: '💨', label: `Severe gusts ${gusts}mph`,  level: 'red' });
+  else if (gusts >  50) a.push({ icon: '💨', label: `Strong gusts ${gusts}mph`,  level: 'amber' });
+  if      (precip > 10) a.push({ icon: '🌧', label: `Heavy rain ${precip}mm/h`,  level: 'amber' });
+  else if (precip >  5) a.push({ icon: '🌧', label: `Rain ${precip}mm/h`,        level: 'amber' });
+  if      (code  >= 95) a.push({ icon: '⛈',  label: 'Thunderstorm',              level: 'red' });
+  else if (code  >= 71 && code <= 77)  a.push({ icon: '❄', label: 'Snow',        level: 'blue' });
+  else if (code  >= 45 && code <= 48)  a.push({ icon: '🌫', label: 'Fog',         level: 'amber' });
+  return a;
+}
+
+async function fetchWeather() {
+  const ids  = Object.keys(ZONE_COORDS);
+  const lats = ids.map(id => ZONE_COORDS[id].lat).join(',');
+  const lons = ids.map(id => ZONE_COORDS[id].lon).join(',');
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,wind_gusts_10m,precipitation,weather_code&wind_speed_unit=mph&timezone=Europe%2FLondon`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    const rows = Array.isArray(data) ? data : [data];
+    ids.forEach((id, i) => {
+      const cur = rows[i]?.current;
+      if (!cur) return;
+      const temp   = Math.round(cur.temperature_2m);
+      const gusts  = Math.round(cur.wind_gusts_10m);
+      const precip = +(cur.precipitation || 0).toFixed(1);
+      const code   = cur.weather_code || 0;
+      zoneWeather[id] = { temp, gusts, precip, code, alerts: evalWeatherAlerts(temp, gusts, precip, code) };
+    });
+    renderWeather();
+  } catch (e) {
+    console.warn('[Weather] fetch failed:', e.message);
+  }
+}
+
+function renderWeather() {
+  const allAlerts = [];
+  for (const z of ZONES) {
+    const w = zoneWeather[z.id];
+    if (!w?.alerts.length) continue;
+    for (const a of w.alerts) allAlerts.push({ zoneName: z.name, zoneId: z.id, ...a });
+  }
+
+  const sec = document.getElementById('wxSection');
+  if (!allAlerts.length) { sec.hidden = true; return; }
+
+  sec.hidden = false;
+  document.getElementById('wxUpdated').textContent =
+    'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('wxAlerts').innerHTML = allAlerts.map(a =>
+    `<div class="wx-row">
+      <span class="wx-icon">${a.icon}</span>
+      <span class="wx-zone">${esc(a.zoneName)}</span>
+      <span class="wx-detail wx-level-${a.level}">${esc(a.label)}</span>
+    </div>`
+  ).join('');
+
+  // Repaint zone bar to show/clear chip badges
+  refresh();
+}
+
+fetchWeather();
+setInterval(fetchWeather, 15 * 60 * 1000);
 
 // ── WebSocket ──────────────────────────────────────────────────────
 let ws;
