@@ -47,6 +47,7 @@ console.log(`[Berths] ${berthLookup.size} entries from ${ctx.window.BERTH_DATA.l
 const trainState = new Map();
 // headcode → { delay: number (mins, + = late), status: string, ts: number }
 const trustState = new Map();
+let sessionCancelCount = 0;
 
 function classifyTrain(hc) {
   if (!hc) return 'special';
@@ -96,22 +97,32 @@ function handleCC({ area_id, to, descr, ts }) {
 function handleTRUST(msg) {
   const header = msg.header;
   const body   = msg.body;
-  if (!header || header.msg_type !== '0003' || !body) return;
-  const trainId = body.train_id;
-  if (!trainId || trainId.length < 6) return;
-  const hc    = trainId.substring(2, 6);
-  const delay = parseInt(body.timetable_variation, 10);
-  const status = body.variation_status || '';
-  if (!isNaN(delay)) trustState.set(hc, {
-    delay,
-    status,
-    planned:    body.planned_timestamp    ? Number(body.planned_timestamp)    : null,
-    actual:     body.actual_timestamp     ? Number(body.actual_timestamp)     : null,
-    nextRunMin: body.next_report_run_time ? Number(body.next_report_run_time) : null,
-    eventType:  body.event_type  || '',
-    platform:   body.platform    || '',
-    ts: Date.now(),
-  });
+  if (!header || !body) return;
+
+  if (header.msg_type === '0003') {
+    const trainId = body.train_id;
+    if (!trainId || trainId.length < 6) return;
+    const hc    = trainId.substring(2, 6);
+    const delay = parseInt(body.timetable_variation, 10);
+    const status = body.variation_status || '';
+    if (!isNaN(delay)) trustState.set(hc, {
+      delay,
+      status,
+      planned:    body.planned_timestamp    ? Number(body.planned_timestamp)    : null,
+      actual:     body.actual_timestamp     ? Number(body.actual_timestamp)     : null,
+      nextRunMin: body.next_report_run_time ? Number(body.next_report_run_time) : null,
+      eventType:  body.event_type  || '',
+      platform:   body.platform    || '',
+      ts: Date.now(),
+    });
+  } else if (header.msg_type === '0006') {
+    const trainId = body.train_id;
+    if (!trainId || trainId.length < 6) return;
+    const hc = trainId.substring(2, 6);
+    sessionCancelCount++;
+    const existing = trustState.get(hc) || {};
+    trustState.set(hc, { ...existing, cancelled: true, cancelCode: body.cancel_reason_code || '', ts: Date.now() });
+  }
 }
 
 // ── HTTP + WebSocket server ───────────────────────────────────────────────────
@@ -144,7 +155,7 @@ function buildPayload() {
       platform:    trust.platform,
     } : t;
   }
-  return JSON.stringify({ type: 'state', trains, count: trainState.size, ts: Date.now() });
+  return JSON.stringify({ type: 'state', trains, count: trainState.size, cancelCount: sessionCancelCount, ts: Date.now() });
 }
 
 let broadcastPending = false;
