@@ -527,11 +527,6 @@
 <!-- ── KPI STRIP ──────────────────────────────────────────────────── -->
 <div class="kpi-strip">
   <div class="kpi">
-    <div class="kpi-label">Time to 3 (T-3)</div>
-    <div class="kpi-val signal" id="kpiRT">—</div>
-    <div class="kpi-sub">within 3 min of schedule</div>
-  </div>
-  <div class="kpi">
     <div class="kpi-label">On Time</div>
     <div class="kpi-val" id="kpiPPM">—</div>
     <div class="kpi-sub">within 1 min (supplementary)</div>
@@ -1000,7 +995,6 @@ function refresh() {
   const now = new Date();
 
   // KPIs
-  set('kpiRT',        c.t3Pct !== null ? c.t3Pct + '%' : '—');
   set('kpiPPM',       c.rtPct !== null ? c.rtPct + '%' : '—');
   set('kpiCaSL',      cancelCount || '—');
   set('kpiDelayMins', c.totalDelayMins > 0 ? c.totalDelayMins : '—');
@@ -1009,11 +1003,6 @@ function refresh() {
   set('perfTimestamp', now.toLocaleTimeString('en-GB'));
   document.getElementById('feedTime').textContent = c.total ? ' · ' + now.toLocaleTimeString('en-GB') : '';
 
-  // Colour T-3 KPI — CP7 thresholds (NW&C region baseline ~82.2%)
-  const rtEl = document.getElementById('kpiRT');
-  if (rtEl && c.t3Pct !== null) {
-    rtEl.className = 'kpi-val ' + (c.t3Pct >= 84 ? 'good' : c.t3Pct >= 80 ? 'warn' : 'bad');
-  }
   // On Time — informational, no threshold colour
   const ppmEl = document.getElementById('kpiPPM');
   if (ppmEl) ppmEl.className = 'kpi-val';
