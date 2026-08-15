@@ -146,6 +146,8 @@
       border-bottom: 1px solid var(--border);
       overflow-x: auto;
       scrollbar-width: none;
+      cursor: grab;
+      user-select: none;
     }
     .zone-bar::-webkit-scrollbar { display: none; }
     .zb-chip {
@@ -797,6 +799,27 @@ let cancelCount = 0;
 let reconnDelay = 2000;
 let sortMode = 'delay';
 const otpHistory = [];
+
+// ── Zone bar drag-to-scroll ─────────────────────────────────────────
+(function () {
+  const bar = document.getElementById('zoneBar');
+  let dragging = false, startX = 0, scrollStart = 0;
+  bar.addEventListener('mousedown', e => {
+    dragging  = true;
+    startX    = e.pageX;
+    scrollStart = bar.scrollLeft;
+    bar.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    bar.scrollLeft = scrollStart - (e.pageX - startX);
+  });
+  window.addEventListener('mouseup', () => {
+    dragging = false;
+    bar.style.cursor = '';
+  });
+})();
 
 document.getElementById('sortBtns').addEventListener('click', e => {
   const btn = e.target.closest('[data-sort]');
