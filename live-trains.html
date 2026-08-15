@@ -885,18 +885,21 @@ if (window.BERTH_DATA) {
 const map = L.map('map', { center: [53.2, -1.5], zoom: 7, zoomControl: false });
 L.control.zoom({ position: 'topright' }).addTo(map);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom: 19
+// Dark base tile — matches the dashboard theme and makes ORM track lines vivid
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 19,
+  detectRetina: true
 }).addTo(map);
 
 // Railway network overlay — OpenRailwayMap standard style
-// Shows every track, junction, and signal box as coloured lines
+// Against the dark base the coloured track lines are sharply visible
 let ormVisible = true;
 const ormTiles = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
   attribution: 'Railway: <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a> (CC BY-SA)',
   maxZoom: 19,
-  opacity: 0.72
+  opacity: 1.0
 }).addTo(map);
 
 map.createPane('ukBoundaryPane');
