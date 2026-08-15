@@ -173,22 +173,22 @@
     }
     .zb-clear:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
     .zb-wx { font-size: 10px; line-height: 1; flex-shrink: 0; }
-    /* ── WEATHER ALERTS ────────────────────────────────────────────── */
+    /* ── WEATHER CONDITIONS ─────────────────────────────────────────── */
     .wx-row {
       display: flex;
       align-items: center;
-      gap: 7px;
-      padding: 5px 0;
+      gap: 6px;
+      padding: 4px 0;
       border-bottom: 1px solid var(--border-2);
-      font: 500 10.5px var(--font);
     }
     .wx-row:last-child { border-bottom: none; }
-    .wx-icon { font-size: 12px; flex-shrink: 0; width: 18px; text-align: center; }
-    .wx-zone { color: var(--text-2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
-    .wx-detail { font: 600 10px var(--mono); color: var(--text-3); flex-shrink: 0; white-space: nowrap; }
-    .wx-level-red    { color: var(--red); }
-    .wx-level-amber  { color: var(--amber); }
-    .wx-level-blue   { color: #60a5fa; }
+    .wx-icon  { font-size: 11px; flex-shrink: 0; width: 16px; text-align: center; }
+    .wx-zone  { flex: 1; font: 500 10px var(--font); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wx-readings { display: flex; gap: 5px; flex-shrink: 0; align-items: center; }
+    .wx-val   { font: 600 9.5px var(--mono); color: var(--text-3); white-space: nowrap; }
+    .wx-val.alert-red   { color: var(--red); }
+    .wx-val.alert-amber { color: var(--amber); }
+    .wx-val.alert-blue  { color: #60a5fa; }
     .zb-chip {
       display: flex;
       align-items: center;
@@ -666,13 +666,13 @@
     </div>
     <div class="panel-body">
 
-      <!-- Weather alerts — hidden when no active conditions -->
-      <div id="wxSection" hidden>
-        <div class="section-head" style="margin-top:0;border-top:none;padding-top:0;display:flex;align-items:center;gap:6px">
-          <span>Weather alerts</span>
+      <!-- Weather conditions — always visible after first fetch -->
+      <div id="wxSection" style="margin-top:0">
+        <div class="section-head" style="margin-top:0;border-top:none;padding-top:0;display:flex;align-items:center">
+          <span>Weather conditions</span>
           <span id="wxUpdated" style="font:400 8px var(--mono);color:var(--text-3);margin-left:auto"></span>
         </div>
-        <div id="wxAlerts"></div>
+        <div id="wxAlerts"><div class="empty-msg">Fetching…</div></div>
       </div>
 
       <div class="section-head" id="snapHead">Network snapshot</div>
@@ -1247,6 +1247,17 @@ function evalWeatherAlerts(temp, gusts, precip, code) {
   return a;
 }
 
+function wxConditionIcon(code) {
+  if (code >= 95) return '⛈';
+  if (code >= 80) return '🌧';
+  if (code >= 71) return '❄';
+  if (code >= 61) return '🌧';
+  if (code >= 51) return '🌦';
+  if (code >= 45) return '🌫';
+  if (code >= 1)  return '⛅';
+  return '☀';
+}
+
 async function fetchWeather() {
   const ids  = Object.keys(ZONE_COORDS);
   const lats = ids.map(id => ZONE_COORDS[id].lat).join(',');
@@ -1254,7 +1265,9 @@ async function fetchWeather() {
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,wind_gusts_10m,precipitation,weather_code&wind_speed_unit=mph&timezone=Europe%2FLondon`;
     const res  = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    // Open-Meteo returns array for multiple locations, object for single
     const rows = Array.isArray(data) ? data : [data];
     ids.forEach((id, i) => {
       const cur = rows[i]?.current;
@@ -1268,33 +1281,39 @@ async function fetchWeather() {
     renderWeather();
   } catch (e) {
     console.warn('[Weather] fetch failed:', e.message);
+    document.getElementById('wxAlerts').innerHTML =
+      `<div class="empty-msg" style="color:var(--red)">Weather unavailable</div>`;
   }
 }
 
 function renderWeather() {
-  const allAlerts = [];
-  for (const z of ZONES) {
-    const w = zoneWeather[z.id];
-    if (!w?.alerts.length) continue;
-    for (const a of w.alerts) allAlerts.push({ zoneName: z.name, zoneId: z.id, ...a });
-  }
+  const zonesWithData = ZONES.filter(z => zoneWeather[z.id]);
+  if (!zonesWithData.length) return;
 
-  const sec = document.getElementById('wxSection');
-  if (!allAlerts.length) { sec.hidden = true; return; }
-
-  sec.hidden = false;
   document.getElementById('wxUpdated').textContent =
-    'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  document.getElementById('wxAlerts').innerHTML = allAlerts.map(a =>
-    `<div class="wx-row">
-      <span class="wx-icon">${a.icon}</span>
-      <span class="wx-zone">${esc(a.zoneName)}</span>
-      <span class="wx-detail wx-level-${a.level}">${esc(a.label)}</span>
-    </div>`
-  ).join('');
+    new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-  // Repaint zone bar to show/clear chip badges
-  refresh();
+  document.getElementById('wxAlerts').innerHTML = zonesWithData.map(z => {
+    const w = zoneWeather[z.id];
+    const icon = wxConditionIcon(w.code);
+
+    const tempCls = w.temp > 35 ? 'alert-red' : w.temp > 30 ? 'alert-amber'
+                  : w.temp < -5 ? 'alert-red' : w.temp < -2 ? 'alert-blue' : '';
+    const gustCls = w.gusts > 65 ? 'alert-red' : w.gusts > 50 ? 'alert-amber' : '';
+    const rainCls = w.precip > 10 ? 'alert-red' : w.precip > 5 ? 'alert-amber' : '';
+
+    return `<div class="wx-row">
+      <span class="wx-icon">${icon}</span>
+      <span class="wx-zone">${esc(z.name)}</span>
+      <span class="wx-readings">
+        <span class="wx-val ${tempCls}">${w.temp}°</span>
+        <span class="wx-val ${gustCls}">${w.gusts}mph</span>
+        ${w.precip > 0 ? `<span class="wx-val ${rainCls}">${w.precip}mm</span>` : ''}
+      </span>
+    </div>`;
+  }).join('');
+
+  refresh(); // repaint zone bar chips with weather badges
 }
 
 fetchWeather();
