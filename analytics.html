@@ -705,7 +705,7 @@ function refresh() {
       return `<div class="delay-card"${bg ? ` style="background:${bg}"` : ''}>
         <div class="dc-stripe" style="background:${sev}"></div>
         <span class="dc-rank">${i + 1}</span>
-        <span class="dc-hc" style="background:${cfg.color}1a;color:${cfg.color};border:1px solid ${cfg.color}33">${esc(hc)}</span>
+        <span class="dc-hc" style="background:${cfg.color};color:#fff">${esc(hc)}</span>
         <span class="dc-delay" style="color:${sev}">+${mins}m</span>
         <div class="dc-sep"></div>
         <div class="dc-loc">${esc(t.name || t.td || '—')}</div>
