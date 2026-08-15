@@ -2,246 +2,204 @@
 /**
  * build-berth-positions.js
  *
- * Outputs data/berth-positions.json
- *   TD:berth → { lat, lon, name, platform, line, bearing, source }
+ * Outputs:
+ *   data/berth-snap.js        — compact window.BERTH_SNAP = {TD:berth → [lat,lon]}
+ *                               loaded by live-trains.html to override server coords
+ *   data/berth-positions.json — full data for future tooling
  *
  * Sources:
- *   data/berths-geo.json  — pre-processed berth coordinates (NR + CORPUS)
- *   data/SMART.json       — Network Rail berth step data
- *   OSM Overpass API      — platform geometry for position refinement
+ *   data/berths-geo.json      — NR berth locations (station centroid accuracy)
+ *   data/SMART.json           — berth step graph (platform / line enrichment)
+ *   data/freight-network.js   — UK rail line geometry (used for track snapping)
  *
  * Run: node build-berth-positions.js
  */
 
 const fs   = require('fs');
-const https = require('https');
-const path  = require('path');
+const vm   = require('vm');
+const path = require('path');
 
 const DATA = path.join(__dirname, 'data');
-const OUT  = path.join(DATA, 'berth-positions.json');
 
 // ── Schema indices for berths-geo.json rows ──────────────────────────────────
-// [td, berth, station, stanox, platform, event, route, fromLine, toLine,
-//  offsetMetres, sourceDate, locationName, tiploc, crs, nlc,
-//  easting, northing, latitude, longitude]
-const I = {
-  td: 0, berth: 1, stanox: 3, platform: 4,
-  fromLine: 7, locationName: 11, lat: 17, lon: 18,
-};
+const I = { td:0, berth:1, stanox:3, platform:4, fromLine:7, locationName:11, lat:17, lon:18 };
 
 // ── 1. Load berths-geo.json ──────────────────────────────────────────────────
 console.log('[1/5] Loading berths-geo.json...');
-const _berthsGeoRaw = JSON.parse(fs.readFileSync(path.join(DATA, 'berths-geo.json'), 'utf8'));
-// berths-geo.json is either a plain array or an object with a .records array
-const berthsGeo = Array.isArray(_berthsGeoRaw) ? _berthsGeoRaw : _berthsGeoRaw.records;
+const _raw = JSON.parse(fs.readFileSync(path.join(DATA, 'berths-geo.json'), 'utf8'));
+const berthsGeo = Array.isArray(_raw) ? _raw : _raw.records;
 
-const berthCoords = new Map(); // `${td}:${berth}` → {lat,lon,name,platform,stanox,line}
+const berthCoords = new Map(); // `${td}:${berth}` → object
 for (const r of berthsGeo) {
-  const lat = r[I.lat];
-  const lon = r[I.lon];
+  const lat = r[I.lat], lon = r[I.lon];
   if (!lat || !lon) continue;
   const key = `${r[I.td]}:${r[I.berth]}`;
   if (!berthCoords.has(key)) {
     berthCoords.set(key, {
-      lat,
-      lon,
+      lat: +lat, lon: +lon,
       name:     r[I.locationName] || '',
       platform: r[I.platform]     ? String(r[I.platform]).trim() : '',
       stanox:   r[I.stanox]       ? String(r[I.stanox]).trim()   : '',
       line:     r[I.fromLine]     ? String(r[I.fromLine]).trim() : '',
-      td:       r[I.td],
-      berth:    r[I.berth],
+      td: r[I.td], berth: r[I.berth],
     });
   }
 }
 console.log(`  → ${berthCoords.size} unique berths with coordinates`);
 
-// ── 2. Load SMART.json — build berth graph + enrich platform/line ────────────
+// ── 2. Load SMART.json — berth graph + enrich platform / line ────────────────
 console.log('[2/5] Loading SMART.json...');
-const smart = JSON.parse(fs.readFileSync(path.join(DATA, 'SMART.json'), 'utf8'));
+const _smartRaw = JSON.parse(fs.readFileSync(path.join(DATA, 'SMART.json'), 'utf8'));
+const smart = Array.isArray(_smartRaw) ? _smartRaw : (_smartRaw.BERTHDATA || Object.values(_smartRaw)[0]);
 
-const fwdGraph = new Map(); // `${td}:${fromBerth}` → Set<`${td}:${toBerth}`>
-const revGraph = new Map(); // `${td}:${toBerth}`   → Set<`${td}:${fromBerth}`>
-
+const fwdGraph = new Map();
+const revGraph = new Map();
 for (const s of smart) {
   const td = s.TD;
   if (!td || !s.FROMBERTH || !s.TOBERTH) continue;
-  const from = `${td}:${s.FROMBERTH}`;
-  const to   = `${td}:${s.TOBERTH}`;
-
+  const from = `${td}:${s.FROMBERTH}`, to = `${td}:${s.TOBERTH}`;
   if (!fwdGraph.has(from)) fwdGraph.set(from, new Set());
   fwdGraph.get(from).add(to);
   if (!revGraph.has(to)) revGraph.set(to, new Set());
   revGraph.get(to).add(from);
-
-  // Fill in platform / line where berths-geo left it blank
   const rec = berthCoords.get(from);
   if (rec) {
     if (!rec.platform && s.PLATFORM) rec.platform = String(s.PLATFORM).trim();
     if (!rec.line     && s.FROMLINE) rec.line      = String(s.FROMLINE).trim();
   }
 }
-console.log(`  → ${fwdGraph.size} from-berths with forward steps in graph`);
+console.log(`  → ${fwdGraph.size} from-berths in step graph`);
 
-// ── 3. Compute track bearings ────────────────────────────────────────────────
-console.log('[3/5] Computing track bearings from berth graph...');
+// ── 3. Build spatial grid index from freight-network.js ─────────────────────
+console.log('[3/5] Building track snap index from freight-network.js...');
+const freightJs  = fs.readFileSync(path.join(DATA, 'freight-network.js'), 'utf8');
+const freightCtx = { window: {} };
+vm.createContext(freightCtx);
+vm.runInContext(freightJs, freightCtx);
+const freightGJ = freightCtx.window.FREIGHT_GEOJSON;
 
-const toRad = d => d * Math.PI / 180;
-const toDeg = r => r * 180 / Math.PI;
+const CELL = 0.04; // ~4km grid cells
+const trackGrid = new Map(); // `ci,cj` → [{x1,y1,x2,y2}]
+let segCount = 0;
 
-function geodesicBearing(lat1, lon1, lat2, lon2) {
-  const dLon = toRad(lon2 - lon1);
-  const φ1   = toRad(lat1), φ2 = toRad(lat2);
-  const y = Math.sin(dLon) * Math.cos(φ2);
-  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLon);
-  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+function cellsForSeg(x1, y1, x2, y2) {
+  const keys = [];
+  const ciMin = Math.floor(Math.min(x1,x2)/CELL) - 1;
+  const ciMax = Math.floor(Math.max(x1,x2)/CELL) + 1;
+  const cjMin = Math.floor(Math.min(y1,y2)/CELL) - 1;
+  const cjMax = Math.floor(Math.max(y1,y2)/CELL) + 1;
+  for (let ci = ciMin; ci <= ciMax; ci++)
+    for (let cj = cjMin; cj <= cjMax; cj++)
+      keys.push(`${ci},${cj}`);
+  return keys;
 }
 
-function circularMean(angles) {
-  let sinSum = 0, cosSum = 0;
-  for (const a of angles) { sinSum += Math.sin(toRad(a)); cosSum += Math.cos(toRad(a)); }
-  return (toDeg(Math.atan2(sinSum, cosSum)) + 360) % 360;
+if (freightGJ && freightGJ.features) {
+  for (const f of freightGJ.features) {
+    const coords = f.geometry.coordinates;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const [x1,y1] = coords[i], [x2,y2] = coords[i+1];
+      const seg = {x1,y1,x2,y2};
+      for (const k of cellsForSeg(x1,y1,x2,y2)) {
+        if (!trackGrid.has(k)) trackGrid.set(k, []);
+        trackGrid.get(k).push(seg);
+      }
+      segCount++;
+    }
+  }
+}
+console.log(`  → ${segCount} track segments across ${trackGrid.size} grid cells`);
+
+function nearestOnTrack(lat, lon) {
+  const MAX_DEG = 0.025; // ~2.5 km snap radius
+  const ci0 = Math.floor(lon/CELL), cj0 = Math.floor(lat/CELL);
+  let best = null;
+
+  for (let di = -2; di <= 2; di++) {
+    for (let dj = -2; dj <= 2; dj++) {
+      const segs = trackGrid.get(`${ci0+di},${cj0+dj}`);
+      if (!segs) continue;
+      for (const {x1,y1,x2,y2} of segs) {
+        const dx = x2-x1, dy = y2-y1, lenSq = dx*dx+dy*dy;
+        let nx, ny;
+        if (lenSq < 1e-14) { nx=x1; ny=y1; }
+        else {
+          const t = Math.max(0, Math.min(1, ((lon-x1)*dx + (lat-y1)*dy) / lenSq));
+          nx = x1+t*dx; ny = y1+t*dy;
+        }
+        const d = (lon-nx)*(lon-nx) + (lat-ny)*(lat-ny);
+        if (!best || d < best.d) best = {lat:ny, lon:nx, d};
+      }
+    }
+  }
+
+  if (best && best.d < MAX_DEG*MAX_DEG) return {lat: best.lat, lon: best.lon, snapped: true};
+  return {lat, lon, snapped: false};
+}
+
+// ── 4. Compute track bearings ────────────────────────────────────────────────
+console.log('[4/5] Computing track bearings...');
+const toRad = d => d*Math.PI/180, toDeg = r => r*180/Math.PI;
+
+function geoBearing(lat1,lon1,lat2,lon2) {
+  const dL = toRad(lon2-lon1), φ1=toRad(lat1), φ2=toRad(lat2);
+  const y = Math.sin(dL)*Math.cos(φ2);
+  const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(dL);
+  return (toDeg(Math.atan2(y,x))+360)%360;
+}
+function circularMean(angs) {
+  let s=0,c=0; for(const a of angs){s+=Math.sin(toRad(a));c+=Math.cos(toRad(a));}
+  return (toDeg(Math.atan2(s,c))+360)%360;
 }
 
 const berthBearings = new Map();
 for (const [key, rec] of berthCoords) {
-  const angles = [];
-
-  const fwds = fwdGraph.get(key);
-  if (fwds) {
-    for (const toKey of fwds) {
-      const dest = berthCoords.get(toKey);
-      if (dest) angles.push(geodesicBearing(rec.lat, rec.lon, dest.lat, dest.lon));
+  const angs = [];
+  for (const toKey of (fwdGraph.get(key)||[])) {
+    const d = berthCoords.get(toKey);
+    if (d) angs.push(geoBearing(rec.lat,rec.lon,d.lat,d.lon));
+  }
+  if (!angs.length) {
+    for (const fromKey of (revGraph.get(key)||[])) {
+      const s = berthCoords.get(fromKey);
+      if (s) angs.push(geoBearing(s.lat,s.lon,rec.lat,rec.lon));
     }
   }
-  // If no forward neighbours use reverse direction (same track, opposite arrow)
-  if (angles.length === 0) {
-    const revs = revGraph.get(key);
-    if (revs) {
-      for (const fromKey of revs) {
-        const src = berthCoords.get(fromKey);
-        if (src) angles.push(geodesicBearing(src.lat, src.lon, rec.lat, rec.lon));
-      }
-    }
-  }
-
-  if (angles.length > 0) {
-    berthBearings.set(key, Math.round(circularMean(angles)));
-  }
+  if (angs.length) berthBearings.set(key, Math.round(circularMean(angs)));
 }
-console.log(`  → ${berthBearings.size} berths with bearing computed`);
+console.log(`  → ${berthBearings.size} berths with bearing`);
 
-// ── 4. Fetch OSM railway platform geometry ───────────────────────────────────
-console.log('[4/5] Querying Overpass API for UK railway platforms...');
+// ── 5. Build output files ────────────────────────────────────────────────────
+console.log('[5/5] Snapping berths to nearest track and writing output...');
 
-const OSM_QUERY = `[out:json][timeout:90];
-(
-  node["railway"="platform"]["ref"](49.8,-8.7,60.9,1.9);
-  way["railway"="platform"]["ref"](49.8,-8.7,60.9,1.9);
-  relation["railway"="platform"]["ref"](49.8,-8.7,60.9,1.9);
-);
-out center;`;
+const snapOut  = {};   // for berth-snap.js  → window.BERTH_SNAP
+const fullOut  = {};   // for berth-positions.json
+let snappedCount = 0, unsnapped = 0;
 
-function httpsPost(url, body) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(url);
-    const opts = {
-      hostname: u.hostname,
-      path:     u.pathname,
-      method:   'POST',
-      timeout:  120_000,
-      headers: {
-        'Content-Type':   'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(body),
-        'User-Agent':     'RailInsights/1.0 build-berth-positions.js',
-      },
-    };
-    const req = https.request(opts, res => {
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    });
-    req.on('timeout', () => { req.destroy(); reject(new Error('request timed out')); });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
+for (const [key, rec] of berthCoords) {
+  const {lat, lon, snapped} = nearestOnTrack(rec.lat, rec.lon);
+  if (snapped) snappedCount++; else unsnapped++;
+
+  snapOut[key] = [+lat.toFixed(6), +lon.toFixed(6)];
+  fullOut[key]  = {
+    lat: +lat.toFixed(6),
+    lon: +lon.toFixed(6),
+    name:     rec.name     || null,
+    platform: rec.platform || null,
+    line:     rec.line     || null,
+    bearing:  berthBearings.get(key) ?? null,
+    source:   snapped ? 'track-snap' : 'berths-geo',
+  };
 }
 
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6_371_000;
-  const φ1 = toRad(lat1), φ2 = toRad(lat2);
-  const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
-  const a  = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+fs.writeFileSync(path.join(DATA, 'berth-snap.js'),
+  'window.BERTH_SNAP=' + JSON.stringify(snapOut) + ';');
 
-async function fetchOSMPlatforms() {
-  const body = 'data=' + encodeURIComponent(OSM_QUERY);
-  const raw  = await httpsPost('https://overpass-api.de/api/interpreter', body);
-  const data = JSON.parse(raw);
+fs.writeFileSync(path.join(DATA, 'berth-positions.json'),
+  JSON.stringify(fullOut));
 
-  // Group by platform ref for fast lookup
-  const byRef = new Map();
-  for (const el of data.elements) {
-    const lat = el.center?.lat ?? el.lat;
-    const lon = el.center?.lon ?? el.lon;
-    if (!lat || !lon) continue;
-    const ref = String(el.tags?.ref || '').trim();
-    if (!ref) continue;
-    if (!byRef.has(ref)) byRef.set(ref, []);
-    byRef.get(ref).push({ lat, lon });
-  }
-  console.log(`  → ${data.elements.length} OSM elements, ${byRef.size} distinct platform refs`);
-  return byRef;
-}
-
-// ── 5. Assemble and write output ─────────────────────────────────────────────
-async function main() {
-  let osmByRef = new Map();
-  try {
-    osmByRef = await fetchOSMPlatforms();
-  } catch (err) {
-    console.warn(`  ⚠ OSM fetch failed (${err.message}) — skipping platform position refinement`);
-  }
-
-  console.log('[5/5] Building berth-positions.json...');
-
-  const output    = {};
-  let osmRefined  = 0;
-  const THRESHOLD = 500; // metres — max distance for OSM platform match
-
-  for (const [key, rec] of berthCoords) {
-    let lat = rec.lat, lon = rec.lon, source = 'berths-geo';
-
-    if (rec.platform && osmByRef.size) {
-      const candidates = osmByRef.get(rec.platform) || [];
-      let bestDist = THRESHOLD, bestPt = null;
-      for (const pt of candidates) {
-        const d = haversine(rec.lat, rec.lon, pt.lat, pt.lon);
-        if (d < bestDist) { bestDist = d; bestPt = pt; }
-      }
-      if (bestPt) { lat = bestPt.lat; lon = bestPt.lon; source = 'osm'; osmRefined++; }
-    }
-
-    output[key] = {
-      lat,
-      lon,
-      name:     rec.name     || null,
-      platform: rec.platform || null,
-      line:     rec.line     || null,
-      bearing:  berthBearings.get(key) ?? null,
-      source,
-    };
-  }
-
-  fs.writeFileSync(OUT, JSON.stringify(output));
-  console.log(`  → ${Object.keys(output).length} berths written`);
-  console.log(`  → ${osmRefined} positions refined to OSM platform geometry`);
-  console.log(`\nDone → ${OUT}`);
-}
-
-main().catch(err => {
-  console.error('[Fatal]', err.message);
-  process.exit(1);
-});
+console.log(`  → ${Object.keys(snapOut).length} berths written`);
+console.log(`  → ${snappedCount} snapped to track geometry (${unsnapped} kept original)`);
+console.log(`\nDone.`);
+console.log(`  berth-snap.js        → ${(fs.statSync(path.join(DATA,'berth-snap.js')).size/1024).toFixed(1)} KB`);
+console.log(`  berth-positions.json → ${(fs.statSync(path.join(DATA,'berth-positions.json')).size/1024).toFixed(1)} KB`);
