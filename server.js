@@ -47,6 +47,8 @@ console.log(`[Berths] ${berthLookup.size} entries from ${ctx.window.BERTH_DATA.l
 const trainState = new Map();
 // headcode → { delay: number (mins, + = late), status: string, ts: number }
 const trustState = new Map();
+// headcode → CIF schedule UID (from 0001 activation messages)
+const uidMap = new Map();
 let sessionCancelCount = 0;
 
 function classifyTrain(hc) {
@@ -99,6 +101,15 @@ function handleTRUST(msg) {
   const body   = msg.body;
   if (!header || !body) return;
 
+  if (header.msg_type === '0001') {
+    const trainId = body.train_id;
+    const uid     = body.train_uid;
+    if (trainId && trainId.length >= 6 && uid) {
+      uidMap.set(trainId.substring(2, 6), uid);
+    }
+    return;
+  }
+
   if (header.msg_type === '0003') {
     const trainId = body.train_id;
     if (!trainId || trainId.length < 6) return;
@@ -146,6 +157,7 @@ function buildPayload() {
     const trust = trustState.get(hc);
     trains[hc] = trust ? {
       ...t,
+      uid:         uidMap.get(hc) || null,
       delay:       trust.delay,
       delayStatus: trust.status,
       planned:     trust.planned,
@@ -155,7 +167,7 @@ function buildPayload() {
       platform:    trust.platform,
       cancelled:   trust.cancelled  || false,
       cancelCode:  trust.cancelCode || '',
-    } : t;
+    } : { ...t, uid: uidMap.get(hc) || null };
   }
   return JSON.stringify({ type: 'state', trains, count: trainState.size, cancelCount: sessionCancelCount, ts: Date.now() });
 }

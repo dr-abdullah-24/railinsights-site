@@ -370,6 +370,12 @@
       border-radius: 3px;
       flex-shrink: 0;
     }
+    .dc-uid {
+      font: 400 9px var(--mono);
+      color: var(--text-3);
+      flex-shrink: 0;
+      letter-spacing: .02em;
+    }
     .dc-delay {
       font: 800 17px/1 var(--font);
       min-width: 46px;
@@ -508,6 +514,39 @@
     .hot-mins  { font: 700 11px var(--mono); color: var(--red); min-width: 38px; text-align: right; flex-shrink: 0; }
     .hot-bar-wrap { width: 36px; height: 3px; background: var(--panel-2); border-radius: 2px; flex-shrink: 0; }
     .hot-bar   { height: 100%; border-radius: 2px; background: var(--red); }
+
+    /* ── CONGESTION ────────────────────────────────────────────── */
+    .congest-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border-2);
+    }
+    .congest-row:last-child { border-bottom: none; }
+    .congest-dot  { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .congest-name { font: 500 10px var(--font); color: var(--text-2); white-space: nowrap; min-width: 62px; overflow: hidden; text-overflow: ellipsis; }
+    .congest-bar-wrap { flex: 1; height: 4px; background: var(--border-2); border-radius: 2px; overflow: hidden; }
+    .congest-bar  { height: 100%; border-radius: 2px; transition: width .4s; }
+    .congest-late { font: 700 9px var(--mono); color: var(--text); min-width: 28px; text-align: right; flex-shrink: 0; }
+    .congest-avg  { font: 500 9px var(--mono); color: var(--text-3); min-width: 30px; text-align: right; flex-shrink: 0; }
+    .cluster-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border-2);
+    }
+    .cluster-row:last-child { border-bottom: none; }
+    .cluster-name { flex: 1; font: 500 10px var(--font); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cluster-cnt  { font: 700 9px var(--mono); color: var(--red); flex-shrink: 0; }
+    .cluster-avg  { font: 500 9px var(--mono); color: var(--text-3); flex-shrink: 0; }
+    .cluster-trains { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px 0 7px 18px; }
+    .ct-pill  { display: flex; align-items: center; gap: 4px; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 3px; padding: 2px 6px; }
+    .ct-hc    { font: 700 9px var(--mono); color: var(--text); }
+    .ct-sep   { font: 400 9px var(--mono); color: var(--border); }
+    .ct-uid   { font: 400 9px var(--mono); color: var(--text-3); }
+    .ct-delay { font: 600 9px var(--mono); color: var(--red); }
 
     /* ── SCROLLBAR ─────────────────────────────────────────────── */
     * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -796,6 +835,12 @@
           <span class="snap-label">Trains / area</span>
         </div>
       </div>
+
+      <div class="section-head">Zone Congestion</div>
+      <div id="congestionList"><div class="empty-msg">Waiting…</div></div>
+
+      <div class="section-head">Congestion Clusters</div>
+      <div id="clusterList"><div class="empty-msg">Waiting…</div></div>
 
       <div class="section-head">Active control areas</div>
       <div id="corridorList"><div class="empty-msg">Waiting…</div></div>
@@ -1115,12 +1160,30 @@ function compute() {
   const fdmPct   = frtWithTrust > 0 ? Math.round(fdmCount / frtWithTrust * 100) : null;
   const frtAvgDelay = frtLate > 0 ? (frtTotalDelay / frtLate).toFixed(1) : null;
 
+  // Congestion clusters: TD areas with ≥3 simultaneous late trains
+  const clusters = [...lateAreas.entries()]
+    .filter(([, n]) => n >= 3)
+    .map(([td, n]) => {
+      const lateEntries = Object.entries(trainData)
+        .filter(([, t]) => t.td === td && t.delayStatus === 'LATE');
+      const tdDelay = lateEntries.reduce((s, [, t]) => s + Math.abs(t.delay || 0), 0);
+      return {
+        td, count: n,
+        avgDelay: n > 0 ? (tdDelay / n).toFixed(1) : '—',
+        trains: lateEntries
+          .sort((a, b) => Math.abs(b[1].delay || 0) - Math.abs(a[1].delay || 0))
+          .map(([hc, t]) => ({ hc, uid: t.uid || null, delay: Math.abs(t.delay || 0) })),
+      };
+    })
+    .sort((a, b) => b.count - a.count);
+
   return {
     total, late, onTime, early, noData, lateT3Zone, lateOver3, severeCount,
     t3Count, t3Pct, rtPct, withTrust, paxWithTrust,
     totalDelayMins: Math.round(totalDelayMins), avgDelay, coverage,
     bands, areas, lateAreas, hotspots, zoneStats, typeCounts, typeLate,
     fdmPct, fdmCount, frtWithTrust, frtOnTime, frtLateT15, frtCancelled, frtTotalDelay: Math.round(frtTotalDelay), frtAvgDelay, frtLate, frtLateOver15, frtNoData,
+    clusters,
   };
 }
 
@@ -1234,6 +1297,7 @@ function refresh() {
         <div class="dc-stripe" style="background:${sev}"></div>
         <span class="dc-rank">${i + 1}</span>
         <span class="dc-hc" style="background:${cfg.color};color:#fff">${esc(hc)}</span>
+        ${t.uid ? `<span class="dc-uid">${esc(t.uid)}</span>` : ''}
         <span class="dc-delay" style="color:${sev}">+${mins}m</span>
         <div class="dc-sep"></div>
         <div class="dc-loc">${esc(t.name || t.td || '—')}</div>
@@ -1391,6 +1455,59 @@ function refresh() {
         </div>`;
       }).join('')
     : '<div class="empty-msg">Waiting…</div>';
+
+  // Zone congestion ranking — mean delay per active train (late% × avg delay)
+  const zoneCongest = ZONES
+    .map(z => {
+      const s = c.zoneStats[z.id];
+      const score = s.total > 0 ? s.totalDelay / s.total : 0;
+      return { z, s, score };
+    })
+    .filter(x => x.s.total > 0 && x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+
+  const maxScore = zoneCongest[0]?.score || 1;
+  document.getElementById('congestionList').innerHTML = zoneCongest.length
+    ? zoneCongest.map(({ z, s, score }) => {
+        const lateRatio = Math.round(s.late / s.total * 100);
+        const avgDel    = s.late > 0 ? (s.totalDelay / s.late).toFixed(0) : '—';
+        const pct       = Math.round(score / maxScore * 100);
+        const barColor  = lateRatio >= 40 ? 'var(--red)' : lateRatio >= 20 ? 'var(--amber)' : 'var(--signal)';
+        const shortName = z.name.replace(/ \(.*\)/, '').split(' ').slice(0, 2).join(' ');
+        return `<div class="congest-row">
+          <span class="congest-dot" style="background:${z.color}"></span>
+          <span class="congest-name" title="${esc(z.name)}">${esc(shortName)}</span>
+          <div class="congest-bar-wrap"><div class="congest-bar" style="width:${pct}%;background:${barColor}"></div></div>
+          <span class="congest-late">${lateRatio}%</span>
+          <span class="congest-avg">${avgDel !== '—' ? avgDel + 'm' : '—'}</span>
+        </div>`;
+      }).join('')
+    : '<div class="empty-msg">No congestion data</div>';
+
+  // Congestion clusters — TD areas with ≥3 simultaneous late trains
+  document.getElementById('clusterList').innerHTML = c.clusters.length
+    ? c.clusters.slice(0, 6).map(({ td, count, avgDelay, trains: cTrains }) => {
+        const name = TD_NAMES[td] || td;
+        const zid  = TD_TO_ZONE[td];
+        const zone = zid ? ZONES.find(z => z.id === zid) : null;
+        const dotColor = zone?.color || 'var(--red)';
+        const pills = cTrains.map(({ hc, uid, delay }) =>
+          `<span class="ct-pill">
+            <span class="ct-hc">${esc(hc)}</span>
+            ${uid ? `<span class="ct-sep">/</span><span class="ct-uid">${esc(uid)}</span>` : ''}
+            <span class="ct-delay">+${delay}m</span>
+          </span>`
+        ).join('');
+        return `<div class="cluster-row">
+          <span class="data-code" style="color:${dotColor};border-color:${dotColor}20">${esc(td)}</span>
+          <span class="cluster-name" title="${esc(name)}">${esc(name)}</span>
+          <span class="cluster-cnt">${count} late</span>
+          <span class="cluster-avg">${avgDelay !== '—' ? '+' + avgDelay + 'm avg' : ''}</span>
+        </div>
+        <div class="cluster-trains">${pills}</div>`;
+      }).join('')
+    : '<div class="empty-msg" style="color:var(--text-3)">No clusters detected</div>';
 }
 
 function renderTrend() {
