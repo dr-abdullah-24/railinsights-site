@@ -371,9 +371,25 @@
       flex-shrink: 0;
     }
     .dc-uid {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      margin-left: 4px;
+    }
+    .dc-uid-label {
+      font: 600 7.5px var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      background: var(--panel-2);
+      border: 1px solid var(--border-2);
+      border-radius: 2px;
+      padding: 1px 4px;
+    }
+    .dc-uid-val {
       font: 400 9px var(--mono);
       color: var(--text-3);
-      flex-shrink: 0;
       letter-spacing: .02em;
     }
     .dc-delay {
@@ -542,11 +558,12 @@
     .cluster-cnt  { font: 700 9px var(--mono); color: var(--red); flex-shrink: 0; }
     .cluster-avg  { font: 500 9px var(--mono); color: var(--text-3); flex-shrink: 0; }
     .cluster-trains { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px 0 7px 18px; }
-    .ct-pill  { display: flex; align-items: center; gap: 4px; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 3px; padding: 2px 6px; }
-    .ct-hc    { font: 700 9px var(--mono); color: var(--text); }
-    .ct-sep   { font: 400 9px var(--mono); color: var(--border); }
-    .ct-uid   { font: 400 9px var(--mono); color: var(--text-3); }
-    .ct-delay { font: 600 9px var(--mono); color: var(--red); }
+    .ct-pill      { display: flex; align-items: center; gap: 5px; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 3px; padding: 2px 7px; }
+    .ct-hc        { font: 700 9px var(--mono); color: var(--text); }
+    .ct-divider   { width: 1px; height: 10px; background: var(--border-2); flex-shrink: 0; }
+    .ct-uid-label { font: 600 7.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+    .ct-uid       { font: 400 9px var(--mono); color: var(--text-2); }
+    .ct-delay     { font: 600 9px var(--mono); color: var(--red); }
 
     /* ── SCROLLBAR ─────────────────────────────────────────────── */
     * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -1297,7 +1314,10 @@ function refresh() {
         <div class="dc-stripe" style="background:${sev}"></div>
         <span class="dc-rank">${i + 1}</span>
         <span class="dc-hc" style="background:${cfg.color};color:#fff">${esc(hc)}</span>
-        <span class="dc-uid">${esc(t.uid || t.serviceCode || '—')}</span>
+        <span class="dc-uid">
+          <span class="dc-uid-label">${t.uid ? 'UID' : t.serviceCode ? 'SVC' : 'UID'}</span>
+          <span class="dc-uid-val">${esc(t.uid || t.serviceCode || '—')}</span>
+        </span>
         <span class="dc-delay" style="color:${sev}">+${mins}m</span>
         <div class="dc-sep"></div>
         <div class="dc-loc">${esc(t.name || t.td || '—')}</div>
@@ -1494,10 +1514,13 @@ function refresh() {
         const dotColor = zone?.color || 'var(--red)';
         const pills = cTrains.map(({ hc, uid, serviceCode, delay }) => {
           const svcId = uid || serviceCode || null;
+          const svcLabel = uid ? 'UID' : serviceCode ? 'SVC' : 'UID';
           return `<span class="ct-pill">
             <span class="ct-hc">${esc(hc)}</span>
-            <span class="ct-sep">/</span>
+            <span class="ct-divider"></span>
+            <span class="ct-uid-label">${svcLabel}</span>
             <span class="ct-uid">${svcId ? esc(svcId) : '—'}</span>
+            <span class="ct-divider"></span>
             <span class="ct-delay">+${delay}m</span>
           </span>`;
         }).join('');
