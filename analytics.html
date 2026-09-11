@@ -1172,7 +1172,7 @@ function compute() {
         avgDelay: n > 0 ? (tdDelay / n).toFixed(1) : '—',
         trains: lateEntries
           .sort((a, b) => Math.abs(b[1].delay || 0) - Math.abs(a[1].delay || 0))
-          .map(([hc, t]) => ({ hc, uid: t.uid || null, delay: Math.abs(t.delay || 0) })),
+          .map(([hc, t]) => ({ hc, uid: t.uid || null, serviceCode: t.serviceCode || null, delay: Math.abs(t.delay || 0) })),
       };
     })
     .sort((a, b) => b.count - a.count);
@@ -1297,7 +1297,7 @@ function refresh() {
         <div class="dc-stripe" style="background:${sev}"></div>
         <span class="dc-rank">${i + 1}</span>
         <span class="dc-hc" style="background:${cfg.color};color:#fff">${esc(hc)}</span>
-        ${t.uid ? `<span class="dc-uid">${esc(t.uid)}</span>` : ''}
+        <span class="dc-uid">${esc(t.uid || t.serviceCode || '—')}</span>
         <span class="dc-delay" style="color:${sev}">+${mins}m</span>
         <div class="dc-sep"></div>
         <div class="dc-loc">${esc(t.name || t.td || '—')}</div>
@@ -1492,13 +1492,15 @@ function refresh() {
         const zid  = TD_TO_ZONE[td];
         const zone = zid ? ZONES.find(z => z.id === zid) : null;
         const dotColor = zone?.color || 'var(--red)';
-        const pills = cTrains.map(({ hc, uid, delay }) =>
-          `<span class="ct-pill">
+        const pills = cTrains.map(({ hc, uid, serviceCode, delay }) => {
+          const svcId = uid || serviceCode || null;
+          return `<span class="ct-pill">
             <span class="ct-hc">${esc(hc)}</span>
-            ${uid ? `<span class="ct-sep">/</span><span class="ct-uid">${esc(uid)}</span>` : ''}
+            <span class="ct-sep">/</span>
+            <span class="ct-uid">${svcId ? esc(svcId) : '—'}</span>
             <span class="ct-delay">+${delay}m</span>
-          </span>`
-        ).join('');
+          </span>`;
+        }).join('');
         return `<div class="cluster-row">
           <span class="data-code" style="color:${dotColor};border-color:${dotColor}20">${esc(td)}</span>
           <span class="cluster-name" title="${esc(name)}">${esc(name)}</span>

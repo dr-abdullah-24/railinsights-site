@@ -116,16 +116,20 @@ function handleTRUST(msg) {
     const hc    = trainId.substring(2, 6);
     const delay = parseInt(body.timetable_variation, 10);
     const status = body.variation_status || '';
-    if (!isNaN(delay)) trustState.set(hc, {
-      delay,
-      status,
-      planned:    body.planned_timestamp    ? Number(body.planned_timestamp)    : null,
-      actual:     body.actual_timestamp     ? Number(body.actual_timestamp)     : null,
-      nextRunMin: body.next_report_run_time ? Number(body.next_report_run_time) : null,
-      eventType:  body.event_type  || '',
-      platform:   body.platform    || '',
-      ts: Date.now(),
-    });
+    if (!isNaN(delay)) {
+      const prev = trustState.get(hc) || {};
+      trustState.set(hc, {
+        delay,
+        status,
+        planned:     body.planned_timestamp    ? Number(body.planned_timestamp)    : null,
+        actual:      body.actual_timestamp     ? Number(body.actual_timestamp)     : null,
+        nextRunMin:  body.next_report_run_time ? Number(body.next_report_run_time) : null,
+        eventType:   body.event_type  || '',
+        platform:    body.platform    || '',
+        serviceCode: body.train_service_code  || prev.serviceCode || '',
+        ts: Date.now(),
+      });
+    }
   } else if (header.msg_type === '0006') {
     const trainId = body.train_id;
     if (!trainId || trainId.length < 6) return;
@@ -158,6 +162,7 @@ function buildPayload() {
     trains[hc] = trust ? {
       ...t,
       uid:         uidMap.get(hc) || null,
+      serviceCode: trust.serviceCode || null,
       delay:       trust.delay,
       delayStatus: trust.status,
       planned:     trust.planned,
@@ -167,7 +172,7 @@ function buildPayload() {
       platform:    trust.platform,
       cancelled:   trust.cancelled  || false,
       cancelCode:  trust.cancelCode || '',
-    } : { ...t, uid: uidMap.get(hc) || null };
+    } : { ...t, uid: uidMap.get(hc) || null, serviceCode: null };
   }
   return JSON.stringify({ type: 'state', trains, count: trainState.size, cancelCount: sessionCancelCount, ts: Date.now() });
 }
