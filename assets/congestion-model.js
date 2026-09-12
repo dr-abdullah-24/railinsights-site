@@ -8,15 +8,16 @@
   }
   function analyse(raw, options, now=Date.now()) {
     const all=Object.entries(raw).filter(([,t])=>t && typeof t==='object' && !t.cancelled).map(([id,t])=>({...t,id})).filter(t=> options.type==='all' || (options.type==='passenger' ? ['express','passenger'].includes(t.type) : options.type==='freight' ? t.type==='freight' : !['express','passenger','freight'].includes(t.type)));
-    const fresh=all.filter(t=>typeof t.lat==='number' && typeof t.lon==='number' && Number.isFinite(t.lat) && Number.isFinite(t.lon) && Math.abs(t.lat)<=90 && Math.abs(t.lon)<=180 && validTime(t.ts,now,options.age*60000));
+    const fresh=all.filter(t=>t.positionStatus==='unavailable' ? validTime(t.ts,now,options.age*60000) : typeof t.lat==='number' && typeof t.lon==='number' && Number.isFinite(t.lat) && Number.isFinite(t.lon) && Math.abs(t.lat)<=90 && Math.abs(t.lon)<=180 && validTime(t.ts,now,options.age*60000));
     const known=fresh.filter(t=>typeof t.delay==='number' && Number.isFinite(t.delay) && ['LATE','EARLY','ON TIME'].includes(t.delayStatus) && validTime(t.delayTs,now,900000));
     const reported=fresh.filter(t=>typeof t.delay==='number' && Number.isFinite(t.delay) && ['LATE','EARLY','ON TIME'].includes(t.delayStatus) && (t.delayTs == null || validTime(t.delayTs,now,900000)));
     const unverified=reported.filter(t=>t.delayTs == null);
     const late=reported.filter(t=>t.delayStatus==='LATE' && t.delay>options.threshold).sort((a,b)=>b.delay-a.delay || a.id.localeCompare(b.id));
     const assigned=new Set(), clusters=[];
-    for(const seed of late) {
+    const located=late.filter(t=>t.positionStatus!=='unavailable');
+    for(const seed of located) {
       if(assigned.has(seed.id)) continue;
-      const members=late.filter(t=>!assigned.has(t.id) && distance(seed,t)<=3);
+      const members=located.filter(t=>!assigned.has(t.id) && distance(seed,t)<=3);
       if(members.length<3) continue;
       members.forEach(t=>assigned.add(t.id));
       const total=members.reduce((sum,t)=>sum+t.delay,0);

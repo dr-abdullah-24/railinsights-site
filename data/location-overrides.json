@@ -1,0 +1,17 @@
+{
+  "TIVITNL": {
+    "lat": 50.953646,
+    "lon": -3.295862,
+    "route": "Great Western Main Line",
+    "osmWay": "7657514",
+    "source": "https://www.openstreetmap.org/way/7657514",
+    "reason": "Original LOC grid reference places Whiteball in the North Sea. Use the mapped tunnel centre as a location estimate, not an individual berth or GPS fix."
+  },
+  "MDNHEAD": {
+    "lat": 51.51838,
+    "lon": -0.72281,
+    "route": "Great Western Main Line",
+    "source": "https://api.openstreetmap.org/api/0.6/map?bbox=-0.73,51.512,-0.715,51.523",
+    "reason": "Replace the coarse station coordinate with a point on the mapped main line at Maidenhead. Platform and individual berth remain unverified."
+  }
+}

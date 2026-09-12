@@ -42,6 +42,12 @@ for (const loc of ctx.window.BERTH_DATA.locations) {
 }
 console.log(`[Berths] ${berthLookup.size} entries from ${ctx.window.BERTH_DATA.locations.length} locations`);
 
+
+const RailPosition = require('./assets/rail-position.js');
+const qualityContext = { window: {} };
+vm.runInNewContext(fs.readFileSync('./data/berth-quality.js', 'utf8'), qualityContext);
+const positionQuality = qualityContext.window.BERTH_QUALITY;
+
 // ── Train state ───────────────────────────────────────────────────────────────
 // headcode → { lat, lon, name, td, berth, type, ts }
 const trainState = new Map();
@@ -68,33 +74,22 @@ function isBlank(descr) {
   return !descr || !descr.trim() || descr.trim() === '0000';
 }
 
-function handleCA({ area_id, to, descr, ts }) {
+// A new unmapped berth must not inherit an old coordinate with a fresh timestamp.
+function updateTDPosition({ area_id, to, descr, ts }) {
   if (isBlank(descr)) return;
-  const hc   = descr.trim();
-  const loc  = berthLookup.get(`${area_id}:${to}`);
-  const prev = trainState.get(hc);
-  const n = Number(ts); const stamp = (n > 0 && n < 3e12) ? n : Date.now();
-
-  if (loc) {
-    trainState.set(hc, { lat: loc.lat, lon: loc.lon, name: loc.name, td: area_id, berth: to, type: classifyTrain(hc), ts: stamp });
-  } else if (prev) {
-    // berth not in data — keep old coords, update TD/berth reference
-    trainState.set(hc, { ...prev, td: area_id, berth: to, ts: stamp });
-  }
+  const hc = descr.trim();
+  const n = Number(ts);
+  const stamp = Number.isFinite(n) && n > 0 && n <= Date.now() + 30000 ? n : Date.now();
+  trainState.set(hc, RailPosition.resolve({
+    td: area_id, berth: to, type: classifyTrain(hc), ts: stamp,
+    name: berthLookup.get(`${area_id}:${to}`)?.name || 'Unknown berth',
+  }, positionQuality));
 }
-
+function handleCA(msg) { updateTDPosition(msg); }
 function handleCB({ descr }) {
   if (!isBlank(descr)) trainState.delete(descr.trim());
 }
-
-function handleCC({ area_id, to, descr, ts }) {
-  if (isBlank(descr)) return;
-  const hc  = descr.trim();
-  const loc = berthLookup.get(`${area_id}:${to}`);
-  if (loc) {
-    trainState.set(hc, { lat: loc.lat, lon: loc.lon, name: loc.name, td: area_id, berth: to, type: classifyTrain(hc), ts: ts ? Number(ts) : Date.now() });
-  }
-}
+function handleCC(msg) { updateTDPosition(msg); }
 
 function handleTRUST(msg) {
   const header = msg.header;

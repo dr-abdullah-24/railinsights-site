@@ -274,6 +274,9 @@ async function main() {
     console.log('[berth-positions] Snap data present — skipping build.');
   }
 
+  // Rebuild the conservative, provenance-labelled positions consumed by clients.
+  require('./scripts/build-location-quality.cjs');
+
   if (BUILD_ONLY) {
     console.log('[berth-positions] Exiting (--build-only).');
     process.exit(0);

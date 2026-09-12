@@ -850,7 +850,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="data/berth-locations.js"></script>
 <script src="data/uk-boundary.js"></script>
-<script src="data/berth-snap.js"></script>
+<script src="data/berth-quality.js"></script>
+<script src="assets/rail-position.js"></script>
 <script>
 'use strict';
 
@@ -1184,7 +1185,8 @@ function setMarkerVisibility(hc, show) {
 
 // ── State update from WebSocket ──────────────────────────────────────────────
 function applyState(incomingTrains) {
-  const newTrains = trainsInsideUk(incomingTrains);
+  const corrected = Object.fromEntries(Object.entries(incomingTrains || {}).filter(([,t]) => t && typeof t === 'object').map(([hc,t]) => [hc, RailPosition.resolve(t, window.BERTH_QUALITY)]));
+  const newTrains = trainsInsideUk(corrected);
   recordMovements(trainData, newTrains);
 
   // Remove headcodes that disappeared
@@ -1197,14 +1199,17 @@ function applyState(incomingTrains) {
   }
 
   // Add / update
-  for (const [hc, t] of Object.entries(newTrains)) {
-    if (!t.lat || !t.lon) continue;
+  for (const [hc, incoming] of Object.entries(newTrains)) {
+    const t = RailPosition.resolve(incoming, window.BERTH_QUALITY);
+    if (!RailPosition.canMap(t)) {
+      const previous = trainMk.get(hc);
+      if (previous) { trainLayer.removeLayer(previous); visibleTrains.delete(hc); trainMk.delete(hc); }
+      continue;
+    }
 
-    // Prefer OS-grid-derived coordinates from berth-snap lookup (metre-level precision)
-    // over server-sent positions which are interpolated from station name matching
-    const _s = window.BERTH_SNAP?.[`${t.td}:${t.berth}`];
-    const lat = _s ? _s[0] : t.lat;
-    const lon = _s ? _s[1] : t.lon;
+    // Checked location estimates, not GPS or exact berth coordinates.
+    const lat = t.lat;
+    const lon = t.lon;
 
     recordTrajectoryPoint(hc, { ...t, lat, lon });
 
@@ -1739,6 +1744,7 @@ function selectTrain(hc, t) {
     <div class="detail-row"><span>Last seen</span><span>${time}</span></div>
     <div class="detail-row"><span>Observed since</span><span>${trajectory.length ? new Date(trajectory[0].observedAt).toLocaleTimeString('en-GB') : time}</span></div>
     <div class="detail-row"><span>Trajectory states</span><span>${trajectory.length}</span></div>
+    <div class="detail-row"><span>Position quality</span><span>${esc(t.positionLabel || 'Location unverified')}</span></div>
     <div class="detail-row"><span>Coordinates</span><span>${t.lat.toFixed(4)}, ${t.lon.toFixed(4)}</span></div>
     <button class="detail-locate-btn secondary" onclick="fitTrajectory('${hc}')">
       Show complete observed path
