@@ -164,6 +164,7 @@ function buildPayload() {
       uid:         uidMap.get(hc) || null,
       serviceCode: trust.serviceCode || null,
       delay:       trust.delay,
+      delayTs:     trust.ts,
       delayStatus: trust.status,
       planned:     trust.planned,
       actual:      trust.actual,
@@ -261,7 +262,7 @@ async function startConsumer() {
       let changed = false;
       for (const item of arr) {
         if (topic === 'TRAIN_MVT_ALL_TOC') {
-          handleTRUST(item);
+          handleTRUST(item); changed = true;
         } else if (item.CA_MSG) { handleCA(item.CA_MSG); changed = true; }
         else if (item.CB_MSG) { handleCB(item.CB_MSG); changed = true; }
         else if (item.CC_MSG) { handleCC(item.CC_MSG); changed = true; }
