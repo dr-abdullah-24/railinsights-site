@@ -1,67 +1,83 @@
-'use strict';
+ 'use strict';
 (() => {
-const $=id=>document.getElementById(id), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const options=()=>({type:$('type').value,threshold:+$('threshold').value,age:+$('age').value});
-let raw={},received=0,selected=null,state,connected=false,retry=2000,map,markers,circles;
-const baselines=new Map(), feedParam=new URLSearchParams(location.search).get('feed');
+const ageText=ts=>Number.isFinite(ts)?Math.max(0,Math.floor((Date.now()-ts)/60000))+'m ago':'Age unknown';
+const identity=t=>t.id+'|'+(t.uid||'');
+let raw={},received=0,selected=null,following=null,state,connected=false,retry=2000,map,circles,firstFit=false,lastFollowPosition='';
+const markerMap=new Map();
+const feedParam=new URLSearchParams(location.search).get('feed');
 const wsUrl=feedParam==='mock'?'ws://localhost:3001':feedParam==='live'?'wss://railinsights-site-5jfi.onrender.com':['localhost','127.0.0.1',''].includes(location.hostname)?'ws://localhost:3000':'wss://railinsights-site-5jfi.onrender.com';
 if(['mock','live'].includes(feedParam))document.querySelectorAll('a[href="analytics.html"]').forEach(a=>a.search='?feed='+feedParam);
-const ageText=ts=>Number.isFinite(ts)?Math.max(0,Math.floor((Date.now()-ts)/60000))+' min':'Unknown';
-const identity=t=>t.id+'|'+(t.uid||'');
-function change(t){const b=baselines.get(identity(t));if(!b||t.delayTs<=b.ts)return '—';const d=t.delay-b.delay;return(d>0?'+':'')+d+' min';}
+function rows(){const c=state.clusters.find(c=>c.id===selected),q=$('search').value.trim().toLowerCase();return (c?c.members:state.late).filter(t=>[t.id,t.name,t.uid,t.td].some(v=>String(v||'').toLowerCase().includes(q)));}
 function fit(trains){if(map&&trains.length)map.fitBounds(trains.map(t=>[t.lat,t.lon]),{padding:[35,35],maxZoom:13});}
-function select(id){selected=id;render();const c=state.clusters.find(c=>c.id===id);if(c&&map)map.fitBounds(L.latLng(c.seed.lat,c.seed.lon).toBounds(6000),{padding:[25,25]});}
+function follow(id){const t=state.fresh.find(t=>t.id===id);if(!t)return;following=identity(t);lastFollowPosition='';render();if(map){map.setView([t.lat,t.lon],Math.max(map.getZoom(),14));if(matchMedia('(max-width:700px)').matches)$('map').scrollIntoView({behavior:'smooth',block:'center'});}}
+function select(id){selected=id;following=null;render();const c=state.clusters.find(c=>c.id===id);if(c&&map)map.fitBounds(L.latLng(c.seed.lat,c.seed.lon).toBounds(6000),{padding:[25,25]});}
 function initMap(){
- if(!window.L){$('map').innerHTML='<p class="empty">Map library unavailable. Cluster analysis and service details remain available.</p>';$('basemap').disabled=true;$('resetMap').disabled=true;return;}
+ if(!window.L){$('map').innerHTML='<p class="empty">Map unavailable. Delayed services are listed alongside.</p>';$('basemap').disabled=true;$('resetMap').disabled=true;return;}
  map=L.map('map',{zoomAnimation:false,fadeAnimation:false}).setView([54,-2.5],6);
  const satellite=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community'}).addTo(map);
  const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'});
- for(const layer of [satellite,street])layer.on('tileerror',()=>{$('imageryStatus').textContent='Some map tiles could not load. Try switching basemap. Service observations remain available.';});
- markers=L.layerGroup().addTo(map);circles=L.layerGroup().addTo(map);
- $('basemap').onchange=()=>{map.removeLayer(satellite);map.removeLayer(street);($('basemap').value==='satellite'?satellite:street).addTo(map);$('imageryStatus').textContent=$('basemap').value==='satellite'?'Esri satellite/aerial mosaic · capture date varies and is not supplied here · not a live satellite feed.':'OpenStreetMap geographic context · train locations are TD berth observations.';};
- $('resetMap').onclick=()=>fit(state?.late||[]);
+ for(const layer of [satellite,street])layer.on('tileerror',()=>{$('imageryStatus').textContent='Some map tiles unavailable · try another basemap';});
+ circles=L.layerGroup().addTo(map);
+ $('basemap').onchange=()=>{map.removeLayer(satellite);map.removeLayer(street);($('basemap').value==='satellite'?satellite:street).addTo(map);$('imageryStatus').textContent=$('basemap').value==='satellite'?'Satellite/aerial background · not live imagery':'OpenStreetMap · TD berth positions';};
+ $('resetMap').onclick=()=>{following=null;render();fit(rows());};
 }
-function renderMap(){if(!map)return;markers.clearLayers();circles.clearLayers();
- for(const c of state.clusters)L.circle([c.seed.lat,c.seed.lon],{radius:3000,color:c.id===selected?'#d9ff43':'#f5b74f',weight:2,fillOpacity:.1}).addTo(circles).on('click',()=>select(c.id));
- for(const t of state.late)L.circleMarker([t.lat,t.lon],{radius:6,color:'#10130f',weight:1,fillColor:t.delay>15?'#ff776a':'#f5b74f',fillOpacity:.95}).bindPopup(`<b>${esc(t.id)} · +${esc(t.delay)} min</b><br>${esc(t.name||t.td||'Unknown location')}<br>Position: ${esc(ageText(t.ts))} ago<br>Delay report: ${esc(ageText(t.delayTs))} ago<br>TD berth estimate · not GPS`).addTo(markers);
+function renderMap(tracked){if(!map)return;
+ circles.clearLayers();
+ for(const c of state.clusters)L.circle([c.seed.lat,c.seed.lon],{radius:3000,color:c.id===selected?'#d9ff43':'#f5b74f',weight:1,fillOpacity:.06}).addTo(circles).on('click',()=>select(c.id));
+ const visible=rows();if(tracked&&!visible.some(t=>identity(t)===following))visible.push(tracked);
+ const ids=new Set(visible.map(identity));
+ for(const [key,m]of markerMap)if(!ids.has(key)){map.removeLayer(m);markerMap.delete(key);}
+ for(const t of visible){const key=identity(t),active=key===following;let m=markerMap.get(key);
+  if(!m){m=L.circleMarker([t.lat,t.lon]).addTo(map).on('click',()=>follow(t.id));m.bindTooltip('',{direction:'top'});markerMap.set(key,m);}
+  m.setLatLng([t.lat,t.lon]);m.setRadius(active?10:6);m.setStyle({color:active?'#d9ff43':'#10130f',weight:active?3:1,fillColor:t.delayStatus==='LATE'?(t.delay>15?'#ff776a':'#f5b74f'):'#75df99',fillOpacity:1});
+  m.setTooltipContent(`${esc(t.id)} · ${t.delayStatus==='LATE'?'+'+esc(t.delay)+'m':esc(t.delayStatus||'Delay unknown')} · ${esc(t.name||t.td)}<br>Delay report: ${esc(ageText(t.delayTs))}`);
+  if(active){m.bringToFront();m.openTooltip();}
+ }
+ if(tracked){const pos=tracked.lat+','+tracked.lon;if(pos!==lastFollowPosition){map.panTo([tracked.lat,tracked.lon],{animate:false});lastFollowPosition=pos;}}
+ if(!firstFit&&visible.length){fit(visible);firstFit=true;}
 }
 function render(){
- const now=Date.now(),stale=!received||now-received>60000;
- state=CongestionModel.analyse(raw,options(),now);
- if(stale)state={fresh:[],known:[],late:[],clusters:[],excluded:0};
- $('feed').textContent=!received?(connected?'Waiting for data':'Connecting / reconnecting…'):!connected?'Disconnected · last snapshot '+ageText(received)+' ago':stale?'Feed stale · observations withheld':'Receiving observations';
+ const stale=!received||Date.now()-received>60000;
+ state=CongestionModel.analyse(raw,options());
+ if(stale)state={fresh:[],known:[],reported:[],unverified:[],late:[],clusters:[],excluded:0};
+ $('feed').textContent=!received?(connected?'Waiting for data':'Connecting…'):!connected?'Disconnected':stale?'Feed stale':'Receiving observations';
  $('feed').style.color=connected&&!stale?'var(--signal)':'var(--amber)';
- $('updated').textContent=received?'Snapshot '+new Date(received).toLocaleTimeString('en-GB')+' · refreshes automatically':'Waiting for a feed snapshot';
- for(const [id,value]of Object.entries({positions:state.fresh.length,coverage:state.fresh.length?Math.round(100*state.known.length/state.fresh.length)+'%':'—',delayed:state.late.length,clusters:state.clusters.length}))$(id).textContent=stale?'—':value;
- $('excluded').textContent=state.excluded+' stale / invalid positions excluded';$('thresholdNote').textContent='More than '+options().threshold+' minutes late';
+ $('updated').textContent=received?'Updated '+new Date(received).toLocaleTimeString('en-GB'):'Waiting for feed';
+ $('delayed').textContent=stale?'—':state.reported.length?state.late.length:'—';$('clusters').textContent=stale?'—':state.clusters.length;
+ const unknown=state.late.filter(t=>t.delayTs==null).length;
+ $('dataNotice').textContent=stale?'Waiting for current train observations.':unknown?`${unknown} delayed services have no report time — shown with age unknown.`:!state.reported.length?'Delay reports unavailable for these services.':!connected?'Connection lost — showing the last snapshot.':'';
+ $('dataNotice').hidden=!$('dataNotice').textContent;
+ $('coverageNote').textContent=`${state.fresh.length} valid positions; ${state.known.length} fresh delay reports; ${state.unverified.length} reports with age unknown; ${state.excluded} stale or invalid positions excluded.`;
  if(selected&&!state.clusters.some(c=>c.id===selected))selected=null;
- const missingTime=!stale&&state.fresh.some(t=>typeof t.delay==='number'&&!t.delayTs);
- $('ranking').className=state.clusters.length?'':'empty';
- $('ranking').innerHTML=state.clusters.length?state.clusters.map((c,i)=>`<button class="cluster" data-id="${esc(c.id)}" aria-pressed="${c.id===selected}"><small>${String(i+1).padStart(2,'0')} / ${c.severe?'Severe delays present':'Delay concentration'}</small><strong>${esc(c.seed.name||c.seed.td||'Unnamed location')}</strong><div class="stats"><span>${c.members.length} services</span><span>${c.total.toFixed(0)} min summed</span></div><small>Mean ${c.mean.toFixed(1)} min · ${c.severe} over 15 min</small></button>`).join(''):stale?'Waiting for a current feed snapshot. No sample services are shown.':missingTime?'Delay timestamps unavailable. Deploy the updated bridge to enable trustworthy delay analysis.':!state.known.length?'No fresh delay reports in this selection. This does not mean the railway is running on time.':'No groups of three delayed services within 3 km under these filters.';
- const cluster=state.clusters.find(c=>c.id===selected),rows=cluster?cluster.members:state.late;
- $('detailTitle').textContent=cluster?(cluster.seed.name||cluster.seed.td||'Selected cluster'):'Affected services';
- $('detailSummary').textContent=cluster?`${rows.length} delayed services · ${cluster.total.toFixed(0)} minutes summed current lateness · mean ${cluster.mean.toFixed(1)} min.`:'All delayed services matching the current filters. Select a concentration to narrow the investigation.';
- $('clearSelection').hidden=!cluster;
- $('assessment').textContent=cluster?`${cluster.severe} of ${rows.length} services are over 15 minutes late. Check shared route and platform constraints before interpreting this geographic cluster as a congestion bottleneck.`:'A cluster highlights co-located lateness. It does not establish the cause of delay.';
- $('services').innerHTML=rows.length?rows.map(t=>`<tr><td><b>${esc(t.id)}</b><small>${esc(t.uid||'UID unavailable')}</small></td><td>${esc(t.name||t.td||'Unknown')}<small>${esc(t.td)} / ${esc(t.berth)}</small></td><td>${esc(t.type||'Unknown')}</td><td>+${esc(t.delay)} min</td><td>${ageText(t.ts)}</td><td>${ageText(t.delayTs)}</td><td>${esc(change(t))}</td></tr>`).join(''):'<tr><td colspan="7">'+(stale?'Waiting for a current feed snapshot.':'No delayed services with fresh delay reports match these filters.')+'</td></tr>';
- $('export').disabled=!rows.length;renderMap();
+ const c=state.clusters.find(c=>c.id===selected),list=rows(),tracked=state.fresh.find(t=>identity(t)===following);
+ $('scopeName').textContent=c?'Cluster: '+(c.seed.name||c.seed.td):'';$('clearSelection').hidden=!c;$('scope').hidden=!c;
+ $('listCount').textContent=list.length;
+ $('services').innerHTML=list.length?list.map(t=>`<button class="service" data-service="${esc(t.id)}" aria-pressed="${identity(t)===following}"><span class="service-top"><b>${esc(t.id)}</b><strong>+${esc(t.delay)}m</strong></span><span class="location">${esc(t.name||t.td||'Unknown location')}</span><small>${esc(t.type||'Service')} · Position ${ageText(t.ts)}</small><span class="service-bottom"><small class="${t.delayTs==null?'amber':''}">Delay: ${ageText(t.delayTs)}</small><span class="follow-label">${identity(t)===following?'Following ●':'Follow on map →'}</span></span></button>`).join(''):`<p class="empty">${stale?'Waiting for train observations.':!state.reported.length?'No delay reports available.':$('search').value?'No matching service. Try its headcode or location.':'No services match these filters.'}</p>`;
+ $('stopFollow').hidden=!following;
+ $('trackingText').textContent=following?(tracked?`Following ${tracked.id} · ${tracked.name||tracked.td||'Unknown location'} · Position ${ageText(tracked.ts)} · ${tracked.delayStatus==='LATE'?'Reported +'+tracked.delay+'m':'Status: '+(tracked.delayStatus||'Unknown')} · Delay ${ageText(tracked.delayTs)}`:'Follow paused — service no longer has a position in this selection.'):'Select a service to follow it on the map.';
+ $('tracking').classList.toggle('active',!!tracked);
+ $('clusterCount').textContent=state.clusters.length;
+ $('ranking').innerHTML=state.clusters.length?state.clusters.map(c=>`<button class="cluster" data-id="${esc(c.id)}" aria-pressed="${c.id===selected}"><b>${esc(c.seed.name||c.seed.td)}</b><span>${c.members.length} delayed · mean +${c.mean.toFixed(0)}m →</span></button>`).join(''):'<p class="empty">No clusters under these filters.</p>';
+ $('export').disabled=!list.length;renderMap(tracked);
 }
+$('services').onclick=e=>{const b=e.target.closest('[data-service]');if(b)follow(b.dataset.service);};
 $('ranking').onclick=e=>{const b=e.target.closest('[data-id]');if(b)select(b.dataset.id);};
 $('clearSelection').onclick=()=>{selected=null;render();};
+$('stopFollow').onclick=()=>{following=null;render();};
+$('search').oninput=()=>render();
 for(const id of ['type','threshold','age'])$(id).onchange=()=>{selected=null;render();};
 $('export').onclick=()=>{
- const cluster=state.clusters.find(c=>c.id===selected),rows=cluster?cluster.members:state.late;
  const cell=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';
- const lines=[['Snapshot UTC','Service','UID','Location','TD','Berth','Type','Lateness minutes','Position UTC','Delay report UTC','Session change','Threshold minutes','Max position age minutes']];
- rows.forEach(t=>lines.push([new Date(received).toISOString(),t.id,t.uid,t.name,t.td,t.berth,t.type,t.delay,new Date(t.ts).toISOString(),new Date(t.delayTs).toISOString(),change(t),options().threshold,options().age]));
+ const lines=[['Snapshot UTC','Service','UID','Location','TD','Berth','Type','Reported lateness minutes','Position UTC','Delay report UTC','Report freshness']];
+ rows().forEach(t=>lines.push([new Date(received).toISOString(),t.id,t.uid,t.name,t.td,t.berth,t.type,t.delay,new Date(t.ts).toISOString(),t.delayTs==null?'':new Date(t.delayTs).toISOString(),t.delayTs==null?'Age unknown':'Within 15 minutes']));
  const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='rail-congestion-'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
 function connect(){let ws;try{ws=new WebSocket(wsUrl);}catch{setTimeout(connect,retry);return;}
  ws.onopen=()=>{connected=true;render();};
- ws.onmessage=event=>{let msg;try{msg=JSON.parse(event.data);}catch{return;}if(msg.type!=='state'||!msg.trains||typeof msg.trains!=='object'||Array.isArray(msg.trains))return;
- raw=msg.trains;received=Date.now();retry=2000;const now=Date.now();
- for(const [id,t]of Object.entries(raw)){if(!t||typeof t!=='object')continue;const key=identity({...t,id});if(!baselines.has(key)&&Number.isFinite(t.delay)&&t.delayStatus==='LATE'&&Number.isFinite(t.delayTs)&&now-t.delayTs<=900000&&t.delayTs<=now+30000)baselines.set(key,{delay:t.delay,ts:t.delayTs});}
- for(const [key,b]of baselines)if(now-b.ts>3600000)baselines.delete(key);render();};
+ ws.onmessage=event=>{let msg;try{msg=JSON.parse(event.data);}catch{return;}if(msg.type!=='state'||!msg.trains||typeof msg.trains!=='object'||Array.isArray(msg.trains))return;raw=msg.trains;received=Date.now();retry=2000;render();};
  ws.onerror=()=>ws.close();ws.onclose=()=>{connected=false;render();setTimeout(connect,retry);retry=Math.min(30000,retry*1.5);};
 }
 initMap();render();connect();setInterval(render,10000);

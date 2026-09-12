@@ -10,7 +10,9 @@
     const all=Object.entries(raw).filter(([,t])=>t && typeof t==='object' && !t.cancelled).map(([id,t])=>({...t,id})).filter(t=> options.type==='all' || (options.type==='passenger' ? ['express','passenger'].includes(t.type) : options.type==='freight' ? t.type==='freight' : !['express','passenger','freight'].includes(t.type)));
     const fresh=all.filter(t=>typeof t.lat==='number' && typeof t.lon==='number' && Number.isFinite(t.lat) && Number.isFinite(t.lon) && Math.abs(t.lat)<=90 && Math.abs(t.lon)<=180 && validTime(t.ts,now,options.age*60000));
     const known=fresh.filter(t=>typeof t.delay==='number' && Number.isFinite(t.delay) && ['LATE','EARLY','ON TIME'].includes(t.delayStatus) && validTime(t.delayTs,now,900000));
-    const late=known.filter(t=>t.delayStatus==='LATE' && t.delay>options.threshold).sort((a,b)=>b.delay-a.delay || a.id.localeCompare(b.id));
+    const reported=fresh.filter(t=>typeof t.delay==='number' && Number.isFinite(t.delay) && ['LATE','EARLY','ON TIME'].includes(t.delayStatus) && (t.delayTs == null || validTime(t.delayTs,now,900000)));
+    const unverified=reported.filter(t=>t.delayTs == null);
+    const late=reported.filter(t=>t.delayStatus==='LATE' && t.delay>options.threshold).sort((a,b)=>b.delay-a.delay || a.id.localeCompare(b.id));
     const assigned=new Set(), clusters=[];
     for(const seed of late) {
       if(assigned.has(seed.id)) continue;
@@ -21,7 +23,7 @@
       clusters.push({id:seed.id,seed,members,total,mean:total/members.length,severe:members.filter(t=>t.delay>15).length});
     }
     clusters.sort((a,b)=>b.total-a.total || a.id.localeCompare(b.id));
-    return {fresh,known,late,clusters,excluded:all.length-fresh.length};
+    return {fresh,known,reported,unverified,late,clusters,excluded:all.length-fresh.length};
   }
   const api={analyse,distance};
   if(typeof module!=='undefined' && module.exports) module.exports=api;

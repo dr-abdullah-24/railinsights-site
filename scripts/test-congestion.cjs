@@ -6,12 +6,12 @@ const raw={a:train({delay:20}),b:train(),c:train({lon:-.11,type:'freight'}),d:tr
 const result=analyse(raw,options,now);
 assert.equal(result.fresh.length,7);
 assert.equal(result.known.length,5);
-assert.equal(result.late.length,4);
+assert.equal(result.late.length,5);
 assert.equal(result.clusters.length,1);
-assert.equal(result.clusters[0].members.length,3);
-assert.equal(result.clusters[0].total,40);
+assert.equal(result.clusters[0].members.length,4);
+assert.equal(result.clusters[0].total,50);
 assert.equal(result.clusters[0].severe,1);
-assert.equal(analyse(raw,{...options,type:'passenger'},now).clusters.length,0);
+assert.equal(analyse(raw,{...options,type:'passenger'},now).clusters.length,1);
 assert.equal(analyse(raw,{...options,threshold:15},now).late.length,1);
 assert.equal(analyse({a:train({delay:3})},options,now).late.length,0);
 assert.equal(analyse({},options,now).known.length,0);
@@ -23,3 +23,9 @@ const crowded=Object.fromEntries(Array.from({length:8},(_,i)=>['t'+i,train()]));
 const grouped=analyse(crowded,options,now).clusters.flatMap(c=>c.members.map(t=>t.id));
 assert.equal(new Set(grouped).size,grouped.length);
 console.log('Congestion model: freshness, thresholds, coverage, clustering, exclusions and filters passed.');
+
+assert.equal(result.unverified.length,1);
+assert.equal(result.reported.length,6);
+assert.equal(analyse({a:train({delayTs:null})},options,now).late.length,1);
+assert.equal(analyse({a:train({delayTs:0})},options,now).late.length,0);
+assert.equal(analyse({a:train({delay:1,delayTs:undefined})},{...options,threshold:0},now).late.length,1);
