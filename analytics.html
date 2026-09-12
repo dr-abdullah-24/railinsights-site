@@ -1315,7 +1315,7 @@ function refresh() {
         <span class="dc-rank">${i + 1}</span>
         <span class="dc-hc" style="background:${cfg.color};color:#fff">${esc(hc)}</span>
         <span class="dc-uid">
-          <span class="dc-uid-label">${t.uid ? 'UID' : t.serviceCode ? 'SVC' : 'UID'}</span>
+          <span class="dc-uid-label">${t.uid ? 'UID' : t.serviceCode ? 'TSC' : 'UID'}</span>
           <span class="dc-uid-val">${esc(t.uid || t.serviceCode || '—')}</span>
         </span>
         <span class="dc-delay" style="color:${sev}">+${mins}m</span>
@@ -1514,7 +1514,7 @@ function refresh() {
         const dotColor = zone?.color || 'var(--red)';
         const pills = cTrains.map(({ hc, uid, serviceCode, delay }) => {
           const svcId = uid || serviceCode || null;
-          const svcLabel = uid ? 'UID' : serviceCode ? 'SVC' : 'UID';
+          const svcLabel = uid ? 'UID' : serviceCode ? 'TSC' : 'UID';
           return `<span class="ct-pill">
             <span class="ct-hc">${esc(hc)}</span>
             <span class="ct-divider"></span>
