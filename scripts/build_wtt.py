@@ -47,8 +47,12 @@ def main():
 
             li = loc_id(row.get('location', '').strip())
 
-            if uid not in services:
-                services[uid] = {
+            # One UID can have several schedules (e.g. an MX and an SX
+            # variant, or different date ranges) — keep them separate.
+            key = (uid, row.get('running_days', '').strip(),
+                   row.get('dates_of_operation', '').strip())
+            if key not in services:
+                services[key] = {
                     'h':  row.get('headcode', '').strip(),
                     'u':  uid,
                     'op': row.get('operator', '').strip(),
@@ -66,7 +70,7 @@ def main():
                 }
             book = row.get('wtt_book', '').strip()
             if book:
-                services[uid]['bk'].add(book)
+                services[key]['bk'].add(book)
 
             # Stop tuple: [loc_idx, platform, arr, dep, pass_time]
             # Omit trailing empty strings to save space
@@ -80,7 +84,7 @@ def main():
             # Trim trailing empty strings
             while len(stop) > 1 and stop[-1] == '':
                 stop.pop()
-            services[uid]['s'].append(stop)
+            services[key]['s'].append(stop)
 
     print(f'\nParsed {len(services):,} services, {len(locs_list):,} locations.')
 

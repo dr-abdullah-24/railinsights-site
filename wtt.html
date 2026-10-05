@@ -666,13 +666,24 @@ const BOOK_META = {
   YH17:'Thornaby East Jn – Redcar & Boulby',YH18:'Bessacarr Jn – Werrington Jn',
 };
 
-const RD = {
-  MO:[1,0,0,0,0,0,0], TuO:[0,1,0,0,0,0,0], WO:[0,0,1,0,0,0,0],
-  ThO:[0,0,0,1,0,0,0], FO:[0,0,0,0,1,0,0], SO:[0,0,0,0,0,1,0],
-  SuO:[0,0,0,0,0,0,1], MX:[0,1,1,1,1,1,0], SX:[1,1,1,1,1,0,0],
-  MSX:[0,1,1,1,1,0,0], FSX:[1,1,1,1,0,0,0], WSX:[1,1,0,1,1,0,0],
-  EWD:[1,1,1,1,1,0,0], ThSX:[1,1,1,0,1,0,0], Daily:[1,1,1,1,1,1,1],
-};
+// Running-day codes are combinations like SUO, TWThO, MSX, ThFSO: day tokens
+// followed by O (only) or X (excepted). X codes exclude Sunday — the WTT books
+// split Sunday into separate SUO schedules.
+const DAY_TOK = {M:0,T:1,TU:1,W:2,TH:3,F:4,S:5,SU:6};
+function parseRunDays(code) {
+  const c = (code||'').trim();
+  const u = c.toUpperCase();
+  if (u==='DAILY') return [1,1,1,1,1,1,1];
+  if (u==='EWD') return [1,1,1,1,1,0,0];
+  const mode = c.slice(-1).toUpperCase();
+  if (mode!=='O' && mode!=='X') return [0,0,0,0,0,0,0];
+  const toks = c.slice(0,-1).match(/Su|SU|Th|TH|Tu|TU|M|T|W|F|S/g) || [];
+  if (toks.join('')!==c.slice(0,-1)) return [0,0,0,0,0,0,0];
+  const hit = new Set(toks.map(t=>DAY_TOK[t.toUpperCase()]));
+  return mode==='O'
+    ? [0,1,2,3,4,5,6].map(d=>hit.has(d)?1:0)
+    : [0,1,2,3,4,5,6].map(d=>d<6&&!hit.has(d)?1:0);
+}
 const DAY_L = ['M','T','W','T','F','S','S'];
 
 function svcType(hc) {
@@ -761,17 +772,20 @@ function finalise(s) {
     return true;
   });
 
+  // Order stops by minutes elapsed since the origin time, so services that
+  // cross midnight sort correctly (a pairwise ±12h wrap isn't transitive).
+  const base = t2m(s.origin_time) ?? t2m(stopTime(s.stops[0]||{})) ?? 0;
+  const rel = st => { const t=t2m(stopTime(st)); return t==null ? null : (t-base+1440)%1440; };
   s.stops.sort((a,b) => {
-    let ta=t2m(stopTime(a)), tb=t2m(stopTime(b));
+    const ta=rel(a), tb=rel(b);
     if (ta==null&&tb==null) return 0;
     if (ta==null) return 1; if (tb==null) return -1;
-    if (tb-ta>720) tb-=1440;
-    if (ta-tb>720) ta-=1440;
     return ta-tb;
   });
   s.type = svcType(s.headcode);
   s.tocName = TOC_NAMES[s.operator]||s.operator;
-  s.days = RD[s.running_days]||[0,0,0,0,0,0,0];
+  s.days = parseRunDays(s.running_days);
+  s.key = `${s.uid}|${s.running_days}|${s.dates}`;
   const om=t2m(s.origin_time), dm=t2m(s.destination_time);
   s.durMins = diffM(om,dm);
   s.durStr = fmtDur(s.durMins);
@@ -784,8 +798,10 @@ function buildServices(rows) {
   const map = new Map();
   for (const r of rows) {
     const uid = r.uid; if (!uid) continue;
-    if (!map.has(uid)) {
-      map.set(uid, {
+    // One UID can have several schedules (different days/date ranges)
+    const key = `${uid}|${r.running_days||''}|${r.dates_of_operation||''}`;
+    if (!map.has(key)) {
+      map.set(key, {
         headcode:r.headcode||'', uid,
         operator:r.operator||'', toc:r.toc||'',
         origin:r.origin||'', origin_time:r.origin_time||'',
@@ -796,7 +812,7 @@ function buildServices(rows) {
         stops:[],
       });
     }
-    const svc = map.get(uid);
+    const svc = map.get(key);
     svc.stops.push({
       location:r.location||'', platform:r.platform||'',
       arr:r.arr||'', dep:r.dep||'', pass_time:r.pass_time||'',
@@ -849,18 +865,25 @@ function applyFilter() {
   APP.filtered = APP.all.filter(s => {
     if (!APP.types.has(s.type)) return false;
     if (APP.days.size>0 && ![...APP.days].some(d=>s.days[d]===1)) return false;
+    // Book stop lists only cover timing points within the book's area, so
+    // terminals outside it (e.g. Seaforth C.T. (GBRF)) appear only as the
+    // service origin/destination — treat those as positions before/after the stops.
+    const sOri = (s.origin||'').toLowerCase(), sDst = (s.destination||'').toLowerCase();
     if (fOri || fDst) {
-      let oriPos = -1, dstPos = -1;
+      let oriPos = -2, dstPos = -2;
+      if (fOri && sOri.includes(fOri)) oriPos = -1;
       for (let i = 0; i < s.stops.length; i++) {
         const loc = s.stops[i].location.toLowerCase();
-        if (fOri && oriPos === -1 && loc.includes(fOri)) oriPos = i;
+        if (fOri && oriPos === -2 && loc.includes(fOri)) oriPos = i;
         if (fDst && loc.includes(fDst)) dstPos = i;
       }
-      if (fOri && oriPos === -1) return false;
-      if (fDst && dstPos === -1) return false;
+      if (fDst && sDst.includes(fDst)) dstPos = s.stops.length;
+      if (fOri && oriPos === -2) return false;
+      if (fDst && dstPos === -2) return false;
       if (fOri && fDst && oriPos >= dstPos) return false;
     }
-    if (fSta && !s.stops.some(st=>st.location.toLowerCase().includes(fSta))) return false;
+    if (fSta && !sOri.includes(fSta) && !sDst.includes(fSta)
+        && !s.stops.some(st=>st.location.toLowerCase().includes(fSta))) return false;
     if (fToc && s.operator.toLowerCase()!==fToc && !s.tocName.toLowerCase().includes(fToc)) return false;
     if (APP.book && !s.books.includes(APP.book)) return false;
     return true;
@@ -915,7 +938,7 @@ function renderCard(s) {
   const pips = s.days.map((on,i)=>`<span class="dpip ${on?'on':'off'}">${DAY_L[i]}</span>`).join('');
   const dates = s.dates.replace(/(\d{2})\/(\d{2})\/(\d{4})/g,(_,d,m,y)=>`${d}/${m}/${y.slice(2)}`);
   const strip = buildStrip(s);
-  const isExp = APP.expanded.has(s.uid);
+  const isExp = APP.expanded.has(s.key);
   const arrMark = s.isCircular ? '↺' : '→';
 
   const summary = `
@@ -949,7 +972,7 @@ function renderCard(s) {
       </div>
     </div>`;
 
-  return `<div class="svc-card${isExp?' open':''}" data-type="${esc(s.type)}" data-uid="${esc(s.uid)}">
+  return `<div class="svc-card${isExp?' open':''}" data-type="${esc(s.type)}" data-key="${esc(s.key)}">
     ${summary}
     <div class="svc-detail${isExp?' show':''}">
       ${buildDetail(s)}
@@ -1010,10 +1033,10 @@ function render() {
   el.querySelectorAll('.svc-summary').forEach(el2=>{
     el2.addEventListener('click',()=>{
       const card=el2.closest('.svc-card');
-      const uid=card.dataset.uid;
+      const key=card.dataset.key;
       const det=card.querySelector('.svc-detail');
-      if (APP.expanded.has(uid)){APP.expanded.delete(uid);card.classList.remove('open');det.classList.remove('show');}
-      else{APP.expanded.add(uid);card.classList.add('open');det.classList.add('show');}
+      if (APP.expanded.has(key)){APP.expanded.delete(key);card.classList.remove('open');det.classList.remove('show');}
+      else{APP.expanded.add(key);card.classList.add('open');det.classList.add('show');}
     });
   });
   updateBar(); updateLM();
