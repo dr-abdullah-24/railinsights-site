@@ -117,6 +117,9 @@
     .sort-btn { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: white; color: var(--text-3); font: 700 10px/1 var(--mono); cursor: pointer; letter-spacing: 0.04em; text-transform: uppercase; transition: all 0.12s; }
     .sort-btn:hover { border-color: var(--border-2); color: var(--text-2); }
     .sort-btn.on { background: var(--blue); border-color: var(--blue); color: white; }
+    .dir-btn { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: white; color: var(--text-3); font: 700 10px/1 var(--mono); cursor: pointer; letter-spacing: 0.04em; text-transform: uppercase; transition: all 0.12s; }
+    .dir-btn:hover { border-color: var(--border-2); color: var(--text-2); }
+    .dir-btn.on { background: var(--blue); border-color: var(--blue); color: white; }
 
     .f-reset { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: white; color: var(--text-3); font: 600 10px/1 var(--mono); cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.12s; }
     .f-reset:hover { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
@@ -466,6 +469,11 @@
       </button>
     </div>
     <div class="filter-row-2">
+      <div class="fg-inline">
+        <span class="fg-title">Direction</span>
+        <button class="dir-btn on" data-bidir="0" type="button" title="Origin → Destination only">One way</button>
+        <button class="dir-btn" data-bidir="1" type="button" title="Include trains running Destination → Origin; with one station, trains starting or ending there">Both ways</button>
+      </div>
       <div class="fg-inline">
         <span class="fg-title">Type</span>
         <button class="type-chip on" data-t="EXP" title="Express / Special Passenger (1xxx, 9xxx)">EXP</button>
@@ -851,8 +859,28 @@ const APP = {
   all:[], filtered:[],
   visible:50, expanded:new Set(),
   types:new Set(['EXP','PAX','ECS','FRT','NPX','LL']),
-  days:new Set(), sort:'time', book:'',
+  days:new Set(), sort:'time', book:'', bidir:false,
 };
+
+// Does the service run from location a to location b (either may be blank)?
+// Book stop lists only cover timing points within the book's area, so
+// terminals outside it (e.g. Seaforth C.T. (GBRF)) appear only as the
+// service origin/destination — treat those as positions before/after the stops.
+function routeMatch(s, a, b) {
+  const sOri=(s.origin||'').toLowerCase(), sDst=(s.destination||'').toLowerCase();
+  let aPos=-2, bPos=-2;
+  if (a && sOri.includes(a)) aPos=-1;
+  for (let i=0; i<s.stops.length; i++) {
+    const loc=s.stops[i].location.toLowerCase();
+    if (a && aPos===-2 && loc.includes(a)) aPos=i;
+    if (b && loc.includes(b)) bPos=i;
+  }
+  if (b && sDst.includes(b)) bPos=s.stops.length;
+  if (a && aPos===-2) return false;
+  if (b && bPos===-2) return false;
+  if (a && b && aPos>=bPos) return false;
+  return true;
+}
 
 // ── Filter ──────────────────────────────────────────────────────
 function applyFilter() {
@@ -865,23 +893,9 @@ function applyFilter() {
   APP.filtered = APP.all.filter(s => {
     if (!APP.types.has(s.type)) return false;
     if (APP.days.size>0 && ![...APP.days].some(d=>s.days[d]===1)) return false;
-    // Book stop lists only cover timing points within the book's area, so
-    // terminals outside it (e.g. Seaforth C.T. (GBRF)) appear only as the
-    // service origin/destination — treat those as positions before/after the stops.
+    if ((fOri || fDst) && !routeMatch(s, fOri, fDst)
+        && !(APP.bidir && routeMatch(s, fDst, fOri))) return false;
     const sOri = (s.origin||'').toLowerCase(), sDst = (s.destination||'').toLowerCase();
-    if (fOri || fDst) {
-      let oriPos = -2, dstPos = -2;
-      if (fOri && sOri.includes(fOri)) oriPos = -1;
-      for (let i = 0; i < s.stops.length; i++) {
-        const loc = s.stops[i].location.toLowerCase();
-        if (fOri && oriPos === -2 && loc.includes(fOri)) oriPos = i;
-        if (fDst && loc.includes(fDst)) dstPos = i;
-      }
-      if (fDst && sDst.includes(fDst)) dstPos = s.stops.length;
-      if (fOri && oriPos === -2) return false;
-      if (fDst && dstPos === -2) return false;
-      if (fOri && fDst && oriPos >= dstPos) return false;
-    }
     if (fSta && !sOri.includes(fSta) && !sDst.includes(fSta)
         && !s.stops.some(st=>st.location.toLowerCase().includes(fSta))) return false;
     if (fToc && s.operator.toLowerCase()!==fToc && !s.tocName.toLowerCase().includes(fToc)) return false;
@@ -1250,7 +1264,17 @@ document.querySelectorAll('.sort-btn').forEach(b=>{
   });
 });
 
+document.querySelectorAll('.dir-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    APP.bidir = b.dataset.bidir==='1';
+    document.querySelectorAll('.dir-btn').forEach(x=>x.classList.toggle('on',x===b));
+    applyFilter();render();
+  });
+});
+
 document.getElementById('resetBtn').addEventListener('click',()=>{
+  APP.bidir=false;
+  document.querySelectorAll('.dir-btn').forEach(x=>x.classList.toggle('on',x.dataset.bidir==='0'));
   document.getElementById('fOri').value='';
   document.getElementById('fDst').value='';
   document.getElementById('fSta').value='';
