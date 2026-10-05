@@ -774,6 +774,23 @@ function splitLine(line) {
 }
 
 // ── Shared service finaliser ─────────────────────────────────────
+const MERGE_WINDOW_MINS = 30;
+function stopsCompatible(a, b, relM, adjacent) {
+  const F = ['arr','dep','pass_time'];
+  for (const f of F) if (a[f] && b[f] && a[f]!==b[f]) return false;
+  // A passing time can't coexist with a call (arr/dep) at the same visit
+  if ((a.pass_time && (b.arr||b.dep)) || (b.pass_time && (a.arr||a.dep))) return false;
+  // One row's timings all contained in the other's: same call, any dwell length
+  const subset = (x,y) => F.every(f => !x[f] || x[f]===y[f]);
+  if (subset(a,b) || subset(b,a)) return true;
+  // Arrival-only row immediately followed by departure-only row: one long call
+  if (adjacent && a.arr && !a.dep && b.dep && !b.arr) return true;
+  const ts = [a,b].flatMap(x=>[x.arr,x.dep,x.pass_time]).map(t2m).filter(t=>t!=null);
+  if (ts.length<2) return true;
+  const r = ts.map(relM);
+  return Math.max(...r)-Math.min(...r) <= MERGE_WINDOW_MINS;
+}
+
 function finalise(s) {
   // Remove duplicate stops introduced by the same service appearing in multiple WTT books
   const seen = new Set();
@@ -787,13 +804,34 @@ function finalise(s) {
   // Order stops by minutes elapsed since the origin time, so services that
   // cross midnight sort correctly (a pairwise ±12h wrap isn't transitive).
   const base = t2m(s.origin_time) ?? t2m(stopTime(s.stops[0]||{})) ?? 0;
-  const rel = st => { const t=t2m(stopTime(st)); return t==null ? null : (t-base+1440)%1440; };
-  s.stops.sort((a,b) => {
+  const relM = m => (m-base+1440)%1440;
+  const rel = st => { const t=t2m(stopTime(st)); return t==null ? null : relM(t); };
+  const byTime = (a,b) => {
     const ta=rel(a), tb=rel(b);
     if (ta==null&&tb==null) return 0;
     if (ta==null) return 1; if (tb==null) return -1;
     return ta-tb;
-  });
+  };
+  s.stops.sort(byTime);
+  // Books record the same call differently at their boundaries (one has only
+  // the arrival, the next only the departure, another both). Merge rows at the
+  // same location whose times don't conflict and lie within MERGE_WINDOW_MINS;
+  // genuine revisits (e.g. passing a junction twice) have conflicting times.
+  const merged = [];
+  for (const st of s.stops) {
+    const t = rel(st);
+    let into = null;
+    for (let j=merged.length-1; j>=0; j--) {
+      const m = merged[j], mt = rel(m);
+      if (m.location===st.location && stopsCompatible(m, st, relM, j===merged.length-1)) { into=m; break; }
+      if (t!=null && mt!=null && t-mt > 180) break;
+    }
+    if (into) {
+      for (const f of ['arr','dep','pass_time']) if (!into[f]) into[f]=st[f];
+      if (!into.platform) into.platform=st.platform;
+    } else merged.push({...st});
+  }
+  s.stops = merged.sort(byTime);
   s.type = svcType(s.headcode);
   s.tocName = TOC_NAMES[s.operator]||s.operator;
   s.days = parseRunDays(s.running_days);
