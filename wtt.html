@@ -222,6 +222,8 @@
     .stop-dep { font: 600 12px/1 var(--mono); color: var(--amber); text-align: right; }
     .stop-pass { font: 500 11px/1 var(--mono); color: var(--text-3); text-align: right; font-style: italic; }
     .stop-int { font: 500 10px/1 var(--mono); color: var(--text-4); text-align: right; }
+    .stop-gap { display: flex; align-items: center; gap: 8px; padding: 6px 15px 6px 41px; background: #fffbeb; border-bottom: 1px solid #fde68a; color: #92400e; font: 500 11px/1.35 var(--font); }
+    .stop-gap strong { font: 700 11px/1 var(--mono); }
     .stop-dash { color: var(--text-4); text-align: right; font: 500 11px/1 var(--mono); }
 
     /* ── FILE DROP ─────────────────────────────────────────────── */
@@ -734,6 +736,8 @@ function fmtDur(m) {
 
 function stopTime(s) { return s.dep||s.arr||s.pass_time; }
 
+const GAP_FLAG_MINS = 60;
+
 function esc(s) {
   return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 }
@@ -1052,17 +1056,29 @@ function buildDetail(s) {
 
   const hdr=`<div class="stops-hdr"><div></div><div>Location</div><div style="text-align:center">Platform</div><div style="text-align:right">Arrival</div><div style="text-align:right">Departure</div><div style="text-align:right">Pass</div><div style="text-align:right">+min</div></div>`;
 
-  let prevM=null;
+  let prevM=null, prevLoc=null;
   const rows=s.stops.map((st,i)=>{
     const isO=i===0&&st.location===s.origin;
     const isD=i===s.stops.length-1&&st.location===s.destination;
     const isPass=!!(st.pass_time&&!st.arr&&!st.dep);
     const icoC=isO?'sc sc-orig':isD?'sc sc-dest':isPass?'sc sc-pass':'sc sc-call';
     const curM=t2m(st.dep||st.arr||st.pass_time);
-    let intv='';
-    if (prevM!=null&&curM!=null){const d=diffM(prevM,curM); if(d!=null&&d>0) intv=`+${d}`;}
-    if (curM!=null) prevM=curM;
-    return `<div class="stop-row">
+    let intv='', gap='';
+    if (prevM!=null&&curM!=null){
+      const d=diffM(prevM,curM);
+      if(d!=null&&d>0) intv=`+${d}`;
+      // Long gaps between consecutive timings: the train is either held somewhere
+      // the WTT books don't time (loop, yard, recess) or running over lines
+      // outside the loaded books. Returning to the same point means it was held.
+      if(d!=null&&d>=GAP_FLAG_MINS){
+        const msg = prevLoc===st.location
+          ? `train held nearby, returns to ${esc(st.location)} — location not recorded in the timetable books`
+          : 'no timing points recorded — train held, or running over lines outside the loaded timetable books';
+        gap=`<div class="stop-gap"><span aria-hidden="true">⏸</span><span><strong>${fmtDur(d)}</strong> — ${msg}</span></div>`;
+      }
+    }
+    if (curM!=null){ prevM=curM; prevLoc=st.location; }
+    return gap+`<div class="stop-row">
       <div class="stop-ico"><div class="${icoC}"></div></div>
       <div class="stop-name${isPass?' is-pass':''}">${esc(st.location)}</div>
       <div class="stop-plat">${st.platform?`<span>Plat ${esc(st.platform)}</span>`:'—'}</div>
