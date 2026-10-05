@@ -854,6 +854,49 @@ function buildServicesFromJSON(data) {
   });
 }
 
+// ── Rejoin overnight services ────────────────────────────────────
+// The WTT books file the after-midnight part of a service under the next
+// day's running days and dates (e.g. an SX 18/05–11/12 service continues as
+// MX 19/05–12/12 with the same UID). Merge such continuations back into the
+// service they belong to, provided the service crosses midnight and every
+// continuation timing falls within its origin→destination window.
+function parseDateRange(str) {
+  const m = (str||'').match(/(\d\d)\/(\d\d)\/(\d{4})/g) || [];
+  return m.map(d => { const [dd,mm,yy]=d.split('/').map(Number); return Date.UTC(yy,mm-1,dd)/864e5; });
+}
+function joinOvernight(list) {
+  const byUid = new Map();
+  for (const s of list) {
+    if (!byUid.has(s.uid)) byUid.set(s.uid, []);
+    byUid.get(s.uid).push(s);
+  }
+  const absorbed = new Set();
+  for (const group of byUid.values()) {
+    if (group.length < 2) continue;
+    for (const a of group) {
+      if (absorbed.has(a)) continue;
+      const o=t2m(a.origin_time), e=t2m(a.destination_time);
+      if (o==null || e==null || e>=o) continue;
+      const dur = e+1440-o;
+      const da = parseDateRange(a.dates);
+      const shifted = a.days.map((_,i)=>a.days[(i+6)%7]);
+      for (const b of group) {
+        if (b===a || absorbed.has(b)) continue;
+        const db = parseDateRange(b.dates);
+        if (da.length!==2 || db.length!==2 || db[0]-da[0]!==1 || db[1]-da[1]!==1) continue;
+        if (b.days.some((v,i)=>v!==shifted[i])) continue;
+        const times = b.stops.flatMap(st=>[st.arr,st.dep,st.pass_time]).map(t2m).filter(t=>t!=null);
+        if (!times.length || times.some(t=>(t-o+1440)%1440>dur)) continue;
+        a.stops.push(...b.stops);
+        a.books = [...new Set([...a.books, ...b.books])].sort();
+        absorbed.add(b);
+        finalise(a);
+      }
+    }
+  }
+  return absorbed.size ? list.filter(s=>!absorbed.has(s)) : list;
+}
+
 // ── App State ───────────────────────────────────────────────────
 const APP = {
   all:[], filtered:[],
@@ -1137,12 +1180,12 @@ function processPickedText(text, filename) {
     const isJson = filename && filename.toLowerCase().endsWith('.json');
     if (isJson) {
       const data=JSON.parse(text);
-      APP.all=buildServicesFromJSON(data);
+      APP.all=joinOvernight(buildServicesFromJSON(data));
       populateUI(data.locs);
     } else {
       const rows=parseCSV(text);
       if (!rows.length) throw new Error('CSV parsed but returned 0 rows — check this is wtt_stops.csv or wtt_data.json.');
-      APP.all=buildServices(rows);
+      APP.all=joinOvernight(buildServices(rows));
       populateUI(null);
     }
   } catch(err) {
@@ -1217,7 +1260,7 @@ async function loadData() {
       `Run <code>python scripts/build_wtt.py</code> to generate it from wtt_stops.csv.`
     );
     const data=await r.json();
-    APP.all=buildServicesFromJSON(data);
+    APP.all=joinOvernight(buildServicesFromJSON(data));
     populateUI(data.locs);
   } catch(err) {
     el.innerHTML=`<div class="error-state">
